@@ -20,10 +20,13 @@ fn main() {
         process::exit(1);
     });
 
-    let conn_opts = mqtt::ConnectOptions::new();
+
+
+    // let conn_opts = mqtt::ConnectOptions::new();
+    let connect_opts= mqtt::ConnectOptionsBuilder::new().user_name("tether").password("sp_ceB0ss!").finalize();
 
     // Connect and wait for it to complete or fail
-    if let Err(e) = cli.connect(conn_opts).wait() {
+    if let Err(e) = cli.connect(connect_opts).wait() {
         println!("Unable to connect: {:?}", e);
         process::exit(1);
     }
