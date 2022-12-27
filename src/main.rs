@@ -1,4 +1,4 @@
- use msgpack_simple::{MsgPack, MapElement};
+ use msgpack_simple::{MsgPack};
 
  use futures::{executor::block_on, stream::StreamExt};
  use paho_mqtt as mqtt;
@@ -7,7 +7,9 @@
  // The topics to which we subscribe.
  const TOPICS: &[&str] = &["+/+/scans"];
  const QOS: &[i32] = &[1, 1];
- 
+
+ use std::collections::HashMap;
+
  /////////////////////////////////////////////////////////////////////////////
  
  fn main() {
@@ -61,6 +63,8 @@
          // disconnect. Therefore, when you kill this app (with a ^C or
          // whatever) the server will get an unexpected drop and then
          // should emit the LWT message.
+
+         let mut scan_samples = HashMap::new();
  
          while let Some(msg_opt) = strm.next().await {
              if let Some(msg) = msg_opt {
@@ -76,6 +80,24 @@
                 if decoded.is_array() {
                     let scans = decoded.as_array().unwrap();
                     println!("Decoded {} scans", scans.len());
+
+                    let mut samples_this_device: Vec<(f64, f64)> = Vec::new();
+
+                    for sample in scans {
+                        let el =sample.as_array().unwrap();
+                        // println!("el: {:?}", el);
+                        let angle = &el[0].clone().as_float().unwrap();
+                        let distance = &el[1].clone().as_float().unwrap();
+                        // let angle = sample[0];
+                        // let distance = sample[1];
+                        // println!("angle = {}, distance = {}", angle, distance);
+
+                        let scan_sample: (f64, f64) = (*angle, *distance);
+                        samples_this_device.push(scan_sample);
+                    }
+                    scan_samples.insert(String::from(serial), samples_this_device);
+
+                    println!("Updated scan samples hashmap: {:?}", scan_samples);
                 }
              }
              else {
