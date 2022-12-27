@@ -1,11 +1,11 @@
- use msgpack_simple::{MsgPack, MapElement, Extension};
+ use msgpack_simple::{MsgPack, MapElement};
 
  use futures::{executor::block_on, stream::StreamExt};
  use paho_mqtt as mqtt;
  use std::{env, process, time::Duration};
  
  // The topics to which we subscribe.
- const TOPICS: &[&str] = &["test", "hello"];
+ const TOPICS: &[&str] = &["+/+/scans"];
  const QOS: &[i32] = &[1, 1];
  
  /////////////////////////////////////////////////////////////////////////////
@@ -64,17 +64,25 @@
  
          while let Some(msg_opt) = strm.next().await {
              if let Some(msg) = msg_opt {
-                 println!("Received on topic \"{}\": {}", msg.topic(), msg.payload_str());
+                println!("Received message on topic \"{}\":", msg.topic());
+                //  println!("Received on topic \"{}\": {}", msg.topic(), msg.payload_str());
                  let payload = msg.payload().to_vec();
                  let decoded = MsgPack::parse(&payload).unwrap();
-                 println!("decoded: {}", decoded);
+                //  println!("decoded: {}", decoded);
+
+                let serial = parse_agent_id(msg.topic());
+                println!("Device serial is determined as: {}", serial);
+
+                if decoded.is_array() {
+                    let scans = decoded.as_array().unwrap();
+                    println!("Decoded {} scans", scans.len());
+                }
              }
              else {
                  // A "None" means we were disconnected. Try to reconnect...
                  println!("Lost connection. Attempting reconnect.");
                  while let Err(err) = cli.reconnect().await {
                      println!("Error reconnecting: {}", err);
-                     // For tokio use: tokio::time::delay_for()
                      async_std::task::sleep(Duration::from_millis(1000)).await;
                  }
              }
@@ -85,4 +93,9 @@
      }) {
          eprintln!("{}", err);
      }
+ }
+
+ fn parse_agent_id(topic: &str) -> &str{
+    let parts: Vec<&str> = topic.split('/').collect();
+    parts[1]
  }
