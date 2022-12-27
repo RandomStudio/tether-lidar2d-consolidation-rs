@@ -1,36 +1,4 @@
-// paho-mqtt/examples/async_subscribe.rs
-// This is a Paho MQTT Rust client, sample application.
-//
-//! This application is an MQTT subscriber using the asynchronous client
-//! interface of the Paho Rust client library.
-//! It also monitors for disconnects and performs manual re-connections.
-//!
-//! The sample demonstrates:
-//!   - An async/await subscriber
-//!   - Connecting to an MQTT server/broker.
-//!   - Subscribing to a topic
-//!   - Receiving messages from an async stream.
-//!   - Handling disconnects and attempting manual reconnects.
-//!   - Using a "persistent" (non-clean) session so the broker keeps
-//!     subscriptions and messages through reconnects.
-//!   - Last will and testament
-//!
-
-/*******************************************************************************
- * Copyright (c) 2017-2020 Frank Pagliughi <fpagliughi@mindspring.com>
- *
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * and Eclipse Distribution License v1.0 which accompany this distribution.
- *
- * The Eclipse Public License is available at
- *    http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at
- *   http://www.eclipse.org/org/documents/edl-v10.php.
- *
- * Contributors:
- *    Frank Pagliughi - initial implementation and documentation
- *******************************************************************************/
+ use msgpack_simple::{MsgPack, MapElement, Extension};
 
  use futures::{executor::block_on, stream::StreamExt};
  use paho_mqtt as mqtt;
@@ -96,7 +64,10 @@
  
          while let Some(msg_opt) = strm.next().await {
              if let Some(msg) = msg_opt {
-                 println!("{}", msg);
+                 println!("Received on topic \"{}\": {}", msg.topic(), msg.payload_str());
+                 let payload = msg.payload().to_vec();
+                 let decoded = MsgPack::parse(&payload).unwrap();
+                 println!("decoded: {}", decoded);
              }
              else {
                  // A "None" means we were disconnected. Try to reconnect...
