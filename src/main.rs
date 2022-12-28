@@ -1,5 +1,6 @@
-use kddbscan::{cluster, ClusterId, IntoPoint};
 use msgpack_simple::MsgPack;
+use ndarray::array;
+use petal_clustering::{Dbscan, Fit};
 
 use futures::{executor::block_on, stream::StreamExt};
 use paho_mqtt as mqtt;
@@ -16,13 +17,6 @@ struct Point2D {
     x: f64,
     y: f64,
 }
-
-impl IntoPoint for Point2D {
-    fn get_distance(&self, neighbour: &Point2D) -> f64 {
-        ((self.x - neighbour.x).powi(2) + (self.y - neighbour.y).powi(2)).powf(0.5)
-    }
-}
-
 /////////////////////////////////////////////////////////////////////////////
 
 fn main() {
@@ -114,7 +108,8 @@ fn main() {
 
                     println!("Combined {} points from all devices", combined_points.len());
 
-                    let clusters = cluster(combined_points, 2, None, None);
+                    // let clusters = cluster(combined_points, 2, None, None);
+
                     println!("Clustering done");
                     // println!("Found {} clusters", clusters.len());
 
@@ -151,11 +146,11 @@ fn measurement_to_point(angle: &f64, distance: &f64) -> Point2D {
     }
 }
 
-fn combine_all_points(device_points: &HashMap<String, Vec<Point2D>>) -> Vec<Point2D> {
-    let mut all_points: Vec<Point2D> = vec![];
+fn combine_all_points(device_points: &HashMap<String, Vec<Point2D>>) -> ndarray::Array2<f64> {
+    let mut all_points: ndarray::Array2<f64> = array![];
     for (_device, points) in device_points {
         for p in points {
-            all_points.push(Point2D { x: p.x, y: p.y });
+            all_points.push(ndarray::Axis(0), [p.x, p.y]);
         }
     }
     all_points
