@@ -102,21 +102,25 @@ fn main() {
 
                         if *distance > 0.0 {
                             let point = measurement_to_point(angle, distance);
-                            points_this_scan.push(point);
+                            if point.x < 0.0 && point.y < 0.0 {
+                                points_this_scan.push(point);
+                            }
                         }
                     }
 
                     scan_points.insert(String::from(serial), points_this_scan);
 
-                    println!("Updated scan samples hashmap: {:?}", scan_points);
+                    // println!("Updated scan samples hashmap: {:?}", scan_points);
 
                     let combined_points = combine_all_points(&scan_points);
+                    // let combined_points: Vec<Point2D> =
+                    //     vec![Point2D { x: 1.0, y: 1.0 }, Point2D { x: 2.0, y: 2.0 }];
 
                     println!("Combined {} points from all devices", combined_points.len());
 
                     let clusters = cluster(combined_points, 2, None, None);
                     println!("Clustering done");
-                    // println!("Found {} clusters", clusters.len());
+                    println!("Found {} clusters", clusters.len());
 
                     // for c in clusters {
                     //     println!("cluster #{:?}: {:?}", c.get_cluster_id(), c.into_inner());
