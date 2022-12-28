@@ -18,8 +18,8 @@ For now, we are using [msgpack-simple](https://crates.io/crates/msgpack_simple) 
   - There is a lot of new allocation and copying here; possibly this needs to be reduced as far as is practical
   - There are plenty of instances of `.unwrap()` in this process; errors should be handled more carefully
 - It remains to be seen whether the OG Agent logic around the timing of publishing "cluster" and "tracking" data should be retained. The original version seems to imply that every single incoming "scans" message triggers a corresponding set of "cluster" and "tracking" messages, which in turn require all the clustering and transformation calculations to be run each time; this seems excessive and likely to increase calculations/message volumes exponentially as the number of devices increases!
-  - It might be possible to determine a complete "frame" by checking the number of known devices (by serial) against counts of messages incoming from those devices. But this is likely to get quite complicated, and prone to failure (what if a device delivers a message "late", for example, or drops out altogether for a while.)
-  - It might be simpler to emit the tracking/cluster data on a regular interval instead. This means that the calculations are done, at most, once per "frame" before publishing any messages. We could even be smart about keeping track of which scan data has been updated each time. For example, we keep a separate list of calculated/transformed points per device separately from the raw scan data - and only update the latter when new scan data for that device is incoming. We could also skip/cache calculations for clustering if none of the devices have updated scan data since the previous frame.
+  - Calculations should probably be updated on each message, but only for the incoming device
+  - Clustering should be recalculated on every incoming message because point data has now been updated. Possibly this message should also be re-emitted on an interval (timeout/debounce).
 
   ## Useful resources
   General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
