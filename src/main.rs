@@ -1,4 +1,5 @@
  use msgpack_simple::{MsgPack};
+ use kddbscan::{cluster, IntoPoint, ClusterId};
 
  use futures::{executor::block_on, stream::StreamExt};
  use paho_mqtt as mqtt;
@@ -11,7 +12,16 @@
  use std::collections::HashMap;
 
  #[derive(Debug)]
-  struct Point2D(f64, f64);
+  struct Point2D {
+    x: f64,
+    y: f64
+  }
+
+  impl IntoPoint for Point2D {
+    fn get_distance(&self, neighbour: &Point2D) -> f64 {
+        ((self.x - neighbour.x).powi(2) + (self.y - neighbour.y).powi(2)).powf(0.5)
+    }
+  }
 
  /////////////////////////////////////////////////////////////////////////////
  
@@ -68,14 +78,13 @@
          // should emit the LWT message.
 
          let mut scan_points = HashMap::new();
+         let mut clusters: Vec<Point2D> = vec![];
  
          while let Some(msg_opt) = strm.next().await {
              if let Some(msg) = msg_opt {
                 println!("Received message on topic \"{}\":", msg.topic());
-                //  println!("Received on topic \"{}\": {}", msg.topic(), msg.payload_str());
                  let payload = msg.payload().to_vec();
                  let decoded = MsgPack::parse(&payload).unwrap();
-                //  println!("decoded: {}", decoded);
 
                 let serial = parse_agent_id(msg.topic());
                 println!("Device serial is determined as: {}", serial);
@@ -88,20 +97,28 @@
 
                     for sample in scans {
                         let el =sample.as_array().unwrap();
-                        // println!("el: {:?}", el);
                         let angle = &el[0].clone().as_float().unwrap();
                         let distance = &el[1].clone().as_float().unwrap();
-                        // let angle = sample[0];
-                        // let distance = sample[1];
-                        // println!("angle = {}, distance = {}", angle, distance);
 
-                        let point = measurement_to_point(*angle, *distance);
+                        let point = measurement_to_point(angle, distance);
                         points_this_scan.push(point);
                     }
 
                     scan_points.insert(String::from(serial), points_this_scan);
 
-                    println!("Updated scan samples hashmap: {:?}", scan_points);
+                    // println!("Updated scan samples hashmap: {:?}", scan_points);
+
+                    let combined_points = combine_all_points(&scan_points);
+
+                    println!("Combined {} points from all devices", combined_points.len());
+
+                    let clusters = cluster(combined_points, 2, None, None);
+                    println!("Found {} clusters", clusters.len());
+
+                    // for c in clusters {
+                    //     println!("cluster #{:?}: {:?}", c.get_cluster_id(), c.into_inner());
+                    // }
+ 
                 }
              }
              else {
@@ -126,8 +143,19 @@
     parts[1]
  }
 
- fn measurement_to_point(angle: f64, distance: f64) -> Point2D {
-    let x: f64 = angle.to_radians().cos() * distance;
-    let y: f64 = angle.to_radians().sin() * distance;
-    Point2D(x,y)
+ fn measurement_to_point(angle: &f64, distance: &f64) -> Point2D {
+    Point2D {
+        x: angle.to_radians().cos() * distance,
+        y: angle.to_radians().sin() * distance
+    }
+ }
+
+ fn combine_all_points(device_points: &HashMap<String, Vec<Point2D>>) -> Vec<Point2D> {
+    let mut all_points: Vec<Point2D> = vec![];
+    for (device, points) in device_points {
+        for p in points {
+            all_points.push(Point2D{ x: p.x, y: p.y});
+        }
+    }
+    all_points
  }
