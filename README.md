@@ -38,4 +38,4 @@ Another possibility might be the library [linfa-clustering](https://crates.io/cr
   - MessagePack spec (includes details about supported types): https://github.com/msgpack/msgpack/blob/master/spec.md
   - Rust by Example, including custom types (structs): https://doc.rust-lang.org/rust-by-example/custom_types/structs.html
   - Rust Programming Language "Book", including useful info about hash maps: https://doc.rust-lang.org/book/ch08-03-hash-maps.html
-  
+  - Useful tips for debugging via VSCode + LLDB
