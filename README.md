@@ -31,8 +31,8 @@ Another possibility might be the library [linfa-clustering](https://crates.io/cr
   - Clustering should be recalculated on every incoming message because point data has now been updated. Possibly this message should also be re-emitted on an interval (timeout/debounce).
 
   ## Useful resources
-  General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
-  MessagePack spec (includes details about supported types): https://github.com/msgpack/msgpack/blob/master/spec.md
-  Rust by Example, including custom types (structs): https://doc.rust-lang.org/rust-by-example/custom_types/structs.html
-  Rust Programming Language "Book", including useful info about hash maps: https://doc.rust-lang.org/book/ch08-03-hash-maps.html
+  - General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
+  - MessagePack spec (includes details about supported types): https://github.com/msgpack/msgpack/blob/master/spec.md
+  - Rust by Example, including custom types (structs): https://doc.rust-lang.org/rust-by-example/custom_types/structs.html
+  - Rust Programming Language "Book", including useful info about hash maps: https://doc.rust-lang.org/book/ch08-03-hash-maps.html
   
