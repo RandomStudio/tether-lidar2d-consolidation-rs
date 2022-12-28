@@ -10,6 +10,9 @@
 
  use std::collections::HashMap;
 
+ #[derive(Debug)]
+  struct Point2D(f64, f64);
+
  /////////////////////////////////////////////////////////////////////////////
  
  fn main() {
@@ -64,7 +67,7 @@
          // whatever) the server will get an unexpected drop and then
          // should emit the LWT message.
 
-         let mut scan_samples = HashMap::new();
+         let mut scan_points = HashMap::new();
  
          while let Some(msg_opt) = strm.next().await {
              if let Some(msg) = msg_opt {
@@ -81,7 +84,7 @@
                     let scans = decoded.as_array().unwrap();
                     println!("Decoded {} scans", scans.len());
 
-                    let mut samples_this_device: Vec<(f64, f64)> = Vec::new();
+                    let mut points_this_scan: Vec<Point2D> = Vec::new();
 
                     for sample in scans {
                         let el =sample.as_array().unwrap();
@@ -92,12 +95,13 @@
                         // let distance = sample[1];
                         // println!("angle = {}, distance = {}", angle, distance);
 
-                        let scan_sample: (f64, f64) = (*angle, *distance);
-                        samples_this_device.push(scan_sample);
+                        let point = measurement_to_point(*angle, *distance);
+                        points_this_scan.push(point);
                     }
-                    scan_samples.insert(String::from(serial), samples_this_device);
 
-                    println!("Updated scan samples hashmap: {:?}", scan_samples);
+                    scan_points.insert(String::from(serial), points_this_scan);
+
+                    println!("Updated scan samples hashmap: {:?}", scan_points);
                 }
              }
              else {
@@ -120,4 +124,10 @@
  fn parse_agent_id(topic: &str) -> &str{
     let parts: Vec<&str> = topic.split('/').collect();
     parts[1]
+ }
+
+ fn measurement_to_point(angle: f64, distance: f64) -> Point2D {
+    let x: f64 = angle.to_radians().cos() * distance;
+    let y: f64 = angle.to_radians().sin() * distance;
+    Point2D(x,y)
  }
