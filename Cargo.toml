@@ -12,5 +12,7 @@ env_logger = "0.7"
 futures = "0.3"
 async-std = "1"
 petal-clustering = "0.5.1"
+petal-neighbors = "0.8.0"
 ndarray = "0.15.6"
+
 [dev-dependencies]

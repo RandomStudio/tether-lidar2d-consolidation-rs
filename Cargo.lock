@@ -835,6 +835,7 @@ dependencies = [
  "ndarray",
  "paho-mqtt",
  "petal-clustering",
+ "petal-neighbors",
 ]
 
 [[package]]

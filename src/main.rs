@@ -1,6 +1,7 @@
 use msgpack_simple::MsgPack;
-use ndarray::array;
+use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
+use petal_neighbors::distance::Euclidean;
 
 use futures::{executor::block_on, stream::StreamExt};
 use paho_mqtt as mqtt;
@@ -72,7 +73,12 @@ fn main() {
         // should emit the LWT message.
 
         let mut scan_points = HashMap::new();
-        let mut clusters: Vec<Point2D> = vec![];
+
+        let mut clustering = Dbscan {
+            eps: 0.5,
+            min_samples: 2,
+            metric: Euclidean::default(),
+        };
 
         while let Some(msg_opt) = strm.next().await {
             if let Some(msg) = msg_opt {
@@ -106,16 +112,38 @@ fn main() {
 
                     let combined_points = combine_all_points(&scan_points);
 
-                    println!("Combined {} points from all devices", combined_points.len());
+                    println!(
+                        "Combined {} points from all devices",
+                        (combined_points.len() / 2)
+                    );
 
-                    // let clusters = cluster(combined_points, 2, None, None);
+                    // let points = array![
+                    //     [1.0, 2.0],
+                    //     [2.0, 2.0],
+                    //     [2.0, 2.3],
+                    //     [8.0, 7.0],
+                    //     [8.0, 8.0],
+                    //     [25.0, 80.0]
+                    // ];
+
+                    // let clustering = Dbscan::new(3.0, 2, Euclidean::default()).fit(&points);
+                    let (clusters, outliers) = clustering.fit(&combined_points);
 
                     println!("Clustering done");
-                    // println!("Found {} clusters", clusters.len());
+                    println!(
+                        "Found {} clusters, {} outliers",
+                        clusters.len(),
+                        outliers.len()
+                    );
 
-                    // for c in clusters {
-                    //     println!("cluster #{:?}: {:?}", c.get_cluster_id(), c.into_inner());
-                    // }
+                    for c in clusters.iter() {
+                        let (cluster_index, point_indexes) = c;
+                        println!("cluster #{} = {:?}", cluster_index, point_indexes);
+                        for x in point_indexes {
+                            let matched_point = combined_points.row(*x);
+                            println!("point index #{} matches point {:?}", x, matched_point);
+                        }
+                    }
                 }
             } else {
                 // A "None" means we were disconnected. Try to reconnect...
@@ -147,10 +175,10 @@ fn measurement_to_point(angle: &f64, distance: &f64) -> Point2D {
 }
 
 fn combine_all_points(device_points: &HashMap<String, Vec<Point2D>>) -> ndarray::Array2<f64> {
-    let mut all_points: ndarray::Array2<f64> = array![];
+    let mut all_points = Array::zeros((0, 2));
     for (_device, points) in device_points {
         for p in points {
-            all_points.push(ndarray::Axis(0), [p.x, p.y]);
+            all_points.push_row(ArrayView::from(&[p.x, p.y])).unwrap()
         }
     }
     all_points
