@@ -75,7 +75,7 @@ fn main() {
         let mut scan_points = HashMap::new();
 
         let mut clustering = Dbscan {
-            eps: 0.5,
+            eps: 300.,
             min_samples: 2,
             metric: Euclidean::default(),
         };
@@ -113,24 +113,12 @@ fn main() {
                     // println!("Updated scan samples hashmap: {:?}", scan_points);
 
                     let combined_points = combine_all_points(&scan_points);
-                    // let combined_points: Vec<Point2D> =
-                    //     vec![Point2D { x: 1.0, y: 1.0 }, Point2D { x: 2.0, y: 2.0 }];
 
                     println!(
                         "Combined {} points from all devices",
                         (combined_points.len() / 2)
                     );
 
-                    // let points = array![
-                    //     [1.0, 2.0],
-                    //     [2.0, 2.0],
-                    //     [2.0, 2.3],
-                    //     [8.0, 7.0],
-                    //     [8.0, 8.0],
-                    //     [25.0, 80.0]
-                    // ];
-
-                    // let clustering = Dbscan::new(3.0, 2, Euclidean::default()).fit(&points);
                     let (clusters, outliers) = clustering.fit(&combined_points);
 
                     println!("Clustering done");
