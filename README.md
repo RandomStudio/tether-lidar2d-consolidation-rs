@@ -30,6 +30,9 @@ Another possibility might be the library [linfa-clustering](https://crates.io/cr
   - Calculations should probably be updated on each message, but only for the incoming device
   - Clustering should be recalculated on every incoming message because point data has now been updated. Possibly this message should also be re-emitted on an interval (timeout/debounce).
 
+  ## TODO
+  - [ ] We should check the details of (auto)acknowledgement of messages in the MQTTT client, since giant queues seem to build up from time to time
+
   ## Useful resources
   - General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
   - MessagePack spec (includes details about supported types): https://github.com/msgpack/msgpack/blob/master/spec.md
