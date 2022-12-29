@@ -241,8 +241,8 @@ struct Bounds2D {
     y_max: Option<f64>,
 }
 /**
- * Consolidate points in a cluster to a single "Cluster2D" (same as Point2D, but including size)
- */
+Consolidate points in a cluster to a single "Cluster2D" (same as Point2D, but including size)
+*/
 fn consolidate_cluster_points(points: Vec<Point2D>, id: u64) -> Cluster2D {
     let bounds = points.iter().fold(
         Bounds2D {

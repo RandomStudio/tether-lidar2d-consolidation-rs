@@ -26,7 +26,7 @@ Another possibility might be the library [linfa-clustering](https://crates.io/cr
 - The samples are copied from the array of arrays; each "sample" is an array with the elements `[angle, distance]` and sometimes `[angle, distance, quality]` (although the latter is not handled yet). The samples are converted into points and the list(vector) of all converted points are "inserted" (i.e. replaced, if key already exists) into the hashmap which represents all LIDAR devices (with serial strings as keys). 
   - There is a lot of new allocation and copying here; possibly this needs to be reduced as far as is practical
   - There are plenty of instances of `.unwrap()` in this process; errors should be handled more carefully
-- It remains to be seen whether the OG Agent logic around the timing of publishing "cluster" and "tracking" data should be retained. The original version seems to imply that every single incoming "scans" message triggers a corresponding set of "cluster" and "tracking" messages, which in turn require all the clustering and transformation calculations to be run each time; this seems excessive and likely to increase calculations/message volumes exponentially as the number of devices increases!
+- It might be wortwhile to revisit the mechanism for timing of calculations and publishing messages, compared to OG Agent
   - Calculations should probably be updated on each message, but only for the incoming device
   - Clustering should be recalculated on every incoming message because point data has now been updated. Possibly this message should also be re-emitted on an interval (timeout/debounce).
 
