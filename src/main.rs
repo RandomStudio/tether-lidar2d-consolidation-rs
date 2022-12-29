@@ -19,6 +19,13 @@ struct Point2D {
     y: f64,
 }
 
+struct Cluster2D {
+    id: u64,
+    x: f64,
+    y: f64,
+    size: f64,
+}
+
 const AGENT_TYPE: &str = "lidarConsolidation";
 const AGENT_ID: &str = "rsTest";
 
@@ -227,4 +234,50 @@ fn combine_all_points(device_points: &HashMap<String, Vec<Point2D>>) -> ndarray:
         }
     }
     all_points
+}
+
+struct Bounds2D {
+    x_min: Option<f64>,
+    y_min: Option<f64>,
+    x_max: Option<f64>,
+    y_max: Option<f64>,
+}
+/**
+ * Consolidate points in a cluster to a single "Cluster2D" (same as Point2D, but including size)
+ */
+fn consolidate_cluster_points(points: Vec<Point2D>, id: u64) -> Cluster2D {
+    let bounds = points.iter().fold(
+        Bounds2D {
+            x_min: None,
+            y_min: None,
+            x_max: None,
+            y_max: None,
+        },
+        |acc, p| Bounds2D {
+            x_min: match acc.x_min {
+                None => Some(p.x),
+                Some(v) => Some(v.min(p.x)),
+            },
+            y_min: match acc.y_min {
+                None => Some(p.y),
+                Some(v) => Some(v.min(p.y)),
+            },
+            x_max: match acc.x_max {
+                None => Some(p.x),
+                Some(v) => Some(v.max(p.x)),
+            },
+            y_max: match acc.y_max {
+                None => Some(p.y),
+                Some(v) => Some(v.max(p.y)),
+            },
+        },
+    );
+    let width = bounds.x_max.unwrap() - bounds.x_min.unwrap();
+    let height = bounds.y_max.unwrap() - bounds.y_min.unwrap();
+    Cluster2D {
+        id,
+        x: bounds.x_min.unwrap() + 0.5 * width,
+        y: bounds.y_min.unwrap() + 0.5 * height,
+        size: { width.max(height) },
+    }
 }
