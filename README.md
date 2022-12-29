@@ -35,7 +35,7 @@ Another possibility might be the library [linfa-clustering](https://crates.io/cr
   - [ ] Transform incoming scan points: rotation and position/offset
   - [ ] Read/write config data from/to disk
   - [ ] Handle ROI, transformation (warping)
-  - [ ] We should check the details of (auto)acknowledgement of messages in the MQTTT client, since giant queues seem to build up from time to time
+  - [ ] Close the client properly on quit, so that the queue is also properly destroyed
 
   ## Useful resources
   - General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
