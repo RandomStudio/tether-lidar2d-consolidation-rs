@@ -242,7 +242,7 @@ fn main() {
 
                     let message = MsgPack::Array(clusters);
                     let msg =
-                        mqtt::Message::new(&cluster_output_topic, message.encode(), mqtt::QOS_1);
+                        mqtt::Message::new(&cluster_output_topic, message.encode(), mqtt::QOS_0);
                     client.publish(msg).await?;
                 }
             } else {
