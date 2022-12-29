@@ -1,4 +1,3 @@
-use async_std::stream::Map;
 use msgpack_simple::{MapElement, MsgPack};
 use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
@@ -142,10 +141,20 @@ fn main() {
                         let matched_points = point_indexes.iter().map(|i| {
                             let point = combined_points.row(*i);
                             let index = u64::try_from(*i).unwrap();
-                            MsgPack::Map(vec![MapElement {
-                                key: MsgPack::String("id".to_string()),
-                                value: MsgPack::Uint(index),
-                            }])
+                            MsgPack::Map(vec![
+                                MapElement {
+                                    key: MsgPack::String("id".to_string()),
+                                    value: MsgPack::Uint(index),
+                                },
+                                MapElement {
+                                    key: MsgPack::String("x".to_string()),
+                                    value: MsgPack::Float(point[0]),
+                                },
+                                MapElement {
+                                    key: MsgPack::String("y".to_string()),
+                                    value: MsgPack::Float(point[1]),
+                                },
+                            ])
                         });
                         let matched_points: Vec<MsgPack> = matched_points.collect();
 
