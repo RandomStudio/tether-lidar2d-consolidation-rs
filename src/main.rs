@@ -186,9 +186,9 @@ fn main() {
                         })
                         .collect();
 
-                    let message = MsgPack::Array(clusters);
+                    let payload = MsgPack::Array(clusters);
                     let msg =
-                        mqtt::Message::new(&cluster_output_topic, message.encode(), mqtt::QOS_0);
+                        mqtt::Message::new(&cluster_output_topic, payload.encode(), mqtt::QOS_0);
                     client.publish(msg).await?;
                 }
             } else {
