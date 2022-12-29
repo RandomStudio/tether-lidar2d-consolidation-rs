@@ -131,9 +131,17 @@ fn main() {
                     for c in clusters.iter() {
                         let (cluster_index, point_indexes) = c;
                         println!("cluster #{} = {:?}", cluster_index, point_indexes);
-                        for x in point_indexes {
-                            let matched_point = combined_points.row(*x);
-                            println!("point index #{} matches point {:?}", x, matched_point);
+
+                        let matched_points = point_indexes.iter().map(|i| combined_points.row(*i));
+
+                        println!(
+                            "found {} matched points vs {} point indexes in cluster",
+                            matched_points.len(),
+                            point_indexes.len()
+                        );
+
+                        for x in matched_points {
+                            println!("this should be a point, not an index: {:?}", x);
                         }
                     }
                 }
