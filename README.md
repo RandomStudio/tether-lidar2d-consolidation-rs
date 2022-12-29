@@ -31,6 +31,10 @@ Another possibility might be the library [linfa-clustering](https://crates.io/cr
   - Clustering should be recalculated on every incoming message because point data has now been updated. Possibly this message should also be re-emitted on an interval (timeout/debounce).
 
   ## TODO
+  - [ ] Maintain "state" (config data) and publish this on startup, preferably with QOS_2 and retain=true - this should allow the visualiser to start showing scan data
+  - [ ] Transform incoming scan points: rotation and position/offset
+  - [ ] Read/write config data from/to disk
+  - [ ] Handle ROI, transformation (warping)
   - [ ] We should check the details of (auto)acknowledgement of messages in the MQTTT client, since giant queues seem to build up from time to time
 
   ## Useful resources
