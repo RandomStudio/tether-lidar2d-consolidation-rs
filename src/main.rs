@@ -141,57 +141,109 @@ fn main() {
                         outliers.len()
                     );
 
-                    for c in clusters.iter() {
-                        let (cluster_index, point_indexes) = c;
-                        println!("cluster #{} = {:?}", cluster_index, point_indexes);
+                    // Shadowed "clusters" - now as Cluster2D ("points")
+                    let clusters: Vec<Cluster2D> = clusters
+                        .iter()
+                        .map(|c| {
+                            let (cluster_index, point_indexes) = c;
+                            let matched_points = point_indexes
+                                .iter()
+                                .map(|i| {
+                                    let point = combined_points.row(*i);
+                                    Point2D {
+                                        x: point[0],
+                                        y: point[1],
+                                    }
+                                })
+                                .collect();
 
-                        let matched_points = point_indexes.iter().map(|i| {
-                            let point = combined_points.row(*i);
-                            let index = u64::try_from(*i).unwrap();
+                            let id = u64::try_from(*cluster_index).unwrap();
+                            consolidate_cluster_points(matched_points, id)
+                        })
+                        .collect();
+
+                    // for c in clusters.iter() {
+                    //     let (cluster_index, point_indexes) = c;
+                    //     println!("cluster #{} = {:?}", cluster_index, point_indexes);
+
+                    //     let matched_points = point_indexes.iter().map(|i| {
+                    //         let point = combined_points.row(*i);
+                    //         Point2D {
+                    //             x: point[0],
+                    //             y: point[1],
+                    //         }
+                    //     });
+
+                    //     assert_eq!(matched_points.len(), point_indexes.len());
+
+                    //     // for el in matched_points {
+                    //     //     //     let p: Point2D = Point2D { x: el[0], y: el[1] };
+                    //     //     println!("this should be point: {:?}", el);
+                    //     // }
+                    // }
+
+                    let clusters: Vec<MsgPack> = clusters
+                        .iter()
+                        .map(|c| {
                             MsgPack::Map(vec![
                                 MapElement {
                                     key: MsgPack::String("id".to_string()),
-                                    value: MsgPack::Uint(index),
+                                    value: MsgPack::Uint(c.id),
                                 },
                                 MapElement {
                                     key: MsgPack::String("x".to_string()),
-                                    value: MsgPack::Float(point[0]),
+                                    value: MsgPack::Float(c.x),
                                 },
                                 MapElement {
                                     key: MsgPack::String("y".to_string()),
-                                    value: MsgPack::Float(point[1]),
+                                    value: MsgPack::Float(c.y),
                                 },
                                 MapElement {
                                     key: MsgPack::String("size".to_string()),
-                                    value: MsgPack::Float(300.),
+                                    value: MsgPack::Float(c.size),
                                 },
                             ])
-                        });
-                        let matched_points: Vec<MsgPack> = matched_points.collect();
+                        })
+                        .collect();
 
-                        assert_eq!(matched_points.len(), point_indexes.len());
+                    // let matched_points = point_indexes.iter().map(|i| {
+                    //     let point = combined_points.row(*i);
+                    //     let index = u64::try_from(*i).unwrap();
+                    //     MsgPack::Map(vec![
+                    //         MapElement {
+                    //             key: MsgPack::String("id".to_string()),
+                    //             value: MsgPack::Uint(index),
+                    //         },
+                    //         MapElement {
+                    //             key: MsgPack::String("x".to_string()),
+                    //             value: MsgPack::Float(point[0]),
+                    //         },
+                    //         MapElement {
+                    //             key: MsgPack::String("y".to_string()),
+                    //             value: MsgPack::Float(point[1]),
+                    //         },
+                    //         MapElement {
+                    //             key: MsgPack::String("size".to_string()),
+                    //             value: MsgPack::Float(300.),
+                    //         },
+                    //     ])
+                    // });
+                    // let matched_points: Vec<MsgPack> = matched_points.collect();
 
-                        // for el in matched_points {
-                        //     //     let p: Point2D = Point2D { x: el[0], y: el[1] };
-                        //     println!("this should be point: {:?}", el);
-                        // }
+                    // DUMMY MESSAGE
+                    // let message = MsgPack::Map(vec![MapElement {
+                    //     key: MsgPack::Int(0),
+                    //     value: MsgPack::Int(42),
+                    // }]);
 
-                        // let message = MsgPack::Map(vec![MapElement {
-                        //     key: MsgPack::Int(0),
-                        //     value: MsgPack::Int(42),
-                        // }]);
-                        let message = MsgPack::Array(matched_points);
-                        // let message = MsgPack::Map(matched_points.map(|point|
-                        //     MapElement { key: point., value: () }
-                        // ).collect());
+                    // let message = MsgPack::Map(matched_points.map(|point|
+                    //     MapElement { key: point., value: () }
+                    // ).collect());
 
-                        let msg = mqtt::Message::new(
-                            &cluster_output_topic,
-                            message.encode(),
-                            mqtt::QOS_1,
-                        );
-                        client.publish(msg).await?;
-                    }
+                    let message = MsgPack::Array(clusters);
+                    let msg =
+                        mqtt::Message::new(&cluster_output_topic, message.encode(), mqtt::QOS_1);
+                    client.publish(msg).await?;
                 }
             } else {
                 // A "None" means we were disconnected. Try to reconnect...
