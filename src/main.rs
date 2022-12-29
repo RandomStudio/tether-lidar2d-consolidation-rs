@@ -1,4 +1,5 @@
-use msgpack_simple::MsgPack;
+use async_std::stream::Map;
+use msgpack_simple::{MapElement, MsgPack};
 use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
@@ -18,6 +19,10 @@ struct Point2D {
     x: f64,
     y: f64,
 }
+
+const AGENT_TYPE: &str = "lidarConsolidation";
+const AGENT_ID: &str = "rsTest";
+
 /////////////////////////////////////////////////////////////////////////////
 
 fn main() {
@@ -36,14 +41,14 @@ fn main() {
         .finalize();
 
     // Create the client connection
-    let mut cli = mqtt::AsyncClient::new(create_opts).unwrap_or_else(|e| {
+    let mut client = mqtt::AsyncClient::new(create_opts).unwrap_or_else(|e| {
         println!("Error creating the client: {:?}", e);
         process::exit(1);
     });
 
     if let Err(err) = block_on(async {
         // Get message stream before connecting.
-        let mut strm = cli.get_stream(25);
+        let mut strm = client.get_stream(25);
 
         // Define the set of options for the connection
         let lwt = mqtt::Message::new("test", "Async subscriber lost connection", mqtt::QOS_1);
@@ -59,10 +64,10 @@ fn main() {
 
         // Make the connection to the broker
         println!("Connecting to the MQTT server...");
-        cli.connect(conn_opts).await?;
+        client.connect(conn_opts).await?;
 
         println!("Subscribing to topics: {:?}", TOPICS);
-        cli.subscribe_many(TOPICS, QOS).await?;
+        client.subscribe_many(TOPICS, QOS).await?;
 
         // Just loop on incoming messages.
         println!("Waiting for messages...");
@@ -79,6 +84,8 @@ fn main() {
             min_samples: 2,
             metric: Euclidean::default(),
         };
+
+        let cluster_output_topic = build_topic(AGENT_TYPE, AGENT_ID, "clusters");
 
         while let Some(msg_opt) = strm.next().await {
             if let Some(msg) = msg_opt {
@@ -132,23 +139,44 @@ fn main() {
                         let (cluster_index, point_indexes) = c;
                         println!("cluster #{} = {:?}", cluster_index, point_indexes);
 
-                        let matched_points = point_indexes.iter().map(|i| combined_points.row(*i));
+                        let matched_points = point_indexes.iter().map(|i| {
+                            let point = combined_points.row(*i);
+                            let index = u64::try_from(*i).unwrap();
+                            MsgPack::Map(vec![MapElement {
+                                key: MsgPack::String("id".to_string()),
+                                value: MsgPack::Uint(index),
+                            }])
+                        });
+                        let matched_points: Vec<MsgPack> = matched_points.collect();
 
-                        println!(
-                            "found {} matched points vs {} point indexes in cluster",
-                            matched_points.len(),
-                            point_indexes.len()
+                        assert_eq!(matched_points.len(), point_indexes.len());
+
+                        // for el in matched_points {
+                        //     //     let p: Point2D = Point2D { x: el[0], y: el[1] };
+                        //     println!("this should be point: {:?}", el);
+                        // }
+
+                        // let message = MsgPack::Map(vec![MapElement {
+                        //     key: MsgPack::Int(0),
+                        //     value: MsgPack::Int(42),
+                        // }]);
+                        let message = MsgPack::Array(matched_points);
+                        // let message = MsgPack::Map(matched_points.map(|point|
+                        //     MapElement { key: point., value: () }
+                        // ).collect());
+
+                        let msg = mqtt::Message::new(
+                            &cluster_output_topic,
+                            message.encode(),
+                            mqtt::QOS_1,
                         );
-
-                        for x in matched_points {
-                            println!("this should be a point, not an index: {:?}", x);
-                        }
+                        client.publish(msg).await?;
                     }
                 }
             } else {
                 // A "None" means we were disconnected. Try to reconnect...
                 println!("Lost connection. Attempting reconnect.");
-                while let Err(err) = cli.reconnect().await {
+                while let Err(err) = client.reconnect().await {
                     println!("Error reconnecting: {}", err);
                     async_std::task::sleep(Duration::from_millis(1000)).await;
                 }
@@ -165,6 +193,10 @@ fn main() {
 fn parse_agent_id(topic: &str) -> &str {
     let parts: Vec<&str> = topic.split('/').collect();
     parts[1]
+}
+
+fn build_topic(agent_type: &str, agent_id: &str, plug_name: &str) -> String {
+    format!("{}/{}/{}", agent_type, agent_id, plug_name)
 }
 
 fn measurement_to_point(angle: &f64, distance: &f64) -> Point2D {
