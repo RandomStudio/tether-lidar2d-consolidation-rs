@@ -154,6 +154,10 @@ fn main() {
                                     key: MsgPack::String("y".to_string()),
                                     value: MsgPack::Float(point[1]),
                                 },
+                                MapElement {
+                                    key: MsgPack::String("size".to_string()),
+                                    value: MsgPack::Float(300.),
+                                },
                             ])
                         });
                         let matched_points: Vec<MsgPack> = matched_points.collect();
