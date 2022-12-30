@@ -4,7 +4,6 @@ pub mod config_state {
     use paho_mqtt as mqtt;
 
     use serde::{Deserialize, Serialize};
-    use serde_json::Value;
 
     #[derive(Serialize, Deserialize, Debug)]
     pub struct LidarDevice {
@@ -12,13 +11,13 @@ pub mod config_state {
     }
 
     #[derive(Serialize, Deserialize, Debug)]
-    pub struct ConfigManager {
+    pub struct Config {
         devices: Vec<LidarDevice>,
     }
 
-    impl ConfigManager {
-        pub fn new() -> ConfigManager {
-            ConfigManager { devices: vec![] }
+    impl Config {
+        pub fn new() -> Config {
+            Config { devices: vec![] }
         }
 
         pub fn publish_config(&self, provide_config_topic: &str) -> Result<mqtt::Message, ()> {
@@ -41,19 +40,15 @@ pub mod config_state {
             Ok(message)
         }
 
-        pub fn load_lidar_config(&mut self, devices: Vec<LidarDevice>) -> Result<usize, ()> {
-            // self.devices.clear();
-            self.devices = devices;
-            Ok(self.devices.len())
-        }
-
-        pub fn load_config_from_file(&mut self, path: &str) -> Result<(), ()> {
+        pub fn load_config_from_file(&mut self, path: &str) -> Result<usize, ()> {
             let text = std::fs::read_to_string(&path).unwrap();
-            let data = serde_json::from_str::<Value>(&text).unwrap();
+            let data: Config = serde_json::from_str(&text).unwrap();
 
-            println!("We loaded data: {:?}", data);
+            println!("Config parsed data from file: {:?}", data);
 
-            Ok(())
+            self.devices = data.devices;
+
+            Ok(self.devices.len())
         }
     }
 

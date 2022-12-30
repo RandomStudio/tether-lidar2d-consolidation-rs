@@ -1,4 +1,4 @@
-use config::config_state::{ConfigManager, LidarDevice};
+use config::config_state::Config;
 use petal_clustering::Dbscan;
 use petal_neighbors::distance::Euclidean;
 
@@ -73,15 +73,10 @@ fn main() {
         client.connect(conn_opts).await?;
 
         // Initialise config, now that we have the MQTT client ready
-        let mut config = ConfigManager::new();
-        config
-            .load_config_from_file(
-                "/Users/stephen/repos/tether/tether-lidar2d-consolidation-rs/dummyConfig.json",
-            )
-            .unwrap();
-        match config.load_lidar_config(vec![LidarDevice {
-            serial: String::from("dummy"),
-        }]) {
+        let mut config = Config::new();
+        match config.load_config_from_file(
+            "/Users/stephen/repos/tether/tether-lidar2d-consolidation-rs/dummyConfig.json",
+        ) {
             Ok(count) => {
                 println!("Loaded {} devices OK into Config", count);
                 let output_topic = build_topic(AGENT_TYPE, AGENT_ID, "provideLidarConfig");
