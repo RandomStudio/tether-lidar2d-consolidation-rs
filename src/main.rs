@@ -1,6 +1,4 @@
-use mqtt::Message;
-use msgpack_simple::{MapElement, MsgPack};
-use petal_clustering::{Dbscan, Fit};
+use petal_clustering::Dbscan;
 use petal_neighbors::distance::Euclidean;
 
 use futures::{executor::block_on, stream::StreamExt};
@@ -8,12 +6,15 @@ use paho_mqtt as mqtt;
 use std::{env, process, time::Duration};
 
 mod clustering;
+mod tether_utils;
 
 // The topics to which we subscribe.
 const TOPICS: &[&str] = &["+/+/scans"];
 const QOS: &[i32] = &[1, 1];
 
 use std::collections::HashMap;
+
+use crate::tether_utils::build_topic;
 
 pub type Point2D = (f64, f64);
 
@@ -93,7 +94,7 @@ fn main() {
 
         while let Some(msg_opt) = strm.next().await {
             if let Some(msg) = msg_opt {
-                match handle_scan_message(
+                match clustering::handle_scan_message(
                     &msg,
                     &mut scan_points,
                     &mut clustering,
@@ -105,7 +106,7 @@ fn main() {
                         client.publish(message).await.unwrap();
                     }
                     Err(()) => {
-                        println!("Something went wrong sending the cluster message");
+                        println!("Something went wrong building the clusters message to send");
                     }
                 }
             } else {
@@ -122,128 +123,4 @@ fn main() {
     }) {
         eprintln!("{}", err);
     }
-}
-
-async fn handle_scan_message(
-    msg: &Message,
-    scan_points: &mut HashMap<String, Vec<Point2D>>,
-    clustering: &mut Dbscan<f64, Euclidean>,
-    cluster_output_topic: &str,
-) -> Result<Message, ()> {
-    println!("Received message on topic \"{}\":", msg.topic());
-    let payload = msg.payload().to_vec();
-    let decoded = MsgPack::parse(&payload).unwrap();
-
-    let serial = parse_agent_id(msg.topic());
-    println!("Device serial is determined as: {}", serial);
-
-    if decoded.is_array() {
-        let scans = decoded.as_array().unwrap();
-        println!("Decoded {} scans", scans.len());
-
-        let mut points_this_scan: Vec<Point2D> = Vec::new();
-
-        for sample in scans {
-            let el = sample.as_array().unwrap();
-            let angle = &el[0].clone().as_float().unwrap();
-            let distance = &el[1].clone().as_float().unwrap();
-
-            if *distance > 0.0 {
-                let point = measurement_to_point(angle, distance);
-                let (x, y) = point;
-                if x < 0.0 && y < 0.0 {
-                    points_this_scan.push(point);
-                }
-            }
-        }
-
-        scan_points.insert(String::from(serial), points_this_scan);
-
-        // println!("Updated scan samples hashmap: {:?}", scan_points);
-
-        let combined_points = clustering::combine_all_points(&scan_points);
-
-        println!(
-            "Combined {} points from all devices",
-            (combined_points.len() / 2)
-        );
-
-        let (clusters, outliers) = clustering.fit(&combined_points);
-
-        println!("Clustering done");
-        println!(
-            "Found {} clusters, {} outliers",
-            clusters.len(),
-            outliers.len()
-        );
-
-        // Shadowed "clusters" - now as Cluster2D ("points")
-        let clusters: Vec<Cluster2D> = clusters
-            .iter()
-            .map(|c| {
-                let (cluster_index, point_indexes) = c;
-                let matched_points = point_indexes
-                    .iter()
-                    .map(|i| {
-                        let point = combined_points.row(*i);
-                        (point[0], point[1])
-                        // Point2D {
-                        //     x: point[0],
-                        //     y: point[1],
-                        // }
-                    })
-                    .collect();
-
-                let id = u64::try_from(*cluster_index).unwrap();
-                clustering::consolidate_cluster_points(matched_points, id)
-            })
-            .collect();
-
-        let clusters: Vec<MsgPack> = clusters
-            .iter()
-            .map(|c| {
-                MsgPack::Map(vec![
-                    MapElement {
-                        key: MsgPack::String("id".to_string()),
-                        value: MsgPack::Uint(c.id),
-                    },
-                    MapElement {
-                        key: MsgPack::String("x".to_string()),
-                        value: MsgPack::Float(c.position.0),
-                    },
-                    MapElement {
-                        key: MsgPack::String("y".to_string()),
-                        value: MsgPack::Float(c.position.1),
-                    },
-                    MapElement {
-                        key: MsgPack::String("size".to_string()),
-                        value: MsgPack::Float(c.size),
-                    },
-                ])
-            })
-            .collect();
-
-        let payload = MsgPack::Array(clusters);
-        let message = mqtt::Message::new(cluster_output_topic, payload.encode(), mqtt::QOS_0);
-
-        Ok(message)
-    } else {
-        Err(())
-    }
-}
-
-fn parse_agent_id(topic: &str) -> &str {
-    let parts: Vec<&str> = topic.split('/').collect();
-    parts[1]
-}
-
-fn build_topic(agent_type: &str, agent_id: &str, plug_name: &str) -> String {
-    format!("{}/{}/{}", agent_type, agent_id, plug_name)
-}
-
-fn measurement_to_point(angle: &f64, distance: &f64) -> Point2D {
-    (
-        angle.to_radians().cos() * distance,
-        angle.to_radians().sin() * distance,
-    )
 }
