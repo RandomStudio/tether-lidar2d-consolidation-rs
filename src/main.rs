@@ -1,12 +1,13 @@
 use mqtt::Message;
 use msgpack_simple::{MapElement, MsgPack};
-use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
 
 use futures::{executor::block_on, stream::StreamExt};
 use paho_mqtt as mqtt;
 use std::{env, process, time::Duration};
+
+mod clustering;
 
 // The topics to which we subscribe.
 const TOPICS: &[&str] = &["+/+/scans"];
@@ -160,7 +161,7 @@ async fn handle_scan_message(
 
         // println!("Updated scan samples hashmap: {:?}", scan_points);
 
-        let combined_points = combine_all_points(&scan_points);
+        let combined_points = clustering::combine_all_points(&scan_points);
 
         println!(
             "Combined {} points from all devices",
@@ -223,9 +224,9 @@ async fn handle_scan_message(
             .collect();
 
         let payload = MsgPack::Array(clusters);
-        let msg = mqtt::Message::new(cluster_output_topic, payload.encode(), mqtt::QOS_0);
+        let message = mqtt::Message::new(cluster_output_topic, payload.encode(), mqtt::QOS_0);
 
-        Ok(msg)
+        Ok(message)
     } else {
         Err(())
     }
@@ -245,16 +246,6 @@ fn measurement_to_point(angle: &f64, distance: &f64) -> Point2D {
         angle.to_radians().cos() * distance,
         angle.to_radians().sin() * distance,
     )
-}
-
-fn combine_all_points(device_points: &HashMap<String, Vec<Point2D>>) -> ndarray::Array2<f64> {
-    let mut all_points = Array::zeros((0, 2));
-    for (_device, points) in device_points {
-        for (x, y) in points {
-            all_points.push_row(ArrayView::from(&[*x, *y])).unwrap()
-        }
-    }
-    all_points
 }
 
 struct Bounds2D {
