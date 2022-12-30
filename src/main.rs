@@ -6,6 +6,7 @@ use paho_mqtt as mqtt;
 use std::{env, process, time::Duration};
 
 mod clustering;
+mod config;
 mod tether_utils;
 
 // The topics to which we subscribe (Input Plugs)
