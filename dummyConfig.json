@@ -1,0 +1,10 @@
+{
+  "devices": [
+    {
+      "serial": "dummy1"
+    },
+    {
+      "serial": "dummy2"
+    }
+  ]
+}
