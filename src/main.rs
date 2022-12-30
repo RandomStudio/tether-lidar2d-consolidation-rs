@@ -15,12 +15,7 @@ use std::collections::HashMap;
 
 type Point2D = (f64, f64);
 
-// #[derive(Debug)]
-// struct Point2D {
-//     x: f64,
-//     y: f64,
-// }
-
+#[derive(Debug)]
 struct Cluster2D {
     id: u64,
     position: Point2D,
