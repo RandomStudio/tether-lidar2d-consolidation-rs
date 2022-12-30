@@ -74,9 +74,7 @@ fn main() {
 
         // Initialise config, now that we have the MQTT client ready
         let mut config = Config::new();
-        match config.load_config_from_file(
-            "/Users/stephen/repos/tether/tether-lidar2d-consolidation-rs/dummyConfig.json",
-        ) {
+        match config.load_config_from_file("./dummyConfig.json") {
             Ok(count) => {
                 println!("Loaded {} devices OK into Config", count);
                 let output_topic = build_topic(AGENT_TYPE, AGENT_ID, "provideLidarConfig");
