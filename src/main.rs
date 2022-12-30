@@ -1,3 +1,4 @@
+use config::config_state::{ConfigManager, LidarDevice};
 use petal_clustering::Dbscan;
 use petal_neighbors::distance::Euclidean;
 
@@ -37,6 +38,19 @@ const AGENT_ID: &str = "rsTest";
 fn main() {
     // Initialize the logger from the environment
     env_logger::init();
+
+    // Initialise config
+    let mut config = ConfigManager::new();
+    match config.load_lidar_config(vec![LidarDevice {
+        serial: String::from("dummy"),
+    }]) {
+        Ok(count) => {
+            println!("Loaded {} devices OK into Config", count);
+        }
+        Err(()) => {
+            panic!("Error loading devices into config manager!")
+        }
+    }
 
     let host = env::args()
         .nth(1)

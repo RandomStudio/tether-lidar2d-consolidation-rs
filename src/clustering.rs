@@ -142,6 +142,7 @@ pub async fn handle_scan_message(
             })
             .collect();
 
+        // Shadowed "clusters" - now as MsgPack Elements
         let clusters: Vec<MsgPack> = clusters
             .iter()
             .map(|c| {
