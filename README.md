@@ -12,6 +12,8 @@ The "proper" high-performance solution should be something like [msgpack-rust](h
 
 For now, we are using [msgpack-simple](https://crates.io/crates/msgpack_simple) which warns that it is "not as performant as static solutions" but seems much easier to use as a starting point.
 
+Since we are already using serde for JSON, we should probably just use [rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) for MsgPack, too!
+
 ### Clustering
 We tried the library [kddbscan](https://crates.io/crates/kddbscan), but although this may well be more "accurate" it seems to run far too slowly. In any case, this is a very different algorithm from the DBSCAN used in the OG Agent.
 
@@ -35,6 +37,7 @@ We are using a combination of the libraries [serde](https://serde.rs/) and [serd
 
   ## TODO
   - [ ] Maintain "state" (config data) and publish this on startup, preferably with QOS_2 and retain=true - this should allow the visualiser to start showing scan data
+  - [ ] Use [rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) for MsgPacg instead of msgpack_simple
   - [ ] Transform incoming scan points: rotation and position/offset
   - [ ] Read/write config data from/to disk
   - [ ] Handle ROI, transformation (warping)
