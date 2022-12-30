@@ -1,10 +1,22 @@
 {
   "devices": [
     {
-      "serial": "dummy1"
+      "serial": "dummy001",
+      "name": "aDummyLidarDevice_1",
+      "rotation": 0,
+      "x": 0,
+      "y": 0,
+      "color": "#ff0000",
+      "minDistanceThreshold": 20
     },
     {
-      "serial": "dummy__2"
+      "serial": "dummy002",
+      "name": "anotherDevice",
+      "rotation": 91.5,
+      "x": 100,
+      "y": -500,
+      "color": "#00ff00",
+      "minDistanceThreshold": 20
     }
   ]
 }

@@ -5,9 +5,18 @@ pub mod config_state {
 
     use serde::{Deserialize, Serialize};
 
+    type ScanMaskThreshold = (f64, f64); // angle, distance
     #[derive(Serialize, Deserialize, Debug)]
+    #[serde(rename_all = "camelCase")]
     pub struct LidarDevice {
-        pub serial: String,
+        serial: String,
+        name: String,
+        rotation: f64,
+        x: f64,
+        y: f64,
+        color: String,
+        min_distance_threshold: f64,
+        scan_mask_thresholds: Option<Vec<ScanMaskThreshold>>,
     }
 
     #[derive(Serialize, Deserialize, Debug)]
