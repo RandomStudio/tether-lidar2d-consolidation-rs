@@ -15,10 +15,10 @@ const QOS: &[i32] = &[1, 1];
 
 use std::collections::HashMap;
 
-type Point2D = (f64, f64);
+pub type Point2D = (f64, f64);
 
 #[derive(Debug)]
-struct Cluster2D {
+pub struct Cluster2D {
     id: u64,
     position: Point2D,
     size: f64,
@@ -195,7 +195,7 @@ async fn handle_scan_message(
                     .collect();
 
                 let id = u64::try_from(*cluster_index).unwrap();
-                consolidate_cluster_points(matched_points, id)
+                clustering::consolidate_cluster_points(matched_points, id)
             })
             .collect();
 
@@ -246,55 +246,4 @@ fn measurement_to_point(angle: &f64, distance: &f64) -> Point2D {
         angle.to_radians().cos() * distance,
         angle.to_radians().sin() * distance,
     )
-}
-
-struct Bounds2D {
-    x_min: Option<f64>,
-    y_min: Option<f64>,
-    x_max: Option<f64>,
-    y_max: Option<f64>,
-}
-/**
-Consolidate points in a cluster to a single "Cluster2D" (same as Point2D, but including size)
-*/
-fn consolidate_cluster_points(points: Vec<Point2D>, id: u64) -> Cluster2D {
-    let bounds = points.iter().fold(
-        Bounds2D {
-            x_min: None,
-            y_min: None,
-            x_max: None,
-            y_max: None,
-        },
-        |acc, point| {
-            let (x, y) = point;
-            Bounds2D {
-                x_min: match acc.x_min {
-                    None => Some(*x),
-                    Some(v) => Some(v.min(*x)),
-                },
-                y_min: match acc.y_min {
-                    None => Some(*y),
-                    Some(v) => Some(v.min(*y)),
-                },
-                x_max: match acc.x_max {
-                    None => Some(*x),
-                    Some(v) => Some(v.max(*x)),
-                },
-                y_max: match acc.y_max {
-                    None => Some(*y),
-                    Some(v) => Some(v.max(*y)),
-                },
-            }
-        },
-    );
-    let width = bounds.x_max.unwrap() - bounds.x_min.unwrap();
-    let height = bounds.y_max.unwrap() - bounds.y_min.unwrap();
-    Cluster2D {
-        id,
-        position: (
-            bounds.x_min.unwrap() + 0.5 * width,
-            bounds.y_min.unwrap() + 0.5 * height,
-        ),
-        size: { width.max(height) },
-    }
 }
