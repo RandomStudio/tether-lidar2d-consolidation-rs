@@ -8,9 +8,12 @@ use std::{env, process, time::Duration};
 mod clustering;
 mod tether_utils;
 
-// The topics to which we subscribe.
-const TOPICS: &[&str] = &["+/+/scans"];
-const QOS: &[i32] = &[1, 1];
+// The topics to which we subscribe (Input Plugs)
+const SCANS_TOPIC: &str = "+/+/scans";
+const TOPICS: &[&str] = &[SCANS_TOPIC];
+
+// Corresponding QOS level for each of the above
+const QOS: &[i32] = &[0];
 
 use std::collections::HashMap;
 
@@ -55,16 +58,12 @@ fn main() {
         // Get message stream before connecting.
         let mut strm = client.get_stream(25);
 
-        // Define the set of options for the connection
-        let lwt = mqtt::Message::new("test", "Async subscriber lost connection", mqtt::QOS_1);
-
         let conn_opts = mqtt::ConnectOptionsBuilder::new()
             .user_name("tether")
             .password("sp_ceB0ss!")
             .keep_alive_interval(Duration::from_secs(30))
             .mqtt_version(mqtt::MQTT_VERSION_3_1_1)
             .clean_session(false)
-            .will_message(lwt)
             .finalize();
 
         // Make the connection to the broker
@@ -93,28 +92,32 @@ fn main() {
         let cluster_output_topic = build_topic(AGENT_TYPE, AGENT_ID, "clusters");
 
         while let Some(msg_opt) = strm.next().await {
-            if let Some(msg) = msg_opt {
-                match clustering::handle_scan_message(
-                    &msg,
-                    &mut scan_points,
-                    &mut clustering,
-                    &cluster_output_topic,
-                )
-                .await
-                {
-                    Ok(message) => {
-                        client.publish(message).await.unwrap();
-                    }
-                    Err(()) => {
-                        println!("Something went wrong building the clusters message to send");
+            match msg_opt {
+                Some(message) => {
+                    // TODO: check which topic we received on, so that messages are passed to correct handlers
+                    match clustering::handle_scan_message(
+                        &message,
+                        &mut scan_points,
+                        &mut clustering,
+                        &cluster_output_topic,
+                    )
+                    .await
+                    {
+                        Ok(message) => {
+                            client.publish(message).await.unwrap();
+                        }
+                        Err(()) => {
+                            println!("Something went wrong building the clusters message to send");
+                        }
                     }
                 }
-            } else {
-                // A "None" means we were disconnected. Try to reconnect...
-                println!("Lost connection. Attempting reconnect.");
-                while let Err(err) = client.reconnect().await {
-                    println!("Error reconnecting: {}", err);
-                    async_std::task::sleep(Duration::from_millis(1000)).await;
+                None => {
+                    // A "None" means we were disconnected. Try to reconnect...
+                    println!("Lost connection. Attempting reconnect.");
+                    while let Err(err) = client.reconnect().await {
+                        println!("Error reconnecting: {}", err);
+                        async_std::task::sleep(Duration::from_millis(1000)).await;
+                    }
                 }
             }
         }
