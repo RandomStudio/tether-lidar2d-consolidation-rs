@@ -15,7 +15,7 @@ pub mod config_state {
             ConfigManager { devices: vec![] }
         }
 
-        fn provide_lidar_config(&self, provide_config_topic: &str) -> Result<mqtt::Message, ()> {
+        pub fn load_config(&self, provide_config_topic: &str) -> Result<mqtt::Message, ()> {
             let devices: Vec<MsgPack> = self
                 .devices
                 .iter()
@@ -27,7 +27,10 @@ pub mod config_state {
                 })
                 .collect();
 
-            let payload = MsgPack::Array(devices);
+            let payload = MsgPack::Map(vec![MapElement {
+                key: MsgPack::String("devices".to_string()),
+                value: MsgPack::Array(devices),
+            }]);
             let message = mqtt::Message::new(provide_config_topic, payload.encode(), 2);
             Ok(message)
         }

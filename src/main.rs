@@ -39,19 +39,6 @@ fn main() {
     // Initialize the logger from the environment
     env_logger::init();
 
-    // Initialise config
-    let mut config = ConfigManager::new();
-    match config.load_lidar_config(vec![LidarDevice {
-        serial: String::from("dummy"),
-    }]) {
-        Ok(count) => {
-            println!("Loaded {} devices OK into Config", count);
-        }
-        Err(()) => {
-            panic!("Error loading devices into config manager!")
-        }
-    }
-
     let host = env::args()
         .nth(1)
         .unwrap_or_else(|| "tcp://localhost:1883".to_string());
@@ -84,6 +71,22 @@ fn main() {
         // Make the connection to the broker
         println!("Connecting to the MQTT server...");
         client.connect(conn_opts).await?;
+
+        // Initialise config
+        let mut config = ConfigManager::new();
+        match config.load_lidar_config(vec![LidarDevice {
+            serial: String::from("dummy"),
+        }]) {
+            Ok(count) => {
+                println!("Loaded {} devices OK into Config", count);
+                let output_topic = build_topic(AGENT_TYPE, AGENT_ID, "provideLidarConfig");
+                let message = config.load_config(&output_topic);
+                client.publish(message.unwrap()).await.unwrap();
+            }
+            Err(()) => {
+                panic!("Error loading devices into config manager!")
+            }
+        }
 
         println!("Subscribing to topics: {:?}", TOPICS);
         client.subscribe_many(TOPICS, QOS).await?;
