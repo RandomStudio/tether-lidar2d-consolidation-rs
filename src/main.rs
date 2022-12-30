@@ -47,7 +47,7 @@ fn main() {
     // A real system should try harder to use a unique ID.
     let create_opts = mqtt::CreateOptionsBuilder::new()
         .server_uri(host)
-        .client_id("rust_async_subscribe")
+        .client_id("")
         .finalize();
 
     // Create the client connection
@@ -65,7 +65,7 @@ fn main() {
             .password("sp_ceB0ss!")
             .keep_alive_interval(Duration::from_secs(30))
             .mqtt_version(mqtt::MQTT_VERSION_3_1_1)
-            .clean_session(false)
+            .clean_session(true)
             .finalize();
 
         // Make the connection to the broker
