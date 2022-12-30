@@ -1,4 +1,4 @@
-use mqtt::{AsyncClient, Message};
+use mqtt::Message;
 use msgpack_simple::{MapElement, MsgPack};
 use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
@@ -92,14 +92,21 @@ fn main() {
 
         while let Some(msg_opt) = strm.next().await {
             if let Some(msg) = msg_opt {
-                handle_scan_message(
+                match handle_scan_message(
                     &msg,
                     &mut scan_points,
                     &mut clustering,
                     &cluster_output_topic,
-                    &client,
                 )
-                .await;
+                .await
+                {
+                    Ok(message) => {
+                        client.publish(message).await.unwrap();
+                    }
+                    Err(()) => {
+                        println!("Something went wrong sending the cluster message");
+                    }
+                }
             } else {
                 // A "None" means we were disconnected. Try to reconnect...
                 println!("Lost connection. Attempting reconnect.");
@@ -121,8 +128,7 @@ async fn handle_scan_message(
     scan_points: &mut HashMap<String, Vec<Point2D>>,
     clustering: &mut Dbscan<f64, Euclidean>,
     cluster_output_topic: &str,
-    client: &AsyncClient,
-) {
+) -> Result<Message, ()> {
     println!("Received message on topic \"{}\":", msg.topic());
     let payload = msg.payload().to_vec();
     let decoded = MsgPack::parse(&payload).unwrap();
@@ -218,7 +224,10 @@ async fn handle_scan_message(
 
         let payload = MsgPack::Array(clusters);
         let msg = mqtt::Message::new(cluster_output_topic, payload.encode(), mqtt::QOS_0);
-        client.publish(msg).await.unwrap();
+
+        Ok(msg)
+    } else {
+        Err(())
     }
 }
 
