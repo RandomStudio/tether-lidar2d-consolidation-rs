@@ -62,14 +62,12 @@ fn main() {
         println!("Connecting to the MQTT server...");
         client.connect(conn_opts).await?;
 
-        let output_topic = build_topic(AGENT_TYPE, AGENT_ID, "provideLidarConfig");
-
         // Initialise config, now that we have the MQTT client ready
-        let mut config = Config::new();
+        let mut config = Config::new(&build_topic(AGENT_TYPE, AGENT_ID, "provideLidarConfig"));
         match config.load_config_from_file("./dummyConfig.json") {
             Ok(count) => {
                 println!("Loaded {} devices OK into Config", count);
-                let message = config.publish_config(&output_topic);
+                let message = config.publish_config();
                 client.publish(message.unwrap()).await.unwrap();
             }
             Err(()) => {
@@ -95,7 +93,7 @@ fn main() {
 
                     let count_created = config.check_or_create_device(serial).unwrap();
                     if count_created > 0 {
-                        let message = config.publish_config(&output_topic);
+                        let message = config.publish_config();
                         client.publish(message.unwrap()).await.unwrap();
                     }
 

@@ -25,16 +25,21 @@ pub mod config_state {
     #[derive(Serialize, Deserialize, Debug)]
     pub struct Config {
         devices: Vec<LidarDevice>,
+        #[serde(skip)]
+        output_topic: String,
     }
 
     impl Config {
-        pub fn new() -> Config {
-            Config { devices: vec![] }
+        pub fn new(output_topic: &str) -> Config {
+            Config {
+                devices: vec![],
+                output_topic: String::from(output_topic),
+            }
         }
 
-        pub fn publish_config(&self, provide_config_topic: &str) -> Result<mqtt::Message, ()> {
+        pub fn publish_config(&self) -> Result<mqtt::Message, ()> {
             let payload: Vec<u8> = to_vec_named(&self).unwrap();
-            let message = mqtt::Message::new(provide_config_topic, payload, 2);
+            let message = mqtt::Message::new(&self.output_topic, payload, 2);
             Ok(message)
         }
 
