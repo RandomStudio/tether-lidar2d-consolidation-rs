@@ -23,13 +23,6 @@ use crate::tether_utils::build_topic;
 
 pub type Point2D = (f64, f64);
 
-#[derive(Debug)]
-pub struct Cluster2D {
-    id: u64,
-    position: Point2D,
-    size: f64,
-}
-
 const AGENT_TYPE: &str = "lidarConsolidation";
 const AGENT_ID: &str = "rsTest";
 
