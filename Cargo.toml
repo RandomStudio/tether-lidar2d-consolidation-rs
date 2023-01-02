@@ -16,5 +16,6 @@ petal-neighbors = "0.8.0"
 ndarray = "0.15.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.91"
+rmp-serde = "1.1.1"
 
 [dev-dependencies]

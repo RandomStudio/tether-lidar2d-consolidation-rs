@@ -1,8 +1,9 @@
 pub mod config_state {
 
-    use msgpack_simple::{MapElement, MsgPack};
     use paho_mqtt as mqtt;
 
+    use rmp_serde as rmps;
+    use rmps::to_vec_named;
     use serde::{Deserialize, Serialize};
 
     type ScanMaskThreshold = (f64, f64); // angle, distance
@@ -30,22 +31,8 @@ pub mod config_state {
         }
 
         pub fn publish_config(&self, provide_config_topic: &str) -> Result<mqtt::Message, ()> {
-            let devices: Vec<MsgPack> = self
-                .devices
-                .iter()
-                .map(|d| {
-                    MsgPack::Map(vec![MapElement {
-                        key: MsgPack::String("serial".to_string()),
-                        value: MsgPack::String(d.serial.clone()),
-                    }])
-                })
-                .collect();
-
-            let payload = MsgPack::Map(vec![MapElement {
-                key: MsgPack::String("devices".to_string()),
-                value: MsgPack::Array(devices),
-            }]);
-            let message = mqtt::Message::new(provide_config_topic, payload.encode(), 2);
+            let payload: Vec<u8> = to_vec_named(&self.devices).unwrap();
+            let message = mqtt::Message::new(provide_config_topic, payload, 2);
             Ok(message)
         }
 
