@@ -1,7 +1,7 @@
 {
   "devices": [
     {
-      "serial": "dummy001",
+      "serial": "H1522184",
       "name": "aDummyLidarDevice_1",
       "rotation": 0,
       "x": 0,
@@ -10,7 +10,7 @@
       "minDistanceThreshold": 20
     },
     {
-      "serial": "H1522184",
+      "serial": "dummyDevice",
       "name": "anotherDevice",
       "rotation": 91.5,
       "x": 100,

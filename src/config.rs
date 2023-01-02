@@ -18,6 +18,7 @@ pub mod config_state {
         color: String,
         min_distance_threshold: f64,
         scan_mask_thresholds: Option<Vec<ScanMaskThreshold>>,
+        flip_coords: Option<(i8, i8)>,
     }
 
     #[derive(Serialize, Deserialize, Debug)]
@@ -31,7 +32,7 @@ pub mod config_state {
         }
 
         pub fn publish_config(&self, provide_config_topic: &str) -> Result<mqtt::Message, ()> {
-            let payload: Vec<u8> = to_vec_named(&self.devices).unwrap();
+            let payload: Vec<u8> = to_vec_named(&self).unwrap();
             let message = mqtt::Message::new(provide_config_topic, payload, 2);
             Ok(message)
         }

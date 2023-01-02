@@ -1,6 +1,4 @@
 use config::config_state::Config;
-use petal_clustering::Dbscan;
-use petal_neighbors::distance::Euclidean;
 
 use futures::{executor::block_on, stream::StreamExt};
 use paho_mqtt as mqtt;
@@ -17,8 +15,7 @@ const TOPICS: &[&str] = &[SCANS_TOPIC];
 // Corresponding QOS level for each of the above
 const QOS: &[i32] = &[0];
 
-use std::collections::HashMap;
-
+use crate::clustering::ClusteringSystem;
 use crate::tether_utils::build_topic;
 
 pub type Point2D = (f64, f64);
@@ -85,18 +82,7 @@ fn main() {
         // Just loop on incoming messages.
         println!("Waiting for messages...");
 
-        // Note that we're not providing a way to cleanly shut down and
-        // disconnect. Therefore, when you kill this app (with a ^C or
-        // whatever) the server will get an unexpected drop and then
-        // should emit the LWT message.
-
-        let mut scan_points: HashMap<String, Vec<Point2D>> = HashMap::new();
-
-        let mut clustering = Dbscan {
-            eps: 300.,
-            min_samples: 2,
-            metric: Euclidean::default(),
-        };
+        let mut clustering_system = ClusteringSystem::new(300., 2);
 
         let cluster_output_topic = build_topic(AGENT_TYPE, AGENT_ID, "clusters");
 
@@ -104,13 +90,9 @@ fn main() {
             match msg_opt {
                 Some(message) => {
                     // TODO: check which topic we received on, so that messages are passed to correct handlers
-                    match clustering::handle_scan_message(
-                        &message,
-                        &mut scan_points,
-                        &mut clustering,
-                        &cluster_output_topic,
-                    )
-                    .await
+                    match clustering_system
+                        .handle_scan_message(&message, &cluster_output_topic)
+                        .await
                     {
                         Ok(message) => {
                             client.publish(message).await.unwrap();
