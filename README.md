@@ -8,11 +8,10 @@ Initially we tried using [mqtt-rs](https://github.com/zonyitoo/mqtt-rs), as it s
 For now have settled on [paho-mqtt](https://crates.io/crates/paho-mqtt) since it seems well-supported and provides examples in realistic scenarios (especially async).
 
 ### MessagePack encoding/decoding
-The "proper" high-performance solution should be something like [msgpack-rust](https://github.com/3Hren/msgpack-rust) but it is not clear how to construct maps (key/values) without further examples.
+[rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) is useful for both JSON and MsgPack serialisation/deserialisation. We might not be taking full advantage of zero-copy operations everywhere, but this will take a little more time to figure out.
 
-For now, we are using [msgpack-simple](https://crates.io/crates/msgpack_simple) which warns that it is "not as performant as static solutions" but seems much easier to use as a starting point.
+In the beginning we tried [msgpack-simple](https://crates.io/crates/msgpack_simple) which warns that it is "not as performant as static solutions" but was much easier to use as a starting point.
 
-Since we are already using serde for JSON, we should probably just use [rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) for MsgPack, too!
 
 ### Clustering
 We tried the library [kddbscan](https://crates.io/crates/kddbscan), but although this may well be more "accurate" it seems to run far too slowly. In any case, this is a very different algorithm from the DBSCAN used in the OG Agent.
