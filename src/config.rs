@@ -1,12 +1,13 @@
 pub mod config_state {
 
+    use std::collections::HashMap;
+
     use paho_mqtt as mqtt;
 
     use rmp_serde as rmps;
     use rmps::to_vec_named;
     use serde::{Deserialize, Serialize};
 
-    type ScanMaskThreshold = (f64, f64); // angle, distance
     #[derive(Serialize, Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
     pub struct LidarDevice {
@@ -17,7 +18,7 @@ pub mod config_state {
         y: f64,
         color: String,
         min_distance_threshold: f64,
-        scan_mask_thresholds: Option<Vec<ScanMaskThreshold>>,
+        scan_mask_thresholds: Option<HashMap<String, f64>>,
         flip_coords: Option<(i8, i8)>,
     }
 
