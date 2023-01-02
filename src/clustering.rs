@@ -69,9 +69,7 @@ impl ClusteringSystem {
             let (angle, distance) = sample;
 
             if distance > 0.0 {
-                let point = measurement_to_point(&angle, &distance);
-                let (x, y) = point;
-                if x < 0.0 && y < 0.0 {
+                if let Some(point) = measurement_to_point(&angle, &distance, device) {
                     points_this_scan.push(point);
                 }
             }
@@ -180,9 +178,36 @@ pub fn consolidate_cluster_points(points: Vec<Point2D>, id: u64) -> Cluster2D {
     }
 }
 
-fn measurement_to_point(angle: &f64, distance: &f64) -> Point2D {
-    (
-        angle.to_radians().cos() * distance,
-        angle.to_radians().sin() * distance,
-    )
+fn measurement_to_point(angle: &f64, distance: &f64, device: &LidarDevice) -> Option<Point2D> {
+    let LidarDevice {
+        x,
+        y,
+        rotation,
+        flip_coords,
+        min_distance_threshold,
+        ..
+    } = device;
+    if *distance > 0. && *distance > *min_distance_threshold {
+        match flip_coords {
+            None => Some((
+                *x + (angle + *rotation).to_radians().cos() * distance,
+                *y + (angle + *rotation).to_radians().sin() * distance,
+            )),
+            Some((flip_x, flip_y)) => {
+                let altered_angle = {
+                    if flip_x == flip_y {
+                        *angle + *rotation
+                    } else {
+                        *angle - *rotation
+                    }
+                };
+                Some((
+                    *x + altered_angle.to_radians().cos() * *distance * (*flip_x as f64),
+                    *y + altered_angle.to_radians().sin() * *distance * (*flip_y as f64),
+                ))
+            }
+        }
+    } else {
+        return None;
+    }
 }

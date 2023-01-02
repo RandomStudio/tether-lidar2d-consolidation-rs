@@ -13,13 +13,13 @@ pub mod config_state {
     pub struct LidarDevice {
         pub serial: String,
         name: String,
-        rotation: f64,
-        x: f64,
-        y: f64,
+        pub rotation: f64,
+        pub x: f64,
+        pub y: f64,
         color: String,
-        min_distance_threshold: f64,
-        scan_mask_thresholds: Option<HashMap<String, f64>>,
-        flip_coords: Option<(i8, i8)>,
+        pub min_distance_threshold: f64,
+        pub scan_mask_thresholds: Option<HashMap<String, f64>>,
+        pub flip_coords: Option<(i8, i8)>,
     }
 
     #[derive(Serialize, Deserialize, Debug)]
