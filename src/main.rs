@@ -82,16 +82,15 @@ fn main() {
         // Just loop on incoming messages.
         println!("Waiting for messages...");
 
-        let mut clustering_system = ClusteringSystem::new(300., 2);
-
-        let cluster_output_topic = build_topic(AGENT_TYPE, AGENT_ID, "clusters");
+        let mut clustering_system =
+            ClusteringSystem::new(300., 2, &build_topic(AGENT_TYPE, AGENT_ID, "clusters"));
 
         while let Some(msg_opt) = strm.next().await {
             match msg_opt {
-                Some(message) => {
+                Some(incoming_message) => {
                     // TODO: check which topic we received on, so that messages are passed to correct handlers
                     match clustering_system
-                        .handle_scan_message(&message, &cluster_output_topic)
+                        .handle_scan_message(&incoming_message)
                         .await
                     {
                         Ok(message) => {

@@ -28,10 +28,15 @@ struct Bounds2D {
 pub struct ClusteringSystem {
     scan_points: HashMap<String, Vec<Point2D>>,
     clustering_engine: Dbscan<f64, Euclidean>,
+    output_topic: String,
 }
 
 impl ClusteringSystem {
-    pub fn new(neighbourhood_radius: f64, min_neighbourss: usize) -> ClusteringSystem {
+    pub fn new(
+        neighbourhood_radius: f64,
+        min_neighbourss: usize,
+        output_topic: &str,
+    ) -> ClusteringSystem {
         ClusteringSystem {
             scan_points: HashMap::new(),
             clustering_engine: Dbscan {
@@ -39,20 +44,23 @@ impl ClusteringSystem {
                 min_samples: min_neighbourss,
                 metric: Euclidean::default(),
             },
+            output_topic: String::from(output_topic),
         }
     }
 
     pub async fn handle_scan_message(
         &mut self,
-        msg: &mqtt::Message,
-        cluster_output_topic: &str,
+        incoming_message: &mqtt::Message,
     ) -> Result<mqtt::Message, ()> {
-        println!("Received message on topic \"{}\":", msg.topic());
-        let payload = msg.payload().to_vec();
+        println!(
+            "Received message on topic \"{}\":",
+            incoming_message.topic()
+        );
+        let payload = incoming_message.payload().to_vec();
 
         let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
 
-        let serial = parse_agent_id(msg.topic());
+        let serial = parse_agent_id(incoming_message.topic());
         println!("Device serial is determined as: {}", serial);
 
         println!("Decoded {} scans", scans.len());
@@ -115,7 +123,7 @@ impl ClusteringSystem {
             .collect();
 
         let payload: Vec<u8> = to_vec_named(&clusters).unwrap();
-        let message = mqtt::Message::new(cluster_output_topic, payload, mqtt::QOS_0);
+        let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_0);
 
         Ok(message)
     }
