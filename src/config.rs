@@ -54,8 +54,8 @@ pub mod config_state {
             Ok(self.devices.len())
         }
 
-        /*  If the device is known, return its Config;
-        otherwise create a new device with defaults and return that. */
+        /**  If the device is known, return 0; if unknown, create it and report that 1
+        device was created. */
         pub fn check_or_create_device(&mut self, serial: &str) -> Result<usize, Error> {
             let existing = self.devices.iter().find(|&d| d.serial.eq(serial));
             match existing {
