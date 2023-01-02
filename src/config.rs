@@ -27,24 +27,30 @@ pub mod config_state {
         devices: Vec<LidarDevice>,
         #[serde(skip)]
         output_topic: String,
+        #[serde(skip)]
+        config_file_path: String,
     }
 
     impl Config {
-        pub fn new(output_topic: &str) -> Config {
+        pub fn new(output_topic: &str, config_file_path: &str) -> Config {
             Config {
                 devices: vec![],
                 output_topic: String::from(output_topic),
+                config_file_path: String::from(config_file_path),
             }
         }
 
-        pub fn publish_config(&self) -> Result<mqtt::Message, ()> {
+        pub fn publish_config(&self, also_save: bool) -> Result<mqtt::Message, ()> {
             let payload: Vec<u8> = to_vec_named(&self).unwrap();
             let message = mqtt::Message::new(&self.output_topic, payload, 2);
+            if also_save {
+                self.write_config_to_file().unwrap();
+            }
             Ok(message)
         }
 
-        pub fn load_config_from_file(&mut self, path: &str) -> Result<usize, ()> {
-            let text = std::fs::read_to_string(&path).unwrap();
+        pub fn load_config_from_file(&mut self) -> Result<usize, ()> {
+            let text = std::fs::read_to_string(&self.config_file_path).unwrap();
             let data: Config = serde_json::from_str(&text).unwrap();
 
             println!("Config parsed data from file: {:?}", data);
@@ -52,6 +58,15 @@ pub mod config_state {
             self.devices = data.devices;
 
             Ok(self.devices.len())
+        }
+
+        pub fn write_config_to_file(&self) -> Result<(), Error> {
+            let text = serde_json::to_string(self).unwrap();
+            std::fs::write(&self.config_file_path, text).unwrap();
+
+            println!("Wrote config to file: {:?}", self.config_file_path);
+
+            Ok(())
         }
 
         /**  If the device is known, return 0; if unknown, create it and report that 1
