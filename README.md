@@ -35,10 +35,10 @@ We are using a combination of the libraries [serde](https://serde.rs/) and [serd
   - Clustering should be recalculated on every incoming message because point data has now been updated. Possibly this message should also be re-emitted on an interval (timeout/debounce).
 
   ## TODO
-  - [ ] Maintain "state" (config data) and publish this on startup, preferably with QOS_2 and retain=true - this should allow the visualiser to start showing scan data
-  - [ ] Use [rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) for MsgPacg instead of msgpack_simple
+  - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
+  - [x] Use [rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) for MsgPacg instead of msgpack_simple
+  - [x] Read/write config data from/to disk
   - [ ] Transform incoming scan points: rotation and position/offset
-  - [ ] Read/write config data from/to disk
   - [ ] Handle ROI, transformation (warping)
   - [ ] Close the client properly on quit, so that the queue is also properly destroyed
   - [ ] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether

@@ -1,15 +1,3 @@
 {
-  "devices": [
-    {
-      "serial": "H1522184",
-      "name": "H1522184",
-      "rotation": 0.0,
-      "x": 0.0,
-      "y": 0.0,
-      "color": "#ffffff",
-      "minDistanceThreshold": 0.0,
-      "scanMaskThresholds": null,
-      "flipCoords": null
-    }
-  ]
+  "devices": []
 }
