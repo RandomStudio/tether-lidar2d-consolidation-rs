@@ -29,6 +29,7 @@ pub struct ClusteringSystem {
     scan_points: HashMap<String, Vec<Point2D>>,
     clustering_engine: Dbscan<f64, Euclidean>,
     output_topic: String,
+    max_cluster_size: f64,
 }
 
 impl ClusteringSystem {
@@ -36,6 +37,7 @@ impl ClusteringSystem {
         neighbourhood_radius: f64,
         min_neighbourss: usize,
         output_topic: &str,
+        max_cluster_size: f64,
     ) -> ClusteringSystem {
         ClusteringSystem {
             scan_points: HashMap::new(),
@@ -45,6 +47,7 @@ impl ClusteringSystem {
                 metric: Euclidean::default(),
             },
             output_topic: String::from(output_topic),
+            max_cluster_size,
         }
     }
 
@@ -116,6 +119,7 @@ impl ClusteringSystem {
                 let id = u64::try_from(*cluster_index).unwrap();
                 consolidate_cluster_points(matched_points, id)
             })
+            .filter(|cluster| cluster.size <= self.max_cluster_size)
             .collect();
 
         let payload: Vec<u8> = to_vec_named(&clusters).unwrap();

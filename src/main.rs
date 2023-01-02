@@ -20,8 +20,14 @@ use crate::tether_utils::{build_topic, parse_agent_id};
 
 pub type Point2D = (f64, f64);
 
+// TODO: some/all of these constants should be
+// overrideable via commandline args, etc.
 const AGENT_TYPE: &str = "lidarConsolidation";
 const AGENT_ID: &str = "rsTest";
+
+const NEIGHBOURHOOD_RADIUS: f64 = 300.;
+const MIN_NEIGHBOURS: usize = 2;
+const MAX_CLUSTER_SIZE: f64 = 2500.;
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -84,8 +90,12 @@ fn main() {
         // Just loop on incoming messages.
         println!("Waiting for messages...");
 
-        let mut clustering_system =
-            ClusteringSystem::new(300., 2, &build_topic(AGENT_TYPE, AGENT_ID, "clusters"));
+        let mut clustering_system = ClusteringSystem::new(
+            NEIGHBOURHOOD_RADIUS,
+            MIN_NEIGHBOURS,
+            &build_topic(AGENT_TYPE, AGENT_ID, "clusters"),
+            MAX_CLUSTER_SIZE,
+        );
 
         while let Some(msg_opt) = strm.next().await {
             match msg_opt {
