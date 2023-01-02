@@ -420,12 +420,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hex"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
-
-[[package]]
 name = "humantime"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -505,16 +499,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5de893c32cde5f383baa4c04c5d6dbdd735cfd4a794b0debdb2bb1b421da5ff4"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "msgpack_simple"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0378abb2e031179121c5c80dd88c7f78ce3eef8999648dbdfa40d982e76cb165"
-dependencies = [
- "byteorder",
- "hex",
 ]
 
 [[package]]
@@ -882,7 +866,6 @@ dependencies = [
  "async-std",
  "env_logger",
  "futures",
- "msgpack_simple",
  "ndarray",
  "paho-mqtt",
  "petal-clustering",

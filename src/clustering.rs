@@ -96,9 +96,6 @@ pub async fn handle_scan_message(
     let mut points_this_scan: Vec<Point2D> = Vec::new();
 
     for sample in scans {
-        // let el = sample.as_array().unwrap();
-        // let angle = &el[0].clone().as_float().unwrap();
-        // let distance = &el[1].clone().as_float().unwrap();
         let (angle, distance) = sample;
 
         if distance > 0.0 {
