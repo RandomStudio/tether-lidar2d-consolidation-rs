@@ -185,9 +185,13 @@ fn measurement_to_point(angle: &f64, distance: &f64, device: &LidarDevice) -> Op
         rotation,
         flip_coords,
         min_distance_threshold,
+        scan_mask_thresholds,
         ..
     } = device;
-    if *distance > 0. && *distance > *min_distance_threshold {
+    if *distance > 0.
+        && *distance > *min_distance_threshold
+        && passes_mask_threshold(angle, distance, &scan_mask_thresholds)
+    {
         match flip_coords {
             None => Some((
                 *x + (angle + *rotation).to_radians().cos() * distance,
@@ -209,5 +213,27 @@ fn measurement_to_point(angle: &f64, distance: &f64, device: &LidarDevice) -> Op
         }
     } else {
         return None;
+    }
+}
+
+fn passes_mask_threshold(
+    angle: &f64,
+    distance: &f64,
+    mask_thresholds: &Option<HashMap<String, f64>>,
+) -> bool {
+    match mask_thresholds {
+        None => true,
+        Some(masking_map) => {
+            let angle_key = angle.to_string();
+            if let Some(threshold) = masking_map.get(&angle_key) {
+                if *distance < *threshold {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                true
+            }
+        }
     }
 }
