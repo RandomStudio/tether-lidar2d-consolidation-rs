@@ -16,7 +16,7 @@ const TOPICS: &[&str] = &[SCANS_TOPIC];
 const QOS: &[i32] = &[0];
 
 use crate::clustering::ClusteringSystem;
-use crate::tether_utils::build_topic;
+use crate::tether_utils::{build_topic, parse_agent_id};
 
 pub type Point2D = (f64, f64);
 
@@ -89,8 +89,21 @@ fn main() {
             match msg_opt {
                 Some(incoming_message) => {
                     // TODO: check which topic we received on, so that messages are passed to correct handlers
+
+                    let serial = parse_agent_id(incoming_message.topic());
+
+                    let count_created = config.check_or_create_device(serial).unwrap();
+                    if count_created > 0 {
+                        println!(
+                            "Device with serial {} was unknown; created in config now",
+                            serial
+                        );
+                    }
+
+                    let device = config.get_device(serial).unwrap();
+
                     match clustering_system
-                        .handle_scan_message(&incoming_message)
+                        .handle_scan_message(&incoming_message, device)
                         .await
                     {
                         Ok(message) => {

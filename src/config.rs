@@ -1,6 +1,6 @@
 pub mod config_state {
 
-    use std::collections::HashMap;
+    use std::{collections::HashMap, fmt::Error};
 
     use paho_mqtt as mqtt;
 
@@ -11,7 +11,7 @@ pub mod config_state {
     #[derive(Serialize, Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
     pub struct LidarDevice {
-        serial: String,
+        pub serial: String,
         name: String,
         rotation: f64,
         x: f64,
@@ -48,7 +48,33 @@ pub mod config_state {
 
             Ok(self.devices.len())
         }
-    }
 
-    // pub fn provide_lidar_config(provide_config_topic: &str) -> Result<mqtt::Message, ()> {}
+        /*  If the device is known, return its Config;
+        otherwise create a new device with defaults and return that. */
+        pub fn check_or_create_device(&mut self, serial: &str) -> Result<usize, Error> {
+            let existing = self.devices.iter().find(|&d| d.serial.eq(serial));
+            match existing {
+                Some(_device) => Ok(0),
+                None => {
+                    let new_device = LidarDevice {
+                        serial: String::from(serial),
+                        name: String::from(serial),
+                        rotation: 0.,
+                        x: 0.,
+                        y: 0.,
+                        color: String::from("#ffffff"), // TODO: use random colour
+                        min_distance_threshold: 0.,
+                        scan_mask_thresholds: None,
+                        flip_coords: None,
+                    };
+                    self.devices.push(new_device);
+                    Ok(1)
+                }
+            }
+        }
+
+        pub fn get_device(&self, serial: &str) -> Option<&LidarDevice> {
+            self.devices.iter().find(|&d| d.serial.eq(serial))
+        }
+    }
 }

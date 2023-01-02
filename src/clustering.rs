@@ -1,4 +1,4 @@
-use crate::{tether_utils::parse_agent_id, Point2D};
+use crate::{config::config_state::LidarDevice, Point2D};
 
 use rmp_serde as rmps;
 use rmps::to_vec_named;
@@ -51,6 +51,7 @@ impl ClusteringSystem {
     pub async fn handle_scan_message(
         &mut self,
         incoming_message: &mqtt::Message,
+        device: &LidarDevice,
     ) -> Result<mqtt::Message, ()> {
         println!(
             "Received message on topic \"{}\":",
@@ -59,9 +60,6 @@ impl ClusteringSystem {
         let payload = incoming_message.payload().to_vec();
 
         let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
-
-        let serial = parse_agent_id(incoming_message.topic());
-        println!("Device serial is determined as: {}", serial);
 
         println!("Decoded {} scans", scans.len());
 
@@ -80,7 +78,7 @@ impl ClusteringSystem {
         }
 
         self.scan_points
-            .insert(String::from(serial), points_this_scan);
+            .insert(String::from(&device.serial), points_this_scan);
 
         // println!("Updated scan samples hashmap: {:?}", scan_points);
 
