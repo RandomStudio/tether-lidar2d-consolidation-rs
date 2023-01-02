@@ -61,7 +61,7 @@ pub mod config_state {
         }
 
         pub fn write_config_to_file(&self) -> Result<(), Error> {
-            let text = serde_json::to_string(self).unwrap();
+            let text = serde_json::to_string_pretty(self).unwrap();
             std::fs::write(&self.config_file_path, text).unwrap();
 
             println!("Wrote config to file: {:?}", self.config_file_path);
