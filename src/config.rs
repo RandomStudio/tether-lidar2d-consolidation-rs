@@ -69,12 +69,13 @@ pub mod config_state {
             Ok(())
         }
 
-        /**  If the device is known, return 0; if unknown, create it and report that 1
-        device was created. */
-        pub fn check_or_create_device(&mut self, serial: &str) -> Result<usize, Error> {
+        /**  If the device is known, return None; if unknown, create it and return
+        Some(())
+        */
+        pub fn check_or_create_device(&mut self, serial: &str) -> Option<()> {
             let existing = self.devices.iter().find(|&d| d.serial.eq(serial));
             match existing {
-                Some(_device) => Ok(0),
+                Some(_device) => None,
                 None => {
                     let new_device = LidarDevice {
                         serial: String::from(serial),
@@ -88,7 +89,7 @@ pub mod config_state {
                         flip_coords: None,
                     };
                     self.devices.push(new_device);
-                    Ok(1)
+                    Some(())
                 }
             }
         }

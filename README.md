@@ -25,6 +25,18 @@ Another possibility might be the library [linfa-clustering](https://crates.io/cr
 ### JSON serialisation / deserialisation
 We are using a combination of the libraries [serde](https://serde.rs/) and [serde_json](https://docs.rs/serde_json/latest/serde_json/#) which makes it easy to handle JSON in various ways - including strongly typed corresponding to Rust types/structs, which is what we need here in the case of our Config loading/saving.
 
+### Perspective transformation
+We are attempting to do a "quad to quad projection" from the ROI to a normalised "square" output quad, similar to [perspective-transform](https://www.npmjs.com/package/perspective-transform) as per the OG Agent.
+
+So far
+- https://www.physicsforums.com/threads/transform-that-maps-points-from-any-quad-to-an-reactangle.833996/
+- https://docs.rs/projective/0.3.0/projective/trait.Projective.html provides the necessary API - I think what is needed is the 3x3 (or is it 4x4?) matrix to apply to any given point. Could be worked out by replicating https://github.com/jlouthan/perspective-transform/blob/master/dist/perspective-transform.js ?
+- https://math.stackexchange.com/questions/296794/finding-the-transform-matrix-from-4-projected-points-with-javascript/339033#339033
+- https://stackoverflow.com/questions/14244032/redraw-image-from-3d-perspective-to-2d/14244616#14244616
+- https://blog.mbedded.ninja/mathematics/geometry/projective-transformations/
+- https://en.wikipedia.org/wiki/Homography#Mathematical_definition
+- https://docs.rs/cgmath/0.18.0/cgmath/struct.Perspective.html
+
 ## Notes on implementation
 - As with OG Agent, the serial string for the LIDAR device is extracted from the topic, specifically the `agentIdOrGroup` part in `lidar2d/{agentIdOrGroup}/scans`
 - The samples are copied from the array of arrays; each "sample" is an array with the elements `[angle, distance]` and sometimes `[angle, distance, quality]` (although the latter is not handled yet). The samples are converted into points and the list(vector) of all converted points are "inserted" (i.e. replaced, if key already exists) into the hashmap which represents all LIDAR devices (with serial strings as keys). 
@@ -40,7 +52,7 @@ We are using a combination of the libraries [serde](https://serde.rs/) and [serd
   - [x] Read/write config data from/to disk
   - [x] Transform incoming scan points: rotation and position/offset
   - [x] Apply Scan Mask Thresholds on incoming samples
-  - [ ] Apply maxClusterSize filtering
+  - [x] Apply maxClusterSize filtering
   - [ ] Handle ROI, transformation (warping)
   - [ ] Allow AutoMaskSampler to be created on request
   - [ ] Close the client properly on quit, so that the queue is also properly destroyed

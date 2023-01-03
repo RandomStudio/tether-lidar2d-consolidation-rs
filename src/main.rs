@@ -104,8 +104,7 @@ fn main() {
 
                     let serial = parse_agent_id(incoming_message.topic());
 
-                    let count_created = config.check_or_create_device(serial).unwrap();
-                    if count_created > 0 {
+                    if let Some(()) = config.check_or_create_device(serial) {
                         let message = config.publish_config(true);
                         client.publish(message.unwrap()).await.unwrap();
                     }
