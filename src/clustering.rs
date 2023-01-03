@@ -55,7 +55,7 @@ impl ClusteringSystem {
         &mut self,
         incoming_message: &mqtt::Message,
         device: &LidarDevice,
-    ) -> Result<mqtt::Message, ()> {
+    ) -> Result<(Vec<Cluster2D>, mqtt::Message), ()> {
         println!(
             "Received message on topic \"{}\":",
             incoming_message.topic()
@@ -125,7 +125,7 @@ impl ClusteringSystem {
         let payload: Vec<u8> = to_vec_named(&clusters).unwrap();
         let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_0);
 
-        Ok(message)
+        Ok((clusters, message))
     }
 
     pub fn combine_all_points(&self) -> ndarray::Array2<f64> {

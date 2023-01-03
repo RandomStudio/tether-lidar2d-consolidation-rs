@@ -36,6 +36,8 @@ So far
 - https://blog.mbedded.ninja/mathematics/geometry/projective-transformations/
 - https://en.wikipedia.org/wiki/Homography#Mathematical_definition
 - https://docs.rs/cgmath/0.18.0/cgmath/struct.Perspective.html
+- https://franklinta.com/2014/09/08/computing-css-matrix3d-transforms/
+- https://yasenh.github.io/post/homogeneous-coordinates/
 
 ## Notes on implementation
 - As with OG Agent, the serial string for the LIDAR device is extracted from the topic, specifically the `agentIdOrGroup` part in `lidar2d/{agentIdOrGroup}/scans`

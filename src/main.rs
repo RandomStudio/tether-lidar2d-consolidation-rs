@@ -7,6 +7,7 @@ use std::{env, process, time::Duration};
 mod clustering;
 mod config;
 mod tether_utils;
+mod tracking;
 
 // The topics to which we subscribe (Input Plugs)
 const SCANS_TOPIC: &str = "+/+/scans";
@@ -111,16 +112,11 @@ fn main() {
 
                     let device = config.get_device(serial).unwrap();
 
-                    match clustering_system
+                    if let Ok((clusters, message)) = clustering_system
                         .handle_scan_message(&incoming_message, device)
                         .await
                     {
-                        Ok(message) => {
-                            client.publish(message).await.unwrap();
-                        }
-                        Err(()) => {
-                            println!("Something went wrong building the clusters message to send");
-                        }
+                        client.publish(message).await.unwrap();
                     }
                 }
                 None => {
