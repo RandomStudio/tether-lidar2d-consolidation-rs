@@ -98,25 +98,30 @@ fn main() {
 
         println!("Clustering system init OK");
 
-        let perspective_transformer = PerspectiveTransformer::new(&[
-            // left top
-            PointXY {
-                x: -510.,
-                y: -1460.,
-            },
-            // left bottom
-            PointXY { x: -230., y: 1380. },
-            // right top
-            PointXY {
-                x: 2050.,
-                y: -1420.,
-            },
-            // right bottom
-            PointXY {
-                x: -1890.,
-                y: -1540.,
-            },
-        ]);
+        // TODO: these rect corners should come from Config, etc.
+        // TODO: rect corners should be in same order as with OG Agent
+        let perspective_transformer = PerspectiveTransformer::new(
+            &[
+                // left top
+                PointXY {
+                    x: -510.,
+                    y: -1460.,
+                },
+                // left bottom
+                PointXY { x: -230., y: 1380. },
+                // right top
+                PointXY {
+                    x: 2050.,
+                    y: -1420.,
+                },
+                // right bottom
+                PointXY {
+                    x: -1890.,
+                    y: -1540.,
+                },
+            ],
+            &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
+        );
 
         println!("Perspective transformer system init OK");
 
@@ -142,11 +147,23 @@ fn main() {
                         .await
                     {
                         client.publish(message).await.unwrap();
-                        for c in clusters {
-                            let transformed = perspective_transformer.transform((c.x, c.y));
-                            let (x, y) = transformed;
-                            println!("Transform {:?} to point {},{}", c, x, y);
+
+                        let points: Vec<Point2D> = clusters
+                            .into_iter()
+                            .map(|c| perspective_transformer.transform((c.x, c.y)))
+                            .collect();
+
+                        if let Ok((_tracked_points, message)) =
+                            perspective_transformer.publish_tracked_points(&points)
+                        {
+                            client.publish(message).await.unwrap();
                         }
+
+                        // for c in clusters {
+                        //     let transformed = perspective_transformer.transform((c.x, c.y));
+                        //     let (x, y) = transformed;
+                        //     println!("Transform {:?} to point {},{}", c, x, y);
+                        // }
                     }
                 }
                 None => {

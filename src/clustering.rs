@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Cluster2D {
-    pub id: u64,
+    pub id: usize,
     pub x: f64,
     pub y: f64,
     pub size: f64,
@@ -116,8 +116,7 @@ impl ClusteringSystem {
                     })
                     .collect();
 
-                let id = u64::try_from(*cluster_index).unwrap();
-                consolidate_cluster_points(matched_points, id)
+                consolidate_cluster_points(matched_points, *cluster_index)
             })
             .filter(|cluster| cluster.size <= self.max_cluster_size)
             .collect();
@@ -142,7 +141,7 @@ impl ClusteringSystem {
 /**
 Consolidate points in a cluster to a single "Cluster2D" (same as Point2D, but including size)
 */
-pub fn consolidate_cluster_points(points: Vec<Point2D>, id: u64) -> Cluster2D {
+pub fn consolidate_cluster_points(points: Vec<Point2D>, id: usize) -> Cluster2D {
     let bounds = points.iter().fold(
         Bounds2D {
             x_min: None,

@@ -1,5 +1,8 @@
 pub mod tracking {
-    use na::{Matrix2, Matrix3, Matrix4, Point2, Point3, Vector3};
+    use na::{Matrix3, Point2};
+    use paho_mqtt as mqtt;
+    use rmp_serde::to_vec_named;
+    use serde::{Deserialize, Serialize};
 
     use crate::Point2D;
 
@@ -9,17 +12,23 @@ pub mod tracking {
         pub y: f64,
     }
 
+    #[derive(Serialize, Deserialize, Debug)]
+    pub struct TrackedPoint2D {
+        id: usize,
+        x: f64,
+        y: f64,
+    }
+
     // 'left top', 'left bottom', 'right top', 'right bottom'
     pub type RectCorners = [PointXY; 4];
-    type Matrix3x3 = na::SMatrix<f64, 3, 3>;
-    type Matrix4x4 = na::SMatrix<f64, 4, 4>;
     type Matrix8x8 = na::SMatrix<f64, 8, 8>;
     pub struct PerspectiveTransformer {
         transform_matrix: Matrix3<f64>,
+        output_topic: String,
     }
 
     impl PerspectiveTransformer {
-        pub fn new(src_quad: &RectCorners) -> PerspectiveTransformer {
+        pub fn new(src_quad: &RectCorners, output_topic: &str) -> PerspectiveTransformer {
             // A standardised "1x1" box to transform all coordinates into
             let dst_quad: RectCorners = [
                 PointXY { x: 0., y: 0. },
@@ -29,6 +38,7 @@ pub mod tracking {
             ];
             PerspectiveTransformer {
                 transform_matrix: build_transform(&src_quad, &dst_quad),
+                output_topic: String::from(output_topic),
             }
         }
 
@@ -37,6 +47,28 @@ pub mod tracking {
             let nalgebra_point = Point2::new(x, y);
             let transformed = self.transform_matrix.transform_point(&nalgebra_point);
             (transformed.x, transformed.y)
+        }
+
+        pub fn publish_tracked_points(
+            &self,
+            points: &Vec<Point2D>,
+        ) -> Result<(Vec<TrackedPoint2D>, mqtt::Message), ()> {
+            let points: Vec<TrackedPoint2D> = points
+                .into_iter()
+                .enumerate()
+                .map(|i| {
+                    let (index, point) = i;
+                    let (x, y) = point;
+                    TrackedPoint2D {
+                        id: index,
+                        x: *x,
+                        y: *y,
+                    }
+                })
+                .collect();
+            let payload: Vec<u8> = to_vec_named(&points).unwrap();
+            let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_1);
+            Ok((points, message))
         }
     }
 
