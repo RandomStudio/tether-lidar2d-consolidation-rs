@@ -18,6 +18,7 @@ const QOS: &[i32] = &[0];
 
 use crate::clustering::ClusteringSystem;
 use crate::tether_utils::{build_topic, parse_agent_id};
+use crate::tracking::tracking::{PerspectiveTransformer, PointXY};
 
 pub type Point2D = (f64, f64);
 
@@ -88,15 +89,39 @@ fn main() {
         println!("Subscribing to topics: {:?}", TOPICS);
         client.subscribe_many(TOPICS, QOS).await?;
 
-        // Just loop on incoming messages.
-        println!("Waiting for messages...");
-
         let mut clustering_system = ClusteringSystem::new(
             NEIGHBOURHOOD_RADIUS,
             MIN_NEIGHBOURS,
             &build_topic(AGENT_TYPE, AGENT_ID, "clusters"),
             MAX_CLUSTER_SIZE,
         );
+
+        println!("Clustering system init OK");
+
+        let perspective_transformer = PerspectiveTransformer::new(&[
+            // left top
+            PointXY {
+                x: -510.,
+                y: -1460.,
+            },
+            // left bottom
+            PointXY { x: -230., y: 1380. },
+            // right top
+            PointXY {
+                x: 2050.,
+                y: -1420.,
+            },
+            // right bottom
+            PointXY {
+                x: -1890.,
+                y: -1540.,
+            },
+        ]);
+
+        println!("Perspective transformer system init OK");
+
+        // Just loop on incoming messages.
+        println!("Waiting for messages...");
 
         while let Some(msg_opt) = strm.next().await {
             match msg_opt {
@@ -117,6 +142,11 @@ fn main() {
                         .await
                     {
                         client.publish(message).await.unwrap();
+                        for c in clusters {
+                            let transformed = perspective_transformer.transform((c.x, c.y));
+                            let (x, y) = transformed;
+                            println!("Transform {:?} to point {},{}", c, x, y);
+                        }
                     }
                 }
                 None => {

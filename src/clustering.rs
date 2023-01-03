@@ -12,10 +12,10 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Cluster2D {
-    id: u64,
-    x: f64,
-    y: f64,
-    size: f64,
+    pub id: u64,
+    pub x: f64,
+    pub y: f64,
+    pub size: f64,
 }
 
 struct Bounds2D {
