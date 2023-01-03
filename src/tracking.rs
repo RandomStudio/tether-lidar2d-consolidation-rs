@@ -32,9 +32,9 @@ pub mod tracking {
             // A standardised "1x1" box to transform all coordinates into
             let dst_quad: RectCorners = [
                 PointXY { x: 0., y: 0. },
-                PointXY { x: 0., y: 1. },
                 PointXY { x: 1., y: 0. },
                 PointXY { x: 1., y: 1. },
+                PointXY { x: 0., y: 1. },
             ];
             PerspectiveTransformer {
                 transform_matrix: build_transform(&src_quad, &dst_quad),

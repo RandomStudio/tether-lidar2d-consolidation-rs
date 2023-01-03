@@ -107,18 +107,15 @@ fn main() {
                     x: -510.,
                     y: -1460.,
                 },
-                // left bottom
-                PointXY { x: -230., y: 1380. },
                 // right top
                 PointXY {
                     x: 2050.,
                     y: -1420.,
                 },
                 // right bottom
-                PointXY {
-                    x: -1890.,
-                    y: -1540.,
-                },
+                PointXY { x: 1890., y: 1540. },
+                // left bottom
+                PointXY { x: -230., y: 1380. },
             ],
             &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
         );
