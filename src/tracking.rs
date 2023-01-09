@@ -47,12 +47,14 @@ pub mod tracking {
         pub fn transform(&self, point: &Point2D) -> Point2D {
             let (x, y) = point;
             let nalgebra_point = Point2::new(*x, *y);
-            let transformed = self.transform_matrix.transform_point(&nalgebra_point);
-            (transformed.x, transformed.y)
-            // let hom_pt = nalgebra_point.to_homogeneous();
-            // let hom_transformed_pt = self.transform_matrix * hom_pt;
-            // let transformed_pt = Point2::from_homogeneous(hom_transformed_pt).unwrap();
-            // (transformed_pt.x, transformed_pt.y)
+
+            // let transformed = self.transform_matrix.transform_point(&nalgebra_point);
+            // (transformed.x, transformed.y)
+
+            let hom_pt = nalgebra_point.to_homogeneous();
+            let hom_transformed_pt = self.transform_matrix * hom_pt;
+            let transformed_pt = Point2::from_homogeneous(hom_transformed_pt).unwrap();
+            (transformed_pt.x / 1000., transformed_pt.y / 1000.)
         }
 
         pub fn publish_tracked_points(
@@ -180,8 +182,9 @@ pub mod tracking {
         let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
 
         // Solve for Ah = B
-        let decomp = matrix_a.lu();
-        let matrix_h = decomp.solve(&matrix_b.transpose()).unwrap();
+        // let decomp = matrix_a.lu();
+        // let matrix_h = decomp.solve(&matrix_b.transpose()).unwrap();
+        let matrix_h = matrix_b * matrix_a.try_inverse().unwrap();
 
         // Create a new 3x3 transform matrix using the elements from above
         let matrix_h = Matrix3::new(
