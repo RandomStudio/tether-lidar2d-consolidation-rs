@@ -98,7 +98,7 @@ pub mod tracking {
             src_quad[0].x,
             src_quad[0].y,
             1.,
-            -src_quad[0].x * dst_quad[0].x,
+            -src_quad[0].x * dst_quad[0].y,
             -src_quad[0].y * dst_quad[0].y,
         ];
         let r3: [f64; 8] = [
@@ -138,7 +138,7 @@ pub mod tracking {
             src_quad[2].x,
             src_quad[2].y,
             1.,
-            -src_quad[2].y * dst_quad[2].x,
+            -src_quad[2].x * dst_quad[2].y,
             -src_quad[2].y * dst_quad[2].y,
         ];
         let r7: [f64; 8] = [
