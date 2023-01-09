@@ -48,13 +48,24 @@ pub mod tracking {
             let (x, y) = point;
             let nalgebra_point = Point2::new(*x, *y);
 
-            // let transformed = self.transform_matrix.transform_point(&nalgebra_point);
-            // (transformed.x, transformed.y)
+            let transformed = self.transform_matrix.transform_point(&nalgebra_point);
+            (transformed.x, transformed.y)
 
-            let hom_pt = nalgebra_point.to_homogeneous();
-            let hom_transformed_pt = self.transform_matrix * hom_pt;
-            let transformed_pt = Point2::from_homogeneous(hom_transformed_pt).unwrap();
-            (transformed_pt.x, transformed_pt.y)
+            // (
+            //     (self.transform_matrix[0] * x
+            //         + self.transform_matrix[1] * y
+            //         + self.transform_matrix[2])
+            //         / (self.transform_matrix[6] * x + self.transform_matrix[7] * y + 1.),
+            //     (self.transform_matrix[3] * x
+            //         + self.transform_matrix[4] * y
+            //         + self.transform_matrix[5])
+            //         / (self.transform_matrix[6] * x + self.transform_matrix[7] * y + 1.),
+            // )
+
+            // let hom_pt = nalgebra_point.to_homogeneous();
+            // let hom_transformed_pt = self.transform_matrix * hom_pt;
+            // let transformed_pt = Point2::from_homogeneous(hom_transformed_pt).unwrap();
+            // (transformed_pt.x, transformed_pt.y)
         }
 
         pub fn publish_tracked_points(
