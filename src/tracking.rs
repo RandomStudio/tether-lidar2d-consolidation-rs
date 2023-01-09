@@ -47,12 +47,12 @@ pub mod tracking {
         pub fn transform(&self, point: &Point2D) -> Point2D {
             let (x, y) = point;
             let nalgebra_point = Point2::new(*x, *y);
-            // let transformed = self.transform_matrix.transform_point(&nalgebra_point);
-            // (transformed.x, transformed.y)
-            let hom_pt = nalgebra_point.to_homogeneous();
-            let hom_transformed_pt = self.transform_matrix * hom_pt;
-            let transformed_pt = Point2::from_homogeneous(hom_transformed_pt).unwrap();
-            (transformed_pt.x, transformed_pt.y)
+            let transformed = self.transform_matrix.transform_point(&nalgebra_point);
+            (transformed.x, transformed.y)
+            // let hom_pt = nalgebra_point.to_homogeneous();
+            // let hom_transformed_pt = self.transform_matrix * hom_pt;
+            // let transformed_pt = Point2::from_homogeneous(hom_transformed_pt).unwrap();
+            // (transformed_pt.x, transformed_pt.y)
         }
 
         pub fn publish_tracked_points(
@@ -88,8 +88,8 @@ pub mod tracking {
             0.,
             0.,
             0.,
-            -dst_quad[0].x * src_quad[0].x,
-            -dst_quad[0].x * src_quad[0].y,
+            -src_quad[0].x * dst_quad[0].x,
+            -src_quad[0].y * dst_quad[0].x,
         ];
         let r2: [f64; 8] = [
             0.,
@@ -98,8 +98,8 @@ pub mod tracking {
             src_quad[0].x,
             src_quad[0].y,
             1.,
-            -dst_quad[0].y * src_quad[0].x,
-            -dst_quad[0].y * src_quad[0].y,
+            -src_quad[0].x * dst_quad[0].x,
+            -src_quad[0].y * dst_quad[0].y,
         ];
         let r3: [f64; 8] = [
             src_quad[1].x,
@@ -108,8 +108,8 @@ pub mod tracking {
             0.,
             0.,
             0.,
-            -dst_quad[1].x * src_quad[1].x,
-            -dst_quad[1].x * src_quad[1].y,
+            -src_quad[1].x * dst_quad[1].x,
+            -src_quad[1].y * dst_quad[1].x,
         ];
         let r4: [f64; 8] = [
             0.,
@@ -118,8 +118,8 @@ pub mod tracking {
             src_quad[1].x,
             src_quad[1].y,
             1.,
-            -dst_quad[1].y * src_quad[1].x,
-            -dst_quad[1].y * src_quad[1].y,
+            -src_quad[1].x * dst_quad[1].y,
+            -src_quad[1].y * dst_quad[1].y,
         ];
         let r5: [f64; 8] = [
             src_quad[2].x,
@@ -128,8 +128,8 @@ pub mod tracking {
             0.,
             0.,
             0.,
-            -dst_quad[2].x * src_quad[2].x,
-            -dst_quad[2].x * src_quad[2].y,
+            -src_quad[2].x * dst_quad[2].x,
+            -src_quad[2].y * dst_quad[2].x,
         ];
         let r6: [f64; 8] = [
             0.,
@@ -138,8 +138,8 @@ pub mod tracking {
             src_quad[2].x,
             src_quad[2].y,
             1.,
-            -dst_quad[2].y * src_quad[2].x,
-            -dst_quad[2].y * src_quad[2].y,
+            -src_quad[2].y * dst_quad[2].x,
+            -src_quad[2].y * dst_quad[2].y,
         ];
         let r7: [f64; 8] = [
             src_quad[3].x,
@@ -148,8 +148,8 @@ pub mod tracking {
             0.,
             0.,
             0.,
-            -dst_quad[3].x * src_quad[3].x,
-            -dst_quad[3].x * src_quad[3].y,
+            -src_quad[3].x * dst_quad[3].x,
+            -src_quad[3].y * dst_quad[3].x,
         ];
         let r8: [f64; 8] = [
             0.,
@@ -158,8 +158,8 @@ pub mod tracking {
             src_quad[3].x,
             src_quad[3].y,
             1.,
-            -dst_quad[3].y * src_quad[3].x,
-            -dst_quad[3].y * src_quad[3].y,
+            -src_quad[3].x * dst_quad[3].y,
+            -src_quad[3].y * dst_quad[3].y,
         ];
         let combined = vec![r1, r2, r3, r4, r5, r6, r7, r8].into_iter().flatten();
 
