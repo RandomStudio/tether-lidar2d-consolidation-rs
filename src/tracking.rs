@@ -19,7 +19,9 @@ pub mod tracking {
         y: f64,
     }
 
-    // 'left top', 'left bottom', 'right top', 'right bottom'
+    /**
+    clockwise: 'left top', 'right top', 'right bottom', 'left bottom',
+     */
     pub type RectCorners = [PointXY; 4];
     type Matrix8x8 = na::SMatrix<f64, 8, 8>;
     pub struct PerspectiveTransformer {
@@ -42,11 +44,15 @@ pub mod tracking {
             }
         }
 
-        pub fn transform(&self, point: Point2D) -> Point2D {
+        pub fn transform(&self, point: &Point2D) -> Point2D {
             let (x, y) = point;
-            let nalgebra_point = Point2::new(x, y);
-            let transformed = self.transform_matrix.transform_point(&nalgebra_point);
-            (transformed.x, transformed.y)
+            let nalgebra_point = Point2::new(*x, *y);
+            // let transformed = self.transform_matrix.transform_point(&nalgebra_point);
+            // (transformed.x, transformed.y)
+            let hom_pt = nalgebra_point.to_homogeneous();
+            let hom_transformed_pt = self.transform_matrix * hom_pt;
+            let transformed_pt = Point2::from_homogeneous(hom_transformed_pt).unwrap();
+            (transformed_pt.x, transformed_pt.y)
         }
 
         pub fn publish_tracked_points(
@@ -157,7 +163,7 @@ pub mod tracking {
         ];
         let combined = vec![r1, r2, r3, r4, r5, r6, r7, r8].into_iter().flatten();
 
-        let matrix_A = Matrix8x8::from_iterator(combined);
+        let matrix_a = Matrix8x8::from_iterator(combined);
 
         let dst_quad_elements = vec![
             src_quad[0].x,
@@ -171,14 +177,14 @@ pub mod tracking {
         ]
         .into_iter();
 
-        let matrix_B: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
+        let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
 
         // Solve for Ah = B
-        let decomp = matrix_A.lu();
-        let matrix_h = decomp.solve(&matrix_B.transpose()).unwrap();
+        let decomp = matrix_a.lu();
+        let matrix_h = decomp.solve(&matrix_b.transpose()).unwrap();
 
         // Create a new 3x3 transform matrix using the elements from above
-        let matrix_H = Matrix3::new(
+        let matrix_h = Matrix3::new(
             matrix_h[0],
             matrix_h[1],
             matrix_h[2],
@@ -190,6 +196,6 @@ pub mod tracking {
             1.,
         );
 
-        matrix_H
+        matrix_h
     }
 }

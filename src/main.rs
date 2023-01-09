@@ -147,7 +147,7 @@ fn main() {
 
                         let points: Vec<Point2D> = clusters
                             .into_iter()
-                            .map(|c| perspective_transformer.transform((c.x, c.y)))
+                            .map(|c| perspective_transformer.transform(&(c.x, c.y)))
                             .collect();
 
                         if let Ok((_tracked_points, message)) =
