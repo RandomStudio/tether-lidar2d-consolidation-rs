@@ -23,8 +23,24 @@ pub mod config_state {
     }
 
     #[derive(Serialize, Deserialize, Debug)]
+    pub struct ConfigRectCornerPoint {
+        corner: u8,
+        pub x: f64,
+        pub y: f64,
+    }
+
+    type CornerPoints = (
+        ConfigRectCornerPoint,
+        ConfigRectCornerPoint,
+        ConfigRectCornerPoint,
+        ConfigRectCornerPoint,
+    );
+
+    #[derive(Serialize, Deserialize, Debug)]
+    #[serde(rename_all = "camelCase")]
     pub struct Config {
         devices: Vec<LidarDevice>,
+        region_of_interest: Option<CornerPoints>,
         #[serde(skip)]
         output_topic: String,
         #[serde(skip)]
@@ -35,6 +51,7 @@ pub mod config_state {
         pub fn new(output_topic: &str, config_file_path: &str) -> Config {
             Config {
                 devices: vec![],
+                region_of_interest: None,
                 output_topic: String::from(output_topic),
                 config_file_path: String::from(config_file_path),
             }
@@ -50,14 +67,23 @@ pub mod config_state {
         }
 
         pub fn load_config_from_file(&mut self) -> Result<usize, ()> {
-            let text = std::fs::read_to_string(&self.config_file_path).unwrap();
-            let data: Config = serde_json::from_str(&text).unwrap();
+            let text =
+                std::fs::read_to_string(&self.config_file_path).expect("Error opening config file");
 
-            println!("Config parsed data from file: {:?}", data);
+            match serde_json::from_str::<Config>(&text) {
+                Ok(data) => {
+                    println!("Config parsed data from file: {:?}", data);
 
-            self.devices = data.devices;
+                    self.devices = data.devices;
+                    self.region_of_interest = data.region_of_interest;
 
-            Ok(self.devices.len())
+                    Ok(self.devices.len())
+                }
+                Err(e) => {
+                    println!("Failed to parse config data: {}", e);
+                    Err(())
+                }
+            }
         }
 
         pub fn write_config_to_file(&self) -> Result<(), Error> {
@@ -96,6 +122,10 @@ pub mod config_state {
 
         pub fn get_device(&self, serial: &str) -> Option<&LidarDevice> {
             self.devices.iter().find(|&d| d.serial.eq(serial))
+        }
+
+        pub fn region_of_interest(&self) -> Option<&CornerPoints> {
+            self.region_of_interest.as_ref()
         }
     }
 }

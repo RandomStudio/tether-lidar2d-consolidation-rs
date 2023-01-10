@@ -98,17 +98,19 @@ fn main() {
 
         println!("Clustering system init OK");
 
-        // TODO: these rect corners should come from Config, etc.
-        // TODO: rect corners should be in same order as with OG Agent
-        let perspective_transformer = PerspectiveTransformer::new(
-            &[
-                (-510., -1460.),
-                (2050., -1420.),
-                (1890., 1540.),
-                (-230., 1380.),
-            ],
-            &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
-        );
+        let perspective_transformer: Option<PerspectiveTransformer> =
+            match config.region_of_interest() {
+                Some(region_of_interest) => {
+                    let (c1, c2, c3, c4) = region_of_interest;
+                    let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
+                    let transformer = PerspectiveTransformer::new(
+                        &corners,
+                        &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
+                    );
+                    Some(transformer)
+                }
+                None => None,
+            };
 
         println!("Perspective transformer system init OK");
 
@@ -135,15 +137,17 @@ fn main() {
                     {
                         client.publish(message).await.unwrap();
 
-                        let points: Vec<Point2D> = clusters
-                            .into_iter()
-                            .map(|c| perspective_transformer.transform(&(c.x, c.y)))
-                            .collect();
+                        if let Some(transformer) = &perspective_transformer {
+                            let points = clusters
+                                .into_iter()
+                                .map(|c| transformer.transform(&(c.x, c.y)))
+                                .collect();
 
-                        if let Ok((_tracked_points, message)) =
-                            perspective_transformer.publish_tracked_points(&points)
-                        {
-                            client.publish(message).await.unwrap();
+                            if let Ok((_tracked_points, message)) =
+                                transformer.publish_tracked_points(&points)
+                            {
+                                client.publish(message).await.unwrap();
+                            }
                         }
 
                         // for c in clusters {
