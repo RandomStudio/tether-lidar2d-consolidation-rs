@@ -938,6 +938,7 @@ dependencies = [
 name = "tether-lidar2d-consolidation-rs"
 version = "0.1.0"
 dependencies = [
+ "approx",
  "async-std",
  "env_logger",
  "futures",

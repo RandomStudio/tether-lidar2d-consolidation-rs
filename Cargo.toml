@@ -19,3 +19,4 @@ rmp-serde = "1.1.1"
 nalgebra = "0.31.4"
 
 [dev-dependencies]
+approx         = { version = "0.5", default-features = false }

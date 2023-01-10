@@ -7,6 +7,7 @@ pub mod tracking {
     use crate::Point2D;
 
     extern crate nalgebra as na;
+    #[derive(Debug)]
     pub struct PointXY {
         pub x: f64,
         pub y: f64,
@@ -50,22 +51,6 @@ pub mod tracking {
 
             let transformed = self.transform_matrix.transform_point(&nalgebra_point);
             (transformed.x, transformed.y)
-
-            // (
-            //     (self.transform_matrix[0] * x
-            //         + self.transform_matrix[1] * y
-            //         + self.transform_matrix[2])
-            //         / (self.transform_matrix[6] * x + self.transform_matrix[7] * y + 1.),
-            //     (self.transform_matrix[3] * x
-            //         + self.transform_matrix[4] * y
-            //         + self.transform_matrix[5])
-            //         / (self.transform_matrix[6] * x + self.transform_matrix[7] * y + 1.),
-            // )
-
-            // let hom_pt = nalgebra_point.to_homogeneous();
-            // let hom_transformed_pt = self.transform_matrix * hom_pt;
-            // let transformed_pt = Point2::from_homogeneous(hom_transformed_pt).unwrap();
-            // (transformed_pt.x, transformed_pt.y)
         }
 
         pub fn publish_tracked_points(
@@ -91,7 +76,7 @@ pub mod tracking {
         }
     }
 
-    fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix3<f64> {
+    pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix3<f64> {
         // Mappings by row - each should have 8 terms
 
         let r1: [f64; 8] = [
@@ -179,23 +164,23 @@ pub mod tracking {
         let matrix_a = Matrix8x8::from_iterator(combined);
 
         let dst_quad_elements = vec![
-            src_quad[0].x,
-            src_quad[0].y,
-            src_quad[1].x,
-            src_quad[1].y,
-            src_quad[2].x,
-            src_quad[2].y,
-            src_quad[3].x,
-            src_quad[3].y,
+            dst_quad[0].x,
+            dst_quad[0].y,
+            dst_quad[1].x,
+            dst_quad[1].y,
+            dst_quad[2].x,
+            dst_quad[2].y,
+            dst_quad[3].x,
+            dst_quad[3].y,
         ]
         .into_iter();
 
         let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
 
         // Solve for Ah = B
-        let decomp = matrix_a.lu();
-        let coefficients = decomp.solve(&matrix_b.transpose()).unwrap();
-        // let matrix_h = matrix_b * matrix_a.try_inverse().unwrap();
+        // let decomp = matrix_a.lu();
+        // let coefficients = decomp.solve(&matrix_b.transpose()).unwrap();
+        let coefficients = matrix_b * matrix_a.try_inverse().unwrap();
 
         // Create a new 3x3 transform matrix using the elements from above
         let transformation_matrix = Matrix3::new(
@@ -211,5 +196,111 @@ pub mod tracking {
         );
 
         transformation_matrix
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use nalgebra::{Matrix3, Point};
+    extern crate approx;
+
+    use crate::tracking::tracking::build_transform;
+
+    use super::tracking::{PerspectiveTransformer, PointXY, RectCorners};
+
+    // #[test]
+    // fn test_get_transform_matrix() {
+    //     // numbers as per https://github.com/jlouthan/perspective-transform#basic-usage
+
+    //     let src_quad = [158., 64., 494., 69., 495., 404., 158., 404.];
+    //     let src_quad: RectCorners = [
+    //         PointXY {
+    //             x: src_quad[0],
+    //             y: src_quad[1],
+    //         },
+    //         PointXY {
+    //             x: src_quad[2],
+    //             y: src_quad[3],
+    //         },
+    //         PointXY {
+    //             x: src_quad[4],
+    //             y: src_quad[5],
+    //         },
+    //         PointXY {
+    //             x: src_quad[6],
+    //             y: src_quad[7],
+    //         },
+    //     ];
+
+    //     let dst_quad = [100., 500., 152., 564., 148., 604., 100., 560.];
+    //     let dst_quad: RectCorners = [
+    //         PointXY {
+    //             x: dst_quad[0],
+    //             y: dst_quad[1],
+    //         },
+    //         PointXY {
+    //             x: dst_quad[2],
+    //             y: dst_quad[3],
+    //         },
+    //         PointXY {
+    //             x: dst_quad[4],
+    //             y: dst_quad[5],
+    //         },
+    //         PointXY {
+    //             x: dst_quad[6],
+    //             y: dst_quad[7],
+    //         },
+    //     ];
+
+    //     let transform_matrix = build_transform(&src_quad, &dst_quad);
+
+    //     let src_point = PointXY { x: 250., y: 120. };
+
+    //     let result = {
+    //         let (x, y) = (src_point.x, src_point.y);
+    //         let nalgebra_point = nalgebra::Point2::new(x, y);
+
+    //         let transformed = transform_matrix.transform_point(&nalgebra_point);
+    //         (transformed.x, transformed.y)
+    //     };
+
+    //     assert_eq!(result, (117.27521125839255, 530.9202410878403));
+    // }
+
+    #[test]
+    fn test_get_transform_matrix_simple() {
+        // numbers as per https://github.com/jlouthan/perspective-transform#basic-usage
+
+        let src_quad: RectCorners = [
+            PointXY { x: 0., y: 0. },
+            PointXY { x: 1., y: 0. },
+            PointXY { x: 1., y: 1. },
+            PointXY { x: 0., y: 1. },
+        ];
+        let dst_quad: RectCorners = [
+            PointXY { x: 1., y: 2. },
+            PointXY { x: 1., y: 4. },
+            PointXY { x: 3., y: 4. },
+            PointXY { x: 3., y: 2. },
+        ];
+
+        let transform_matrix = build_transform(&src_quad, &dst_quad);
+
+        assert_eq!(
+            transform_matrix,
+            Matrix3::new(2., 0., 1., 0., 2., 2., 0., 0., 1.)
+        );
+
+        let src_point = PointXY { x: 0.5, y: 0.5 };
+
+        let result = {
+            let (x, y) = (src_point.x, src_point.y);
+            let nalgebra_point = nalgebra::Point2::new(x, y);
+
+            let transformed = transform_matrix.transform_point(&nalgebra_point);
+            (transformed.x, transformed.y)
+        };
+
+        assert_eq!(result, (2., 3.));
     }
 }
