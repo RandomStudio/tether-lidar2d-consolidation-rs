@@ -11,13 +11,14 @@ mod tracking;
 
 // The topics to which we subscribe (Input Plugs)
 const SCANS_TOPIC: &str = "+/+/scans";
-const TOPICS: &[&str] = &[SCANS_TOPIC];
+const SAVE_CONFIG_TOPIC: &str = "+/+/saveLidarConfig";
+const TOPICS: &[&str] = &[SCANS_TOPIC, SAVE_CONFIG_TOPIC];
 
 // Corresponding QOS level for each of the above
-const QOS: &[i32] = &[0];
+const QOS: &[i32; TOPICS.len()] = &[0, 2];
 
 use crate::clustering::ClusteringSystem;
-use crate::tether_utils::{build_topic, parse_agent_id};
+use crate::tether_utils::{build_topic, parse_agent_id, parse_plug_name};
 use crate::tracking::tracking::PerspectiveTransformer;
 
 pub type Point2D = (f64, f64);
@@ -119,38 +120,45 @@ fn main() {
 
         while let Some(msg_opt) = strm.next().await {
             match msg_opt {
-                Some(incoming_message) => {
-                    // TODO: check which topic we received on, so that messages are passed to correct handlers
+                Some(incoming_message) => match parse_plug_name(incoming_message.topic()) {
+                    "scans" => {
+                        println!("Scans topic");
+                        let serial = parse_agent_id(incoming_message.topic());
 
-                    let serial = parse_agent_id(incoming_message.topic());
+                        if let Some(()) = config.check_or_create_device(serial) {
+                            let message = config.publish_config(true);
+                            client.publish(message.unwrap()).await.unwrap();
+                        }
 
-                    if let Some(()) = config.check_or_create_device(serial) {
-                        let message = config.publish_config(true);
-                        client.publish(message.unwrap()).await.unwrap();
-                    }
+                        let device = config.get_device(serial).unwrap();
 
-                    let device = config.get_device(serial).unwrap();
+                        if let Ok((clusters, message)) = clustering_system
+                            .handle_scan_message(&incoming_message, device)
+                            .await
+                        {
+                            client.publish(message).await.unwrap();
 
-                    if let Ok((clusters, message)) = clustering_system
-                        .handle_scan_message(&incoming_message, device)
-                        .await
-                    {
-                        client.publish(message).await.unwrap();
+                            if let Some(transformer) = &perspective_transformer {
+                                let points = clusters
+                                    .into_iter()
+                                    .map(|c| transformer.transform(&(c.x, c.y)))
+                                    .collect();
 
-                        if let Some(transformer) = &perspective_transformer {
-                            let points = clusters
-                                .into_iter()
-                                .map(|c| transformer.transform(&(c.x, c.y)))
-                                .collect();
-
-                            if let Ok((_tracked_points, message)) =
-                                transformer.publish_tracked_points(&points)
-                            {
-                                client.publish(message).await.unwrap();
+                                if let Ok((_tracked_points, message)) =
+                                    transformer.publish_tracked_points(&points)
+                                {
+                                    client.publish(message).await.unwrap();
+                                }
                             }
                         }
                     }
-                }
+                    "saveLidarConfig" => {
+                        println!("Save Config topic");
+                    }
+                    _ => {
+                        println!("Unknown topic: {}", incoming_message.topic());
+                    }
+                },
                 None => {
                     // A "None" means we were disconnected. Try to reconnect...
                     println!("Lost connection. Attempting reconnect.");

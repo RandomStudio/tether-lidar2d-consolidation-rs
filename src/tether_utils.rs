@@ -3,6 +3,11 @@ pub fn parse_agent_id(topic: &str) -> &str {
     parts[1]
 }
 
+pub fn parse_plug_name(topic: &str) -> &str {
+    let parts: Vec<&str> = topic.split('/').collect();
+    parts[2]
+}
+
 pub fn build_topic(agent_type: &str, agent_id: &str, plug_name: &str) -> String {
     format!("{}/{}/{}", agent_type, agent_id, plug_name)
 }
