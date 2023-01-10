@@ -208,64 +208,70 @@ mod tests {
 
     use super::tracking::{PerspectiveTransformer, PointXY, RectCorners};
 
-    // #[test]
-    // fn test_get_transform_matrix() {
-    //     // numbers as per https://github.com/jlouthan/perspective-transform#basic-usage
+    #[test]
+    fn test_get_transform_matrix() {
+        // numbers as per https://github.com/jlouthan/perspective-transform#basic-usage
 
-    //     let src_quad = [158., 64., 494., 69., 495., 404., 158., 404.];
-    //     let src_quad: RectCorners = [
-    //         PointXY {
-    //             x: src_quad[0],
-    //             y: src_quad[1],
-    //         },
-    //         PointXY {
-    //             x: src_quad[2],
-    //             y: src_quad[3],
-    //         },
-    //         PointXY {
-    //             x: src_quad[4],
-    //             y: src_quad[5],
-    //         },
-    //         PointXY {
-    //             x: src_quad[6],
-    //             y: src_quad[7],
-    //         },
-    //     ];
+        let src_quad = [158., 64., 494., 69., 495., 404., 158., 404.];
+        let src_quad: RectCorners = [
+            PointXY {
+                x: src_quad[0],
+                y: src_quad[1],
+            },
+            PointXY {
+                x: src_quad[2],
+                y: src_quad[3],
+            },
+            PointXY {
+                x: src_quad[4],
+                y: src_quad[5],
+            },
+            PointXY {
+                x: src_quad[6],
+                y: src_quad[7],
+            },
+        ];
 
-    //     let dst_quad = [100., 500., 152., 564., 148., 604., 100., 560.];
-    //     let dst_quad: RectCorners = [
-    //         PointXY {
-    //             x: dst_quad[0],
-    //             y: dst_quad[1],
-    //         },
-    //         PointXY {
-    //             x: dst_quad[2],
-    //             y: dst_quad[3],
-    //         },
-    //         PointXY {
-    //             x: dst_quad[4],
-    //             y: dst_quad[5],
-    //         },
-    //         PointXY {
-    //             x: dst_quad[6],
-    //             y: dst_quad[7],
-    //         },
-    //     ];
+        let dst_quad = [100., 500., 152., 564., 148., 604., 100., 560.];
+        let dst_quad: RectCorners = [
+            PointXY {
+                x: dst_quad[0],
+                y: dst_quad[1],
+            },
+            PointXY {
+                x: dst_quad[2],
+                y: dst_quad[3],
+            },
+            PointXY {
+                x: dst_quad[4],
+                y: dst_quad[5],
+            },
+            PointXY {
+                x: dst_quad[6],
+                y: dst_quad[7],
+            },
+        ];
 
-    //     let transform_matrix = build_transform(&src_quad, &dst_quad);
+        let transform_matrix = build_transform(&src_quad, &dst_quad);
 
-    //     let src_point = PointXY { x: 250., y: 120. };
+        let src_point = PointXY { x: 250., y: 120. };
 
-    //     let result = {
-    //         let (x, y) = (src_point.x, src_point.y);
-    //         let nalgebra_point = nalgebra::Point2::new(x, y);
+        let result = {
+            let (x, y) = (src_point.x, src_point.y);
+            let nalgebra_point = nalgebra::Point2::new(x, y);
 
-    //         let transformed = transform_matrix.transform_point(&nalgebra_point);
-    //         (transformed.x, transformed.y)
-    //     };
+            let transformed = transform_matrix.transform_point(&nalgebra_point);
+            (transformed.x, transformed.y)
+        };
 
-    //     assert_eq!(result, (117.27521125839255, 530.9202410878403));
-    // }
+        assert_eq!(
+            (result.0.round(), result.1.round()),
+            (
+                117.27521125839255_f64.round(),
+                530.9202410878403_f64.round(),
+            ),
+        );
+    }
 
     #[test]
     fn test_get_transform_matrix_simple() {
