@@ -169,10 +169,8 @@ pub mod tracking {
         let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
 
         // Solve for Ah = B
-        let decomp = matrix_a.lu();
-        let coefficients = decomp.solve(&matrix_b.transpose()).unwrap();
-        // let coefficients = matrix_b * matrix_a.try_inverse().unwrap();
-
+        let coefficients = matrix_b * matrix_a.try_inverse().unwrap();
+        //
         // Create a new 3x3 transform matrix using the elements from above
         let transformation_matrix = Matrix3::new(
             coefficients[0],
