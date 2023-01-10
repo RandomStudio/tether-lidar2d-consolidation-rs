@@ -18,7 +18,7 @@ const QOS: &[i32] = &[0];
 
 use crate::clustering::ClusteringSystem;
 use crate::tether_utils::{build_topic, parse_agent_id};
-use crate::tracking::tracking::{PerspectiveTransformer, PointXY};
+use crate::tracking::tracking::PerspectiveTransformer;
 
 pub type Point2D = (f64, f64);
 
@@ -102,20 +102,10 @@ fn main() {
         // TODO: rect corners should be in same order as with OG Agent
         let perspective_transformer = PerspectiveTransformer::new(
             &[
-                // left top
-                PointXY {
-                    x: -510.,
-                    y: -1460.,
-                },
-                // right top
-                PointXY {
-                    x: 2050.,
-                    y: -1420.,
-                },
-                // right bottom
-                PointXY { x: 1890., y: 1540. },
-                // left bottom
-                PointXY { x: -230., y: 1380. },
+                (-510., -1460.),
+                (2050., -1420.),
+                (1890., 1540.),
+                (-230., 1380.),
             ],
             &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
         );
