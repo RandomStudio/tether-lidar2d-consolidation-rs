@@ -149,12 +149,6 @@ fn main() {
                                 client.publish(message).await.unwrap();
                             }
                         }
-
-                        // for c in clusters {
-                        //     let transformed = perspective_transformer.transform((c.x, c.y));
-                        //     let (x, y) = transformed;
-                        //     println!("Transform {:?} to point {},{}", c, x, y);
-                        // }
                     }
                 }
                 None => {
