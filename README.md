@@ -56,7 +56,7 @@ So far
   - [x] Apply Scan Mask Thresholds on incoming samples
   - [x] Apply maxClusterSize filtering
   - [x] Handle ROI, transformation (warping)
-  - [ ] Allow incoming config (devices, ROI) to be saved via "saveLidarConfig"
+  - [x] Allow incoming config (devices, ROI) to be saved via "saveLidarConfig"
   - [ ] Allow AutoMaskSampler to be created on request
   - [ ] Close the client properly on quit, so that the queue is also properly destroyed
   - [ ] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
