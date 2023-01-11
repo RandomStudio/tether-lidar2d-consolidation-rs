@@ -8,6 +8,9 @@ pub mod tracking {
 
     extern crate nalgebra as na;
 
+    // A standardised "1x1" box to transform all coordinates into
+    const DST_QUAD: RectCorners = [(0., 0.), (1., 0.), (1., 1.), (0., 1.)];
+
     #[derive(Serialize, Deserialize, Debug)]
     pub struct TrackedPoint2D {
         id: usize,
@@ -21,26 +24,36 @@ pub mod tracking {
     pub type RectCorners = [Point2D; 4];
     type Matrix8x8 = na::SMatrix<f64, 8, 8>;
     pub struct PerspectiveTransformer {
-        transform_matrix: Matrix3<f64>,
+        transform_matrix: Option<Matrix3<f64>>,
         output_topic: String,
     }
 
     impl PerspectiveTransformer {
-        pub fn new(src_quad: &RectCorners, output_topic: &str) -> PerspectiveTransformer {
-            // A standardised "1x1" box to transform all coordinates into
-            let dst_quad: RectCorners = [(0., 0.), (1., 0.), (1., 1.), (0., 1.)];
+        pub fn new(output_topic: &str, src_quad: Option<RectCorners>) -> PerspectiveTransformer {
             PerspectiveTransformer {
-                transform_matrix: build_transform(&src_quad, &dst_quad),
+                transform_matrix: match src_quad {
+                    Some(quad) => Some(build_transform(&quad.clone(), &DST_QUAD)),
+                    None => None,
+                },
                 output_topic: String::from(output_topic),
             }
         }
 
-        pub fn transform(&self, point: &Point2D) -> Point2D {
-            let (x, y) = point;
-            let nalgebra_point = Point2::new(*x, *y);
+        pub fn set_new_quad(&mut self, src_quad: &RectCorners) {
+            self.transform_matrix = Some(build_transform(&src_quad, &DST_QUAD));
+        }
 
-            let transformed = self.transform_matrix.transform_point(&nalgebra_point);
-            (transformed.x, transformed.y)
+        pub fn transform(&self, point: &Point2D) -> Result<Point2D, ()> {
+            match self.transform_matrix {
+                Some(matrix) => {
+                    let (x, y) = point;
+                    let nalgebra_point = Point2::new(*x, *y);
+
+                    let transformed = matrix.transform_point(&nalgebra_point);
+                    Ok((transformed.x, transformed.y))
+                }
+                None => Err(()),
+            }
         }
 
         pub fn publish_tracked_points(
@@ -63,6 +76,13 @@ pub mod tracking {
             let payload: Vec<u8> = to_vec_named(&points).unwrap();
             let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_1);
             Ok((points, message))
+        }
+
+        pub fn is_ready(&self) -> bool {
+            match self.transform_matrix {
+                Some(_) => true,
+                None => false,
+            }
         }
     }
 
@@ -154,14 +174,14 @@ pub mod tracking {
         let matrix_a = Matrix8x8::from_iterator(combined);
 
         let dst_quad_elements = vec![
-            dst_quad[0].0,
-            dst_quad[0].1,
-            dst_quad[1].0,
-            dst_quad[1].1,
-            dst_quad[2].0,
-            dst_quad[2].1,
-            dst_quad[3].0,
-            dst_quad[3].1,
+            DST_QUAD[0].0,
+            DST_QUAD[0].1,
+            DST_QUAD[1].0,
+            DST_QUAD[1].1,
+            DST_QUAD[2].0,
+            DST_QUAD[2].1,
+            DST_QUAD[3].0,
+            DST_QUAD[3].1,
         ]
         .into_iter();
 

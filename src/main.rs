@@ -100,19 +100,17 @@ fn main() {
 
         println!("Clustering system init OK");
 
-        let perspective_transformer: Option<PerspectiveTransformer> =
+        let mut perspective_transformer = PerspectiveTransformer::new(
+            &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
             match config.region_of_interest() {
                 Some(region_of_interest) => {
                     let (c1, c2, c3, c4) = region_of_interest;
                     let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                    let transformer = PerspectiveTransformer::new(
-                        &corners,
-                        &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
-                    );
-                    Some(transformer)
+                    Some(corners)
                 }
                 None => None,
-            };
+            },
+        );
 
         println!("Perspective transformer system init OK");
 
@@ -134,6 +132,13 @@ fn main() {
                     }
                     "saveLidarConfig" => {
                         println!("Save Config topic");
+                        handle_save_message(
+                            &incoming_message,
+                            &mut config,
+                            &client,
+                            &mut perspective_transformer,
+                        )
+                        .await;
                     }
                     "requestLidarConfig" => {
                         println!("requestLidarConfig; respond with provideLidarConfig message");
@@ -166,7 +171,7 @@ async fn handle_scans_message(
     config: &mut Config,
     client: &mqtt::AsyncClient,
     clustering_system: &mut ClusteringSystem,
-    perspective_transformer: &Option<PerspectiveTransformer>,
+    perspective_transformer: &PerspectiveTransformer,
 ) {
     let serial = parse_agent_id(incoming_message.topic());
     if let Some(()) = config.check_or_create_device(serial) {
@@ -174,19 +179,21 @@ async fn handle_scans_message(
         client.publish(message.unwrap()).await.unwrap();
     }
     let device = config.get_device(serial).unwrap();
-    if let Ok((clusters, message)) = clustering_system
+    if let Ok((clusters, clusters_message)) = clustering_system
         .handle_scan_message(incoming_message, device)
         .await
     {
-        client.publish(message).await.unwrap();
+        client.publish(clusters_message).await.unwrap();
 
-        if let Some(transformer) = perspective_transformer {
-            let points = clusters
+        if perspective_transformer.is_ready() {
+            let points: Vec<Point2D> = clusters
                 .into_iter()
-                .map(|c| transformer.transform(&(c.x, c.y)))
+                .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
                 .collect();
 
-            if let Ok((_tracked_points, message)) = transformer.publish_tracked_points(&points) {
+            if let Ok((_tracked_points, message)) =
+                perspective_transformer.publish_tracked_points(&points)
+            {
                 client.publish(message).await.unwrap();
             }
         }
@@ -197,7 +204,20 @@ async fn handle_save_message(
     incoming_message: &mqtt::Message,
     config: &mut Config,
     client: &mqtt::AsyncClient,
-    perspective_transformer: &Option<PerspectiveTransformer>,
+    perspective_transformer: &mut PerspectiveTransformer,
 ) {
-    // TODO: save device config, update perspective transformer if ROI provided
+    match config.parse_remote_config(incoming_message) {
+        Ok(()) => {
+            println!("Remote-provided config parsed OK; now save to disk and (re) publish");
+            let message = config.publish_config(true);
+            client.publish(message.unwrap()).await.unwrap();
+
+            if let Some(region_of_interest) = config.region_of_interest() {
+                let (c1, c2, c3, c4) = region_of_interest;
+                let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
+                perspective_transformer.set_new_quad(&corners)
+            }
+        }
+        Err(()) => println!("There was an error saving the remote-provided config"),
+    }
 }

@@ -66,6 +66,27 @@ pub mod config_state {
             Ok(message)
         }
 
+        pub fn parse_remote_config(&mut self, incoming_message: &mqtt::Message) -> Result<(), ()> {
+            let payload = incoming_message.payload().to_vec();
+
+            match rmp_serde::from_slice::<Config>(&payload) {
+                Ok(config) => {
+                    let Config {
+                        devices,
+                        region_of_interest,
+                        ..
+                    } = config;
+                    self.devices = devices;
+                    self.region_of_interest = region_of_interest;
+                    Ok(())
+                }
+                Err(e) => {
+                    println!("Failed to parse Config from message: {}", e);
+                    Err(())
+                }
+            }
+        }
+
         pub fn load_config_from_file(&mut self) -> Result<usize, ()> {
             let text =
                 std::fs::read_to_string(&self.config_file_path).expect("Error opening config file");
