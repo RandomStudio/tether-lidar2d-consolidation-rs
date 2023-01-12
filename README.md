@@ -39,7 +39,7 @@ So far
 - https://franklinta.com/2014/09/08/computing-css-matrix3d-transforms/
 - https://yasenh.github.io/post/homogeneous-coordinates/
 
-Finally, used a combination of `ndarray` (which was already installed, to support the clustering calculations) and `nlagebra`.
+Finally, used a combination of `ndarray` (which was already installed, to support the clustering calculations) and `nalgebra`.
 
 ## Notes on implementation
 - As with OG Agent, the serial string for the LIDAR device is extracted from the topic, specifically the `agentIdOrGroup` part in `lidar2d/{agentIdOrGroup}/scans`
