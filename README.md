@@ -39,6 +39,8 @@ So far
 - https://franklinta.com/2014/09/08/computing-css-matrix3d-transforms/
 - https://yasenh.github.io/post/homogeneous-coordinates/
 
+Finally, used a combination of `ndarray` (which was already installed, to support the clustering calculations) and `nlagebra`.
+
 ## Notes on implementation
 - As with OG Agent, the serial string for the LIDAR device is extracted from the topic, specifically the `agentIdOrGroup` part in `lidar2d/{agentIdOrGroup}/scans`
 - The samples are copied from the array of arrays; each "sample" is an array with the elements `[angle, distance]` and sometimes `[angle, distance, quality]` (although the latter is not handled yet). The samples are converted into points and the list(vector) of all converted points are "inserted" (i.e. replaced, if key already exists) into the hashmap which represents all LIDAR devices (with serial strings as keys). 
@@ -50,13 +52,14 @@ So far
 
   ## TODO
   - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
-  - [x] Use [rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) for MsgPacg instead of msgpack_simple
+  - [x] Use [rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) for MessagePack instead of msgpack_simple
   - [x] Read/write config data from/to disk
   - [x] Transform incoming scan points: rotation and position/offset
   - [x] Apply Scan Mask Thresholds on incoming samples
   - [x] Apply maxClusterSize filtering
   - [x] Handle ROI, transformation (warping)
   - [x] Allow incoming config (devices, ROI) to be saved via "saveLidarConfig"
+  - [ ] Should test with multiple sensors
   - [ ] Tracking output should apply ignoreOutside, ignoreOutsideMargin logic
   - [ ] If receiving an unknown / unconfigured device, add it with some defaults to Config
   - [ ] Allow AutoMaskSampler to be created on request
