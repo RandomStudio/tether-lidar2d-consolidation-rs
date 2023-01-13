@@ -1,22 +1,22 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub type MaskThresholdMap = HashMap<String, f64>;
 
-struct AutoMaskSampler {
-    serial: String,
+pub struct AutoMaskSampler {
     threshold_margin: f64,
     angles_with_thresholds: MaskThresholdMap,
     scans_remaining: usize,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AutoMaskMessage {
+    pub r#type: String,
+}
+
 impl AutoMaskSampler {
-    pub fn new(
-        serial: &str,
-        required_scans_count: usize,
-        threshold_margin: f64,
-    ) -> AutoMaskSampler {
+    pub fn new(required_scans_count: usize, threshold_margin: f64) -> AutoMaskSampler {
         AutoMaskSampler {
-            serial: String::from(serial),
             threshold_margin,
             angles_with_thresholds: HashMap::new(),
             scans_remaining: required_scans_count,
@@ -39,7 +39,6 @@ impl AutoMaskSampler {
             }
             None
         } else {
-            println!("All required scans done for device {}", self.serial);
             Some(&self.angles_with_thresholds)
         }
     }

@@ -1,7 +1,9 @@
+use automasking::AutoMaskMessage;
 use config::config_state::Config;
 
 use futures::{executor::block_on, stream::StreamExt};
 use paho_mqtt as mqtt;
+use std::collections::HashMap;
 use std::{env, process, time::Duration};
 
 mod automasking;
@@ -14,11 +16,18 @@ mod tracking;
 const SCANS_TOPIC: &str = "+/+/scans";
 const SAVE_CONFIG_TOPIC: &str = "+/+/saveLidarConfig";
 const REQUEST_CONFIG_TOPIC: &str = "+/+/requestLidarConfig";
-const TOPICS: &[&str] = &[SCANS_TOPIC, SAVE_CONFIG_TOPIC, REQUEST_CONFIG_TOPIC];
+const REQUEST_AUTOMASK_TOPIC: &str = "+/+/requestAutoMask";
+const TOPICS: &[&str] = &[
+    SCANS_TOPIC,
+    SAVE_CONFIG_TOPIC,
+    REQUEST_CONFIG_TOPIC,
+    REQUEST_AUTOMASK_TOPIC,
+];
 
 // Corresponding QOS level for each of the above
-const QOS: &[i32; TOPICS.len()] = &[0, 2, 2];
+const QOS: &[i32; TOPICS.len()] = &[0, 2, 2, 2];
 
+use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
 use crate::tether_utils::{build_topic, parse_agent_id, parse_plug_name};
 use crate::tracking::tracking::PerspectiveTransformer;
@@ -115,6 +124,8 @@ fn main() {
 
         println!("Perspective transformer system init OK");
 
+        let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
+
         // Just loop on incoming messages.
         println!("Waiting for messages...");
 
@@ -145,6 +156,14 @@ fn main() {
                         println!("requestLidarConfig; respond with provideLidarConfig message");
                         let message = config.publish_config(true);
                         client.publish(message.unwrap()).await.unwrap();
+                    }
+                    "requestAutoMask" => {
+                        println!("requestAutoMask message");
+                        handle_automask_message(
+                            &incoming_message,
+                            &mut automask_samplers,
+                            &mut config,
+                        );
                     }
                     _ => {
                         println!("Unknown topic: {}", incoming_message.topic());
@@ -220,5 +239,32 @@ async fn handle_save_message(
             }
         }
         Err(()) => println!("There was an error saving the remote-provided config"),
+    }
+}
+
+fn handle_automask_message(
+    incoming_message: &mqtt::Message,
+    automask_samplers: &mut HashMap<String, AutoMaskSampler>,
+    config: &mut Config,
+) {
+    let payload = incoming_message.payload().to_vec();
+
+    // let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
+    let automask_command: Result<AutoMaskMessage, rmp_serde::decode::Error> =
+        rmp_serde::from_slice(&payload);
+    match automask_command {
+        Ok(parsed_message) => {
+            let command_type = parsed_message.r#type;
+            if command_type.eq_ignore_ascii_case("new") {}
+            if command_type.eq_ignore_ascii_case("clear") {
+                automask_samplers.clear();
+                for (device) in config.devices() {
+                    device.scan_mask_thresholds.as_mut().unwrap().clear();
+                }
+            }
+        }
+        Err(e) => {
+            println!("Failed to parse auto mask command: {}", e)
+        }
     }
 }

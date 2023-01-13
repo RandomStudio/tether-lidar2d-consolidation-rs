@@ -147,6 +147,10 @@ pub mod config_state {
             self.devices.iter().find(|&d| d.serial.eq(serial))
         }
 
+        pub fn devices(&self) -> &Vec<LidarDevice> {
+            &self.devices
+        }
+
         pub fn region_of_interest(&self) -> Option<&CornerPoints> {
             self.region_of_interest.as_ref()
         }
