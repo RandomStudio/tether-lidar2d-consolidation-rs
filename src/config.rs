@@ -8,6 +8,8 @@ pub mod config_state {
     use rmps::to_vec_named;
     use serde::{Deserialize, Serialize};
 
+    use crate::automasking::MaskThresholdMap;
+
     #[derive(Serialize, Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
     pub struct LidarDevice {
@@ -18,7 +20,7 @@ pub mod config_state {
         pub y: f64,
         color: String,
         pub min_distance_threshold: f64,
-        pub scan_mask_thresholds: Option<HashMap<String, f64>>,
+        pub scan_mask_thresholds: Option<MaskThresholdMap>,
         pub flip_coords: Option<(i8, i8)>,
     }
 

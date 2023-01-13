@@ -4,6 +4,7 @@ use futures::{executor::block_on, stream::StreamExt};
 use paho_mqtt as mqtt;
 use std::{env, process, time::Duration};
 
+mod automasking;
 mod clustering;
 mod config;
 mod tether_utils;
