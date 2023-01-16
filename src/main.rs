@@ -237,6 +237,7 @@ async fn handle_scans_message(
                             info!("Updated masking for device {}", serial);
                             let message = config.publish_config(true);
                             client.publish(message.unwrap()).await.unwrap();
+                            sampler.angles_with_thresholds.clear();
                         }
                         Err(()) => {
                             error!("Error updating masking for device {}", serial);

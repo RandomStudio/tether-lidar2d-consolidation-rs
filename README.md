@@ -68,6 +68,7 @@ Finally, used a combination of `ndarray` (which was already installed, to suppor
   - [ ] Close the client properly on quit, so that the queue is also properly destroyed
   - [ ] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
   - [ ] Add (optional) tether-tracking-smooth functionality, built-in
+  - [ ] Possible memory leak when clearing and/or setting new AutoMask Samplers
 
   ## Useful resources
   - General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
