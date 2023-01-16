@@ -8,7 +8,7 @@ pub mod config_state {
     use rmps::to_vec_named;
     use serde::{Deserialize, Serialize};
 
-    use crate::automasking::{AutoMaskSampler, MaskThresholdMap};
+    use crate::automasking::MaskThresholdMap;
 
     #[derive(Serialize, Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
@@ -151,13 +151,17 @@ pub mod config_state {
 
         pub fn update_device_masking(
             &mut self,
-            masking: MaskThresholdMap,
-            serial: &String,
+            masking: &MaskThresholdMap,
+            serial: &str,
         ) -> Result<(), ()> {
             let device = self.get_device_mut(serial);
             match device {
                 Some(d) => {
-                    d.scan_mask_thresholds = Some(masking);
+                    let mut m: MaskThresholdMap = HashMap::new();
+                    for (key, value) in masking {
+                        m.insert(String::from(key), *value);
+                    }
+                    d.scan_mask_thresholds = Some(m);
                     Ok(())
                 }
                 None => Err(()),

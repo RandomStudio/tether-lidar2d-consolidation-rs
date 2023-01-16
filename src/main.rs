@@ -139,6 +139,7 @@ fn main() {
                             &client,
                             &mut clustering_system,
                             &perspective_transformer,
+                            &mut automask_samplers,
                         )
                         .await;
                     }
@@ -194,6 +195,7 @@ async fn handle_scans_message(
     client: &mqtt::AsyncClient,
     clustering_system: &mut ClusteringSystem,
     perspective_transformer: &PerspectiveTransformer,
+    automask_samplers: &mut HashMap<String, AutoMaskSampler>,
 ) {
     let serial = parse_agent_id(incoming_message.topic());
     if let Some(()) = config.check_or_create_device(serial) {
@@ -218,6 +220,28 @@ async fn handle_scans_message(
             {
                 client.publish(message).await.unwrap();
             }
+        }
+
+        let matching_automask_sampler = automask_samplers.get_mut(serial);
+        match matching_automask_sampler {
+            Some(sampler) => {
+                if !sampler.is_complete() {
+                    let payload = incoming_message.payload().to_vec();
+                    let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
+                    if let Some(new_mask) = sampler.add_samples(&scans) {
+                        println!("Sufficient samples for masking device {}", serial);
+                        match config.update_device_masking(&new_mask, &serial) {
+                            Ok(()) => {
+                                println!("Updated masking for device {}", serial);
+                            }
+                            Err(()) => {
+                                println!("Error updating masking for device {}", serial);
+                            }
+                        }
+                    }
+                }
+            }
+            None => {}
         }
     }
 }

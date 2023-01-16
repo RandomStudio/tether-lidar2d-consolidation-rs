@@ -42,4 +42,8 @@ impl AutoMaskSampler {
             Some(&self.angles_with_thresholds)
         }
     }
+
+    pub fn is_complete(&self) -> bool {
+        self.scans_remaining == 0
+    }
 }
