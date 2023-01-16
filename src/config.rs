@@ -1,5 +1,6 @@
 pub mod config_state {
 
+    use log::{debug, error, info};
     use std::{collections::HashMap, fmt::Error};
 
     use paho_mqtt as mqtt;
@@ -83,7 +84,7 @@ pub mod config_state {
                     Ok(())
                 }
                 Err(e) => {
-                    println!("Failed to parse Config from message: {}", e);
+                    error!("Failed to parse Config from message: {}", e);
                     Err(())
                 }
             }
@@ -95,7 +96,7 @@ pub mod config_state {
 
             match serde_json::from_str::<Config>(&text) {
                 Ok(data) => {
-                    println!("Config parsed data from file: {:?}", data);
+                    debug!("Config parsed data from file: {:?}", data);
 
                     self.devices = data.devices;
                     self.region_of_interest = data.region_of_interest;
@@ -103,7 +104,7 @@ pub mod config_state {
                     Ok(self.devices.len())
                 }
                 Err(e) => {
-                    println!("Failed to parse config data: {}", e);
+                    error!("Failed to parse config data: {}", e);
                     Err(())
                 }
             }
@@ -113,7 +114,7 @@ pub mod config_state {
             let text = serde_json::to_string_pretty(self).unwrap();
             std::fs::write(&self.config_file_path, text).unwrap();
 
-            println!("Wrote config to file: {:?}", self.config_file_path);
+            info!("Wrote config to file: {:?}", self.config_file_path);
 
             Ok(())
         }

@@ -941,6 +941,7 @@ dependencies = [
  "async-std",
  "env_logger",
  "futures",
+ "log",
  "nalgebra",
  "ndarray",
  "paho-mqtt",

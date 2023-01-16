@@ -1,7 +1,9 @@
 use automasking::AutoMaskMessage;
 use config::config_state::Config;
 
+use env_logger::Env;
 use futures::{executor::block_on, stream::StreamExt};
+use log::{debug, error, info, warn};
 use paho_mqtt as mqtt;
 use std::collections::HashMap;
 use std::{env, process, time::Duration};
@@ -47,7 +49,8 @@ const MAX_CLUSTER_SIZE: f64 = 2500.;
 
 fn main() {
     // Initialize the logger from the environment
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    info!("Started");
 
     let host = env::args()
         .nth(1)
@@ -62,7 +65,7 @@ fn main() {
 
     // Create the client connection
     let mut client = mqtt::AsyncClient::new(create_opts).unwrap_or_else(|e| {
-        println!("Error creating the client: {:?}", e);
+        error!("Error creating the client: {:?}", e);
         process::exit(1);
     });
 
@@ -79,7 +82,7 @@ fn main() {
             .finalize();
 
         // Make the connection to the broker
-        println!("Connecting to the MQTT server...");
+        info!("Connecting to the MQTT server...");
         client.connect(conn_opts).await?;
 
         // Initialise config, now that we have the MQTT client ready
@@ -98,7 +101,7 @@ fn main() {
             }
         }
 
-        println!("Subscribing to topics: {:?}", TOPICS);
+        info!("Subscribing to topics: {:?}", TOPICS);
         client.subscribe_many(TOPICS, QOS).await?;
 
         let mut clustering_system = ClusteringSystem::new(
@@ -108,7 +111,7 @@ fn main() {
             MAX_CLUSTER_SIZE,
         );
 
-        println!("Clustering system init OK");
+        info!("Clustering system init OK");
 
         let mut perspective_transformer = PerspectiveTransformer::new(
             &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
@@ -123,12 +126,12 @@ fn main() {
             Some(0.04), // TODO: set through config
         );
 
-        println!("Perspective transformer system init OK");
+        info!("Perspective transformer system init OK");
 
         let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
 
         // Just loop on incoming messages.
-        println!("Waiting for messages...");
+        debug!("Waiting for messages...");
 
         while let Some(msg_opt) = strm.next().await {
             match msg_opt {
@@ -145,7 +148,7 @@ fn main() {
                         .await;
                     }
                     "saveLidarConfig" => {
-                        println!("Save Config topic");
+                        debug!("Save Config topic");
                         handle_save_message(
                             &incoming_message,
                             &mut config,
@@ -155,12 +158,12 @@ fn main() {
                         .await;
                     }
                     "requestLidarConfig" => {
-                        println!("requestLidarConfig; respond with provideLidarConfig message");
+                        info!("requestLidarConfig; respond with provideLidarConfig message");
                         let message = config.publish_config(true);
                         client.publish(message.unwrap()).await.unwrap();
                     }
                     "requestAutoMask" => {
-                        println!("requestAutoMask message");
+                        info!("requestAutoMask message");
                         handle_automask_message(
                             &incoming_message,
                             &mut automask_samplers,
@@ -170,14 +173,14 @@ fn main() {
                         .await;
                     }
                     _ => {
-                        println!("Unknown topic: {}", incoming_message.topic());
+                        warn!("Unknown topic: {}", incoming_message.topic());
                     }
                 },
                 None => {
                     // A "None" means we were disconnected. Try to reconnect...
-                    println!("Lost connection. Attempting reconnect.");
+                    warn!("Lost connection. Attempting reconnect.");
                     while let Err(err) = client.reconnect().await {
-                        println!("Error reconnecting: {}", err);
+                        error!("Error reconnecting: {}", err);
                         async_std::task::sleep(Duration::from_millis(1000)).await;
                     }
                 }
@@ -186,7 +189,7 @@ fn main() {
         // Explicit return type for the async block
         Ok::<(), mqtt::Error>(())
     }) {
-        eprintln!("{}", err);
+        error!("{}", err);
     }
 }
 
@@ -230,15 +233,15 @@ async fn handle_scans_message(
                     let payload = incoming_message.payload().to_vec();
                     let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
                     if let Some(new_mask) = sampler.add_samples(&scans) {
-                        println!("Sufficient samples for masking device {}", serial);
+                        debug!("Sufficient samples for masking device {}", serial);
                         match config.update_device_masking(&new_mask, &serial) {
                             Ok(()) => {
-                                println!("Updated masking for device {}", serial);
+                                info!("Updated masking for device {}", serial);
                                 let message = config.publish_config(true);
                                 client.publish(message.unwrap()).await.unwrap();
                             }
                             Err(()) => {
-                                println!("Error updating masking for device {}", serial);
+                                error!("Error updating masking for device {}", serial);
                             }
                         }
                     }
@@ -257,7 +260,7 @@ async fn handle_save_message(
 ) {
     match config.parse_remote_config(incoming_message) {
         Ok(()) => {
-            println!("Remote-provided config parsed OK; now save to disk and (re) publish");
+            info!("Remote-provided config parsed OK; now save to disk and (re) publish");
             let message = config.publish_config(true);
             client.publish(message.unwrap()).await.unwrap();
 
@@ -267,7 +270,7 @@ async fn handle_save_message(
                 perspective_transformer.set_new_quad(&corners)
             }
         }
-        Err(()) => println!("There was an error saving the remote-provided config"),
+        Err(()) => error!("There was an error saving the remote-provided config"),
     }
 }
 
@@ -287,7 +290,7 @@ async fn handle_automask_message(
             let command_type: &str = &parsed_message.r#type;
             let result: Result<(), ()> = match command_type {
                 "new" => {
-                    println!("request NEW auto mask samplers");
+                    info!("request NEW auto mask samplers");
                     automask_samplers.clear();
                     config.clear_device_masking();
                     for device in config.devices().iter() {
@@ -297,13 +300,13 @@ async fn handle_automask_message(
                     Ok(())
                 }
                 "clear" => {
-                    println!("request CLEAR all device masking thresholds");
+                    info!("request CLEAR all device masking thresholds");
                     automask_samplers.clear();
                     config.clear_device_masking();
                     Ok(())
                 }
                 _ => {
-                    println!("Unrecognised command type for RequestAutoMask message");
+                    error!("Unrecognised command type for RequestAutoMask message");
                     Err(())
                 }
             };
@@ -314,12 +317,12 @@ async fn handle_automask_message(
                     client.publish(message.unwrap()).await.unwrap();
                 }
                 Err(()) => {
-                    println!("Error publishing updated config");
+                    error!("Error publishing updated config");
                 }
             }
         }
         Err(e) => {
-            println!("Failed to parse auto mask command: {}", e)
+            error!("Failed to parse auto mask command: {}", e)
         }
     }
 }

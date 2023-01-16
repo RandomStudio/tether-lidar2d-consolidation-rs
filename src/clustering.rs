@@ -1,5 +1,6 @@
 use crate::{config::config_state::LidarDevice, Point2D};
 
+use log::debug;
 use rmp_serde as rmps;
 use rmps::to_vec_named;
 use serde::{Deserialize, Serialize};
@@ -56,7 +57,7 @@ impl ClusteringSystem {
         incoming_message: &mqtt::Message,
         device: &LidarDevice,
     ) -> Result<(Vec<Cluster2D>, mqtt::Message), ()> {
-        println!(
+        debug!(
             "Received message on topic \"{}\":",
             incoming_message.topic()
         );
@@ -64,7 +65,7 @@ impl ClusteringSystem {
 
         let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
 
-        println!("Decoded {} scans", scans.len());
+        debug!("Decoded {} scans", scans.len());
 
         let mut points_this_scan: Vec<Point2D> = Vec::new();
 
@@ -81,19 +82,17 @@ impl ClusteringSystem {
         self.scan_points
             .insert(String::from(&device.serial), points_this_scan);
 
-        // println!("Updated scan samples hashmap: {:?}", scan_points);
-
         let combined_points = self.combine_all_points();
 
-        println!(
+        debug!(
             "Combined {} points from all devices",
             (combined_points.len() / 2)
         );
 
         let (clusters, outliers) = self.clustering_engine.fit(&combined_points);
 
-        println!("Clustering done");
-        println!(
+        debug!("Clustering done");
+        debug!(
             "Found {} clusters, {} outliers",
             clusters.len(),
             outliers.len()
