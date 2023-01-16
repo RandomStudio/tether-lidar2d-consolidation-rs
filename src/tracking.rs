@@ -9,7 +9,13 @@ pub mod tracking {
     extern crate nalgebra as na;
 
     // A standardised "1x1" box to transform all coordinates into
-    const DST_QUAD: RectCorners = [(0., 0.), (1., 0.), (1., 1.), (0., 1.)];
+    const DST_SIZE: f64 = 1.;
+    const DST_QUAD: RectCorners = [
+        (0., 0.),
+        (DST_SIZE, 0.),
+        (DST_SIZE, DST_SIZE),
+        (0., DST_SIZE),
+    ];
 
     #[derive(Serialize, Deserialize, Debug)]
     pub struct TrackedPoint2D {
@@ -25,16 +31,22 @@ pub mod tracking {
     type Matrix8x8 = na::SMatrix<f64, 8, 8>;
     pub struct PerspectiveTransformer {
         transform_matrix: Option<Matrix3<f64>>,
+        ignore_outside_margin: Option<f64>,
         output_topic: String,
     }
 
     impl PerspectiveTransformer {
-        pub fn new(output_topic: &str, src_quad: Option<RectCorners>) -> PerspectiveTransformer {
+        pub fn new(
+            output_topic: &str,
+            src_quad: Option<RectCorners>,
+            ignore_outside_margin: Option<f64>,
+        ) -> PerspectiveTransformer {
             PerspectiveTransformer {
                 transform_matrix: match src_quad {
                     Some(quad) => Some(build_transform(&quad.clone(), &DST_QUAD)),
                     None => None,
                 },
+                ignore_outside_margin,
                 output_topic: String::from(output_topic),
             }
         }
@@ -63,6 +75,21 @@ pub mod tracking {
             let points: Vec<TrackedPoint2D> = points
                 .into_iter()
                 .enumerate()
+                .filter(|(_index, point)| match self.ignore_outside_margin {
+                    Some(margin) => {
+                        let (x, y) = point;
+                        if *x > (DST_SIZE + margin)
+                            || *x < (0. - margin)
+                            || *y > (DST_SIZE + margin)
+                            || *y < (0. - margin)
+                        {
+                            false
+                        } else {
+                            true
+                        }
+                    }
+                    None => true,
+                })
                 .map(|i| {
                     let (index, point) = i;
                     let (x, y) = point;

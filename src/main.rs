@@ -120,6 +120,7 @@ fn main() {
                 }
                 None => None,
             },
+            Some(0.04), // TODO: set through config
         );
 
         println!("Perspective transformer system init OK");
