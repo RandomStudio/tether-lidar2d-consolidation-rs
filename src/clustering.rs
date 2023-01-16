@@ -128,7 +128,7 @@ impl ClusteringSystem {
 
     pub fn combine_all_points(&self) -> ndarray::Array2<f64> {
         let mut all_points = Array::zeros((0, 2));
-        for (_device, points) in &self.scan_points {
+        for points in self.scan_points.values() {
             for (x, y) in points {
                 all_points.push_row(ArrayView::from(&[*x, *y])).unwrap()
             }
@@ -192,7 +192,7 @@ fn measurement_to_point(angle: &f64, distance: &f64, device: &LidarDevice) -> Op
     } = device;
     if *distance > 0.
         && *distance > *min_distance_threshold
-        && passes_mask_threshold(angle, distance, &scan_mask_thresholds)
+        && passes_mask_threshold(angle, distance, scan_mask_thresholds)
     {
         match flip_coords {
             None => Some((
@@ -214,7 +214,7 @@ fn measurement_to_point(angle: &f64, distance: &f64, device: &LidarDevice) -> Op
             }
         }
     } else {
-        return None;
+        None
     }
 }
 
@@ -228,11 +228,7 @@ fn passes_mask_threshold(
         Some(masking_map) => {
             let angle_key = angle.to_string();
             if let Some(threshold) = masking_map.get(&angle_key) {
-                if *distance < *threshold {
-                    true
-                } else {
-                    false
-                }
+                *distance < *threshold
             } else {
                 true
             }

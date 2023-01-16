@@ -1,245 +1,230 @@
-pub mod tracking {
-    use na::{Matrix3, Point2};
-    use paho_mqtt as mqtt;
-    use rmp_serde::to_vec_named;
-    use serde::{Deserialize, Serialize};
+use na::{Matrix3, Point2};
+use paho_mqtt as mqtt;
+use rmp_serde::to_vec_named;
+use serde::{Deserialize, Serialize};
 
-    use crate::Point2D;
+use crate::Point2D;
 
-    extern crate nalgebra as na;
+extern crate nalgebra as na;
 
-    // A standardised "1x1" box to transform all coordinates into
-    const DST_SIZE: f64 = 1.;
-    const DST_QUAD: RectCorners = [
-        (0., 0.),
-        (DST_SIZE, 0.),
-        (DST_SIZE, DST_SIZE),
-        (0., DST_SIZE),
-    ];
+// A standardised "1x1" box to transform all coordinates into
+const DST_SIZE: f64 = 1.;
+const DST_QUAD: RectCorners = [
+    (0., 0.),
+    (DST_SIZE, 0.),
+    (DST_SIZE, DST_SIZE),
+    (0., DST_SIZE),
+];
 
-    #[derive(Serialize, Deserialize, Debug)]
-    pub struct TrackedPoint2D {
-        id: usize,
-        x: f64,
-        y: f64,
-    }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TrackedPoint2D {
+    id: usize,
+    x: f64,
+    y: f64,
+}
 
-    /**
-    clockwise: 'left top', 'right top', 'right bottom', 'left bottom',
-     */
-    pub type RectCorners = [Point2D; 4];
-    type Matrix8x8 = na::SMatrix<f64, 8, 8>;
-    pub struct PerspectiveTransformer {
-        transform_matrix: Option<Matrix3<f64>>,
+/**
+clockwise: 'left top', 'right top', 'right bottom', 'left bottom',
+ */
+pub type RectCorners = [Point2D; 4];
+type Matrix8x8 = na::SMatrix<f64, 8, 8>;
+pub struct PerspectiveTransformer {
+    transform_matrix: Option<Matrix3<f64>>,
+    ignore_outside_margin: Option<f64>,
+    output_topic: String,
+}
+
+impl PerspectiveTransformer {
+    pub fn new(
+        output_topic: &str,
+        src_quad: Option<RectCorners>,
         ignore_outside_margin: Option<f64>,
-        output_topic: String,
+    ) -> PerspectiveTransformer {
+        PerspectiveTransformer {
+            transform_matrix: src_quad.map(|quad| build_transform(&quad.clone(), &DST_QUAD)),
+            ignore_outside_margin,
+            output_topic: String::from(output_topic),
+        }
     }
 
-    impl PerspectiveTransformer {
-        pub fn new(
-            output_topic: &str,
-            src_quad: Option<RectCorners>,
-            ignore_outside_margin: Option<f64>,
-        ) -> PerspectiveTransformer {
-            PerspectiveTransformer {
-                transform_matrix: match src_quad {
-                    Some(quad) => Some(build_transform(&quad.clone(), &DST_QUAD)),
-                    None => None,
-                },
-                ignore_outside_margin,
-                output_topic: String::from(output_topic),
+    pub fn set_new_quad(&mut self, src_quad: &RectCorners) {
+        self.transform_matrix = Some(build_transform(src_quad, &DST_QUAD));
+    }
+
+    pub fn transform(&self, point: &Point2D) -> Result<Point2D, ()> {
+        match self.transform_matrix {
+            Some(matrix) => {
+                let (x, y) = point;
+                let nalgebra_point = Point2::new(*x, *y);
+
+                let transformed = matrix.transform_point(&nalgebra_point);
+                Ok((transformed.x, transformed.y))
             }
+            None => Err(()),
         }
+    }
 
-        pub fn set_new_quad(&mut self, src_quad: &RectCorners) {
-            self.transform_matrix = Some(build_transform(&src_quad, &DST_QUAD));
-        }
-
-        pub fn transform(&self, point: &Point2D) -> Result<Point2D, ()> {
-            match self.transform_matrix {
-                Some(matrix) => {
+    pub fn publish_tracked_points(
+        &self,
+        points: &[Point2D],
+    ) -> Result<(Vec<TrackedPoint2D>, mqtt::Message), ()> {
+        let points: Vec<TrackedPoint2D> = points
+            .iter()
+            .enumerate()
+            .filter(|(_index, point)| match self.ignore_outside_margin {
+                Some(margin) => {
                     let (x, y) = point;
-                    let nalgebra_point = Point2::new(*x, *y);
-
-                    let transformed = matrix.transform_point(&nalgebra_point);
-                    Ok((transformed.x, transformed.y))
+                    !(*x > (DST_SIZE + margin)
+                        || *x < (0. - margin)
+                        || *y > (DST_SIZE + margin)
+                        || *y < (0. - margin))
                 }
-                None => Err(()),
-            }
-        }
-
-        pub fn publish_tracked_points(
-            &self,
-            points: &Vec<Point2D>,
-        ) -> Result<(Vec<TrackedPoint2D>, mqtt::Message), ()> {
-            let points: Vec<TrackedPoint2D> = points
-                .into_iter()
-                .enumerate()
-                .filter(|(_index, point)| match self.ignore_outside_margin {
-                    Some(margin) => {
-                        let (x, y) = point;
-                        if *x > (DST_SIZE + margin)
-                            || *x < (0. - margin)
-                            || *y > (DST_SIZE + margin)
-                            || *y < (0. - margin)
-                        {
-                            false
-                        } else {
-                            true
-                        }
-                    }
-                    None => true,
-                })
-                .map(|i| {
-                    let (index, point) = i;
-                    let (x, y) = point;
-                    TrackedPoint2D {
-                        id: index,
-                        x: *x,
-                        y: *y,
-                    }
-                })
-                .collect();
-            let payload: Vec<u8> = to_vec_named(&points).unwrap();
-            let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_1);
-            Ok((points, message))
-        }
-
-        pub fn is_ready(&self) -> bool {
-            match self.transform_matrix {
-                Some(_) => true,
-                None => false,
-            }
-        }
+                None => true,
+            })
+            .map(|i| {
+                let (index, point) = i;
+                let (x, y) = point;
+                TrackedPoint2D {
+                    id: index,
+                    x: *x,
+                    y: *y,
+                }
+            })
+            .collect();
+        let payload: Vec<u8> = to_vec_named(&points).unwrap();
+        let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_1);
+        Ok((points, message))
     }
 
-    pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix3<f64> {
-        // Mappings by row - each should have 8 terms
-
-        let r1: [f64; 8] = [
-            src_quad[0].0,
-            src_quad[0].1,
-            1.,
-            0.,
-            0.,
-            0.,
-            -src_quad[0].0 * dst_quad[0].0,
-            -src_quad[0].1 * dst_quad[0].0,
-        ];
-        let r2: [f64; 8] = [
-            0.,
-            0.,
-            0.,
-            src_quad[0].0,
-            src_quad[0].1,
-            1.,
-            -src_quad[0].0 * dst_quad[0].1,
-            -src_quad[0].1 * dst_quad[0].1,
-        ];
-        let r3: [f64; 8] = [
-            src_quad[1].0,
-            src_quad[1].1,
-            1.,
-            0.,
-            0.,
-            0.,
-            -src_quad[1].0 * dst_quad[1].0,
-            -src_quad[1].1 * dst_quad[1].0,
-        ];
-        let r4: [f64; 8] = [
-            0.,
-            0.,
-            0.,
-            src_quad[1].0,
-            src_quad[1].1,
-            1.,
-            -src_quad[1].0 * dst_quad[1].1,
-            -src_quad[1].1 * dst_quad[1].1,
-        ];
-        let r5: [f64; 8] = [
-            src_quad[2].0,
-            src_quad[2].1,
-            1.,
-            0.,
-            0.,
-            0.,
-            -src_quad[2].0 * dst_quad[2].0,
-            -src_quad[2].1 * dst_quad[2].0,
-        ];
-        let r6: [f64; 8] = [
-            0.,
-            0.,
-            0.,
-            src_quad[2].0,
-            src_quad[2].1,
-            1.,
-            -src_quad[2].0 * dst_quad[2].1,
-            -src_quad[2].1 * dst_quad[2].1,
-        ];
-        let r7: [f64; 8] = [
-            src_quad[3].0,
-            src_quad[3].1,
-            1.,
-            0.,
-            0.,
-            0.,
-            -src_quad[3].0 * dst_quad[3].0,
-            -src_quad[3].1 * dst_quad[3].0,
-        ];
-        let r8: [f64; 8] = [
-            0.,
-            0.,
-            0.,
-            src_quad[3].0,
-            src_quad[3].1,
-            1.,
-            -src_quad[3].0 * dst_quad[3].1,
-            -src_quad[3].1 * dst_quad[3].1,
-        ];
-        let combined = vec![r1, r2, r3, r4, r5, r6, r7, r8].into_iter().flatten();
-
-        let matrix_a = Matrix8x8::from_iterator(combined);
-
-        let dst_quad_elements = vec![
-            dst_quad[0].0,
-            dst_quad[0].1,
-            dst_quad[1].0,
-            dst_quad[1].1,
-            dst_quad[2].0,
-            dst_quad[2].1,
-            dst_quad[3].0,
-            dst_quad[3].1,
-        ]
-        .into_iter();
-
-        // let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
-        let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
-
-        // Solve for Ah = B
-        let coefficients = matrix_b * matrix_a.try_inverse().unwrap();
-        //
-        // Create a new 3x3 transform matrix using the elements from above
-        let transformation_matrix = Matrix3::new(
-            coefficients[0],
-            coefficients[1],
-            coefficients[2],
-            coefficients[3],
-            coefficients[4],
-            coefficients[5],
-            coefficients[6],
-            coefficients[7],
-            1.,
-        );
-
-        transformation_matrix
+    pub fn is_ready(&self) -> bool {
+        self.transform_matrix.is_some()
     }
+}
+
+pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix3<f64> {
+    // Mappings by row - each should have 8 terms
+
+    let r1: [f64; 8] = [
+        src_quad[0].0,
+        src_quad[0].1,
+        1.,
+        0.,
+        0.,
+        0.,
+        -src_quad[0].0 * dst_quad[0].0,
+        -src_quad[0].1 * dst_quad[0].0,
+    ];
+    let r2: [f64; 8] = [
+        0.,
+        0.,
+        0.,
+        src_quad[0].0,
+        src_quad[0].1,
+        1.,
+        -src_quad[0].0 * dst_quad[0].1,
+        -src_quad[0].1 * dst_quad[0].1,
+    ];
+    let r3: [f64; 8] = [
+        src_quad[1].0,
+        src_quad[1].1,
+        1.,
+        0.,
+        0.,
+        0.,
+        -src_quad[1].0 * dst_quad[1].0,
+        -src_quad[1].1 * dst_quad[1].0,
+    ];
+    let r4: [f64; 8] = [
+        0.,
+        0.,
+        0.,
+        src_quad[1].0,
+        src_quad[1].1,
+        1.,
+        -src_quad[1].0 * dst_quad[1].1,
+        -src_quad[1].1 * dst_quad[1].1,
+    ];
+    let r5: [f64; 8] = [
+        src_quad[2].0,
+        src_quad[2].1,
+        1.,
+        0.,
+        0.,
+        0.,
+        -src_quad[2].0 * dst_quad[2].0,
+        -src_quad[2].1 * dst_quad[2].0,
+    ];
+    let r6: [f64; 8] = [
+        0.,
+        0.,
+        0.,
+        src_quad[2].0,
+        src_quad[2].1,
+        1.,
+        -src_quad[2].0 * dst_quad[2].1,
+        -src_quad[2].1 * dst_quad[2].1,
+    ];
+    let r7: [f64; 8] = [
+        src_quad[3].0,
+        src_quad[3].1,
+        1.,
+        0.,
+        0.,
+        0.,
+        -src_quad[3].0 * dst_quad[3].0,
+        -src_quad[3].1 * dst_quad[3].0,
+    ];
+    let r8: [f64; 8] = [
+        0.,
+        0.,
+        0.,
+        src_quad[3].0,
+        src_quad[3].1,
+        1.,
+        -src_quad[3].0 * dst_quad[3].1,
+        -src_quad[3].1 * dst_quad[3].1,
+    ];
+    let combined = vec![r1, r2, r3, r4, r5, r6, r7, r8].into_iter().flatten();
+
+    let matrix_a = Matrix8x8::from_iterator(combined);
+
+    let dst_quad_elements = vec![
+        dst_quad[0].0,
+        dst_quad[0].1,
+        dst_quad[1].0,
+        dst_quad[1].1,
+        dst_quad[2].0,
+        dst_quad[2].1,
+        dst_quad[3].0,
+        dst_quad[3].1,
+    ]
+    .into_iter();
+
+    // let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
+    let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
+
+    // Solve for Ah = B
+    let coefficients = matrix_b * matrix_a.try_inverse().unwrap();
+    //
+    // Create a new 3x3 transform matrix using the elements from above
+    Matrix3::new(
+        coefficients[0],
+        coefficients[1],
+        coefficients[2],
+        coefficients[3],
+        coefficients[4],
+        coefficients[5],
+        coefficients[6],
+        coefficients[7],
+        1.,
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::tracking::tracking::build_transform;
+    use crate::tracking::build_transform;
 
-    use super::tracking::RectCorners;
+    use super::RectCorners;
 
     #[test]
     fn test_get_transform_matrix() {

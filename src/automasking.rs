@@ -27,7 +27,7 @@ impl AutoMaskSampler {
      * return the mapping once we're done, otherwise return None
      */
     pub fn add_samples(&mut self, samples: &Vec<(f64, f64)>) -> Option<&MaskThresholdMap> {
-        self.scans_remaining = self.scans_remaining - 1;
+        self.scans_remaining -= 1;
 
         if self.scans_remaining > 0 {
             for (angle, distance) in samples {

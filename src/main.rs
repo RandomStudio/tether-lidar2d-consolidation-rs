@@ -32,7 +32,7 @@ const QOS: &[i32; TOPICS.len()] = &[0, 2, 2, 2];
 use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
 use crate::tether_utils::{build_topic, parse_agent_id, parse_plug_name};
-use crate::tracking::tracking::PerspectiveTransformer;
+use crate::tracking::PerspectiveTransformer;
 
 pub type Point2D = (f64, f64);
 
@@ -226,28 +226,24 @@ async fn handle_scans_message(
             }
         }
 
-        let matching_automask_sampler = automask_samplers.get_mut(serial);
-        match matching_automask_sampler {
-            Some(sampler) => {
-                if !sampler.is_complete() {
-                    let payload = incoming_message.payload().to_vec();
-                    let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
-                    if let Some(new_mask) = sampler.add_samples(&scans) {
-                        debug!("Sufficient samples for masking device {}", serial);
-                        match config.update_device_masking(&new_mask, &serial) {
-                            Ok(()) => {
-                                info!("Updated masking for device {}", serial);
-                                let message = config.publish_config(true);
-                                client.publish(message.unwrap()).await.unwrap();
-                            }
-                            Err(()) => {
-                                error!("Error updating masking for device {}", serial);
-                            }
+        if let Some(sampler) = automask_samplers.get_mut(serial) {
+            if !sampler.is_complete() {
+                let payload = incoming_message.payload().to_vec();
+                let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
+                if let Some(new_mask) = sampler.add_samples(&scans) {
+                    debug!("Sufficient samples for masking device {}", serial);
+                    match config.update_device_masking(new_mask, serial) {
+                        Ok(()) => {
+                            info!("Updated masking for device {}", serial);
+                            let message = config.publish_config(true);
+                            client.publish(message.unwrap()).await.unwrap();
+                        }
+                        Err(()) => {
+                            error!("Error updating masking for device {}", serial);
                         }
                     }
                 }
             }
-            None => {}
         }
     }
 }

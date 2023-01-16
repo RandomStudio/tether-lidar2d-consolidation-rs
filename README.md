@@ -52,7 +52,7 @@ Finally, used a combination of `ndarray` (which was already installed, to suppor
 
   ## TODO
   - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
-  - [x] Use [rmp_serde](https://docs.rs/rmp-serde/latest/rmp_serde/) for MessagePack instead of msgpack_simple
+  - [x] Use rmp-serde for MessagePack instead of msgpack-simple
   - [x] Read/write config data from/to disk
   - [x] Transform incoming scan points: rotation and position/offset
   - [x] Apply Scan Mask Thresholds on incoming samples
