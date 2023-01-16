@@ -163,7 +163,9 @@ fn main() {
                             &incoming_message,
                             &mut automask_samplers,
                             &mut config,
-                        );
+                            &client,
+                        )
+                        .await;
                     }
                     _ => {
                         println!("Unknown topic: {}", incoming_message.topic());
@@ -242,10 +244,11 @@ async fn handle_save_message(
     }
 }
 
-fn handle_automask_message(
+async fn handle_automask_message(
     incoming_message: &mqtt::Message,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
     config: &mut Config,
+    client: &mqtt::AsyncClient,
 ) {
     let payload = incoming_message.payload().to_vec();
 
@@ -254,11 +257,38 @@ fn handle_automask_message(
         rmp_serde::from_slice(&payload);
     match automask_command {
         Ok(parsed_message) => {
-            let command_type = parsed_message.r#type;
-            if command_type.eq_ignore_ascii_case("new") {}
-            if command_type.eq_ignore_ascii_case("clear") {
-                automask_samplers.clear();
-                config.clear_device_masking();
+            let command_type: &str = &parsed_message.r#type;
+            let result: Result<(), ()> = match command_type {
+                "new" => {
+                    println!("request NEW auto mask samplers");
+                    automask_samplers.clear();
+                    config.clear_device_masking();
+                    for device in config.devices().iter() {
+                        automask_samplers
+                            .insert(String::from(&device.serial), AutoMaskSampler::new(45, 50.));
+                    }
+                    Ok(())
+                }
+                "clear" => {
+                    println!("request CLEAR all device masking thresholds");
+                    automask_samplers.clear();
+                    config.clear_device_masking();
+                    Ok(())
+                }
+                _ => {
+                    println!("Unrecognised command type for RequestAutoMask message");
+                    Err(())
+                }
+            };
+
+            match result {
+                Ok(()) => {
+                    let message = config.publish_config(true);
+                    client.publish(message.unwrap()).await.unwrap();
+                }
+                Err(()) => {
+                    println!("Error publishing updated config");
+                }
             }
         }
         Err(e) => {

@@ -5,7 +5,7 @@ pub type MaskThresholdMap = HashMap<String, f64>;
 
 pub struct AutoMaskSampler {
     threshold_margin: f64,
-    angles_with_thresholds: MaskThresholdMap,
+    pub angles_with_thresholds: MaskThresholdMap,
     scans_remaining: usize,
 }
 

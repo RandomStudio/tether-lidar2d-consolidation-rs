@@ -149,8 +149,27 @@ pub mod config_state {
             }
         }
 
+        pub fn update_device_masking(
+            &mut self,
+            masking: MaskThresholdMap,
+            serial: &String,
+        ) -> Result<(), ()> {
+            let device = self.get_device_mut(serial);
+            match device {
+                Some(d) => {
+                    d.scan_mask_thresholds = Some(masking);
+                    Ok(())
+                }
+                None => Err(()),
+            }
+        }
+
         pub fn get_device(&self, serial: &str) -> Option<&LidarDevice> {
             self.devices.iter().find(|&d| d.serial.eq(serial))
+        }
+
+        pub fn get_device_mut(&mut self, serial: &str) -> Option<&mut LidarDevice> {
+            self.devices.iter_mut().find(|d| d.serial.eq(serial))
         }
 
         pub fn devices(&self) -> &Vec<LidarDevice> {
