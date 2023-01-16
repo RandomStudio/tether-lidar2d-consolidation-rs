@@ -174,14 +174,14 @@ pub mod tracking {
         let matrix_a = Matrix8x8::from_iterator(combined);
 
         let dst_quad_elements = vec![
-            DST_QUAD[0].0,
-            DST_QUAD[0].1,
-            DST_QUAD[1].0,
-            DST_QUAD[1].1,
-            DST_QUAD[2].0,
-            DST_QUAD[2].1,
-            DST_QUAD[3].0,
-            DST_QUAD[3].1,
+            dst_quad[0].0,
+            dst_quad[0].1,
+            dst_quad[1].0,
+            dst_quad[1].1,
+            dst_quad[2].0,
+            dst_quad[2].1,
+            dst_quad[3].0,
+            dst_quad[3].1,
         ]
         .into_iter();
 
