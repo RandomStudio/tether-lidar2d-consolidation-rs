@@ -258,9 +258,7 @@ fn handle_automask_message(
             if command_type.eq_ignore_ascii_case("new") {}
             if command_type.eq_ignore_ascii_case("clear") {
                 automask_samplers.clear();
-                for (device) in config.devices() {
-                    device.scan_mask_thresholds.as_mut().unwrap().clear();
-                }
+                config.clear_device_masking();
             }
         }
         Err(e) => {

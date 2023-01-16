@@ -8,7 +8,7 @@ pub mod config_state {
     use rmps::to_vec_named;
     use serde::{Deserialize, Serialize};
 
-    use crate::automasking::MaskThresholdMap;
+    use crate::automasking::{AutoMaskSampler, MaskThresholdMap};
 
     #[derive(Serialize, Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
@@ -140,6 +140,12 @@ pub mod config_state {
                     self.devices.push(new_device);
                     Some(())
                 }
+            }
+        }
+
+        pub fn clear_device_masking(&mut self) {
+            for d in self.devices.iter_mut() {
+                d.scan_mask_thresholds = None;
             }
         }
 
