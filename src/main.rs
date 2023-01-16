@@ -233,6 +233,8 @@ async fn handle_scans_message(
                         match config.update_device_masking(&new_mask, &serial) {
                             Ok(()) => {
                                 println!("Updated masking for device {}", serial);
+                                let message = config.publish_config(true);
+                                client.publish(message.unwrap()).await.unwrap();
                             }
                             Err(()) => {
                                 println!("Error updating masking for device {}", serial);

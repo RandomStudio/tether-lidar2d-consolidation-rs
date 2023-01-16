@@ -59,10 +59,10 @@ Finally, used a combination of `ndarray` (which was already installed, to suppor
   - [x] Apply maxClusterSize filtering
   - [x] Handle ROI, transformation (warping)
   - [x] Allow incoming config (devices, ROI) to be saved via "saveLidarConfig"
+  - [x] Allow AutoMaskSampler to be created on request
   - [ ] Should test with multiple sensors
   - [ ] Tracking output should apply ignoreOutside, ignoreOutsideMargin logic
   - [ ] If receiving an unknown / unconfigured device, add it with some defaults to Config
-  - [ ] Allow AutoMaskSampler to be created on request
   - [ ] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
   - [ ] Retain messages, for config publish
   - [ ] Close the client properly on quit, so that the queue is also properly destroyed
