@@ -1,3 +1,4 @@
+use log::warn;
 use na::{Matrix3, Point2};
 use paho_mqtt as mqtt;
 use rmp_serde::to_vec_named;
@@ -40,6 +41,9 @@ impl PerspectiveTransformer {
         src_quad: Option<RectCorners>,
         ignore_outside_margin: Option<f64>,
     ) -> PerspectiveTransformer {
+        if ignore_outside_margin.is_none() {
+            warn!("perspectiveTransform.includeOutside was enabled; points will not be restricted to src_quad");
+        }
         PerspectiveTransformer {
             transform_matrix: src_quad.map(|quad| build_transform(&quad.clone(), &DST_QUAD)),
             ignore_outside_margin,

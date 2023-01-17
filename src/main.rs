@@ -50,6 +50,8 @@ const NEIGHBOURHOOD_RADIUS: f64 = 300.;
 const MIN_NEIGHBOURS: usize = 2;
 const MAX_CLUSTER_SIZE: f64 = 2500.;
 
+const IGNORE_OUTSIDE_MARGIN: f64 = 0.04;
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 
@@ -74,6 +76,12 @@ struct Cli {
 
     #[arg(long = "clustering.maxClusterSize", default_value_t = MAX_CLUSTER_SIZE)]
     clustering_max_cluster_size: f64,
+
+    #[arg(long = "perspectiveTransform.includeOutside")]
+    transform_include_outside: bool,
+
+    #[arg(long = "perspectiveTransform.ignoreOutsideMargin", default_value_t=IGNORE_OUTSIDE_MARGIN)]
+    transform_ignore_outside_margin: f64,
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -83,7 +91,7 @@ fn main() {
 
     // Initialize the logger from the environment
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level)).init();
-    debug!("Started");
+    debug!("Started; args: {:?}", cli);
 
     let broker_uri = format!("tcp://{}:1883", cli.tether_host);
 
@@ -155,7 +163,13 @@ fn main() {
                 }
                 None => None,
             },
-            Some(0.04), // TODO: set through config
+            {
+                if cli.transform_include_outside {
+                    None
+                } else {
+                    Some(cli.transform_ignore_outside_margin)
+                }
+            },
         );
 
         debug!("Perspective transformer system init OK");
