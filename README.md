@@ -1,5 +1,27 @@
 # Tether Lidar2D Consolidator, in Rust
 
+## Basic usage
+If using cargo, you can simply use
+```
+cargo run
+```
+
+Or, for example running in release (recommended) and with some command-line arguments:
+```
+cargo run --release -- --loglevel debug
+```
+
+Alternatively, run the compiled binary (assuming you've already run `cargo build --release`), typically located in `./target/release/tether-lidar2d-consolidation-rs`
+
+## Command-line configuration
+You can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `cargo run -- --help`
+
+Options are deliberately made to be almost identical to those used in the OG Agent, with a few notable exceptions:
+
+- Here we use a flag `--perspectiveTransform.includeOutside` instead of setting a boolean `ignoreOutside`. This reflects the default usage better and makes more sense when using a flag (which defaults to `false` if not explicitly appended)
+- We currently only provide `tether.host` as an override - no other MQTT Client Options (for now)
+- There are no options relating to `autoBroadcastConfig` as there is no need for this behaviour; we save and (re)publish configuration essentially every time it changes, on startup and when requested
+
 ## Notes on Libraries
 
 ### MQTT Client
@@ -47,6 +69,10 @@ We are using [log](https://crates.io/crates/log) and [env-logger](https://crates
 RUST_LOG=debug cargo run
 ```
 
+### Command-line configuration
+We are using [clap](https://crates.io/crates/clap) which does command-line argument parsing only (no use of files, environment variables, etc.)
+
+Something like [more-config](https://crates.io/crates/more-config) could be useful, since it includes functionality similar to the [rc](https://www.npmjs.com/package/rc) package for NodeJS. 
 ## Notes on implementation
 - As with OG Agent, the serial string for the LIDAR device is extracted from the topic, specifically the `agentIdOrGroup` part in `lidar2d/{agentIdOrGroup}/scans`
 - The samples are copied from the array of arrays; each "sample" is an array with the elements `[angle, distance]` and sometimes `[angle, distance, quality]` (although the latter is not handled yet). The samples are converted into points and the list(vector) of all converted points are "inserted" (i.e. replaced, if key already exists) into the hashmap which represents all LIDAR devices (with serial strings as keys). 
