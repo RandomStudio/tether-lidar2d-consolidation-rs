@@ -175,7 +175,7 @@ fn main() {
         debug!("Clustering system init OK");
 
         let mut perspective_transformer = PerspectiveTransformer::new(
-            &build_topic(&AGENT_TYPE, &agent_id, TRACKING_PLUG_NAME),
+            &build_topic(AGENT_TYPE, &agent_id, TRACKING_PLUG_NAME),
             match config.region_of_interest() {
                 Some(region_of_interest) => {
                     let (c1, c2, c3, c4) = region_of_interest;
