@@ -42,7 +42,10 @@ pub type Point2D = (f64, f64);
 const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 const AGENT_TYPE: &str = "lidarConsolidation";
 const AGENT_ID: &str = "rsTest";
+const CLUSTERS_PLUG_NAME: &str = "clusters";
+const TRACKING_PLUG_NAME: &str = "trackedPoints";
 
+const MIN_DISTANCE_THRESHOLD: f64 = 20.;
 const NEIGHBOURHOOD_RADIUS: f64 = 300.;
 const MIN_NEIGHBOURS: usize = 2;
 const MAX_CLUSTER_SIZE: f64 = 2500.;
@@ -60,8 +63,17 @@ struct Cli {
     #[arg(long = "loglevel",default_value_t=String::from("info"))]
     log_level: String,
 
-    #[arg(long = "defaultMinDistanceThreshold", default_value_t = 20.)]
+    #[arg(long = "defaultMinDistanceThreshold", default_value_t = MIN_DISTANCE_THRESHOLD)]
     default_min_distance_threshold: f64,
+
+    #[arg(long = "clustering.neighbourhoodRadius", default_value_t = NEIGHBOURHOOD_RADIUS)]
+    clustering_neighbourhood_radius: f64,
+
+    #[arg(long = "clustering.minNeighbours", default_value_t = MIN_NEIGHBOURS)]
+    clustering_min_neighbours: usize,
+
+    #[arg(long = "clustering.maxClusterSize", default_value_t = MAX_CLUSTER_SIZE)]
+    clustering_max_cluster_size: f64,
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -125,16 +137,16 @@ fn main() {
         client.subscribe_many(TOPICS, QOS).await?;
 
         let mut clustering_system = ClusteringSystem::new(
-            NEIGHBOURHOOD_RADIUS,
-            MIN_NEIGHBOURS,
-            &build_topic(&cli.agent_type, AGENT_ID, "clusters"),
-            MAX_CLUSTER_SIZE,
+            cli.clustering_neighbourhood_radius,
+            cli.clustering_min_neighbours,
+            &build_topic(&cli.agent_type, AGENT_ID, CLUSTERS_PLUG_NAME),
+            cli.clustering_max_cluster_size,
         );
 
         debug!("Clustering system init OK");
 
         let mut perspective_transformer = PerspectiveTransformer::new(
-            &build_topic(&AGENT_TYPE, AGENT_ID, "trackedPoints"),
+            &build_topic(&AGENT_TYPE, AGENT_ID, TRACKING_PLUG_NAME),
             match config.region_of_interest() {
                 Some(region_of_interest) => {
                     let (c1, c2, c3, c4) = region_of_interest;
