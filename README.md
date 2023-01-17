@@ -1,5 +1,12 @@
 # Tether Lidar2D Consolidator, in Rust
 
+This is more or a less a direct port of the original NodeJS Agent (here referred to as "the OG Agent" ✌️) into Rust 🦀.
+
+All the essential features of the OG Agent have been implemented, but the structure of the application does not attempt to replicate the original. 
+
+The two main goals were
+- Learn to use Rust in a real-world application, following an existing codebase which was well known and where the fundamental engineering challenges had already been "solved"
+- Produce a usable version of the Lidar Consolidator Agent that was faster and lighter (e.g. on RAM) which could be deployed to lower-resource platforms (e.g. Raspberry Pi) without putting as much strain on the system
 ## Basic usage
 If using cargo, you can simply use
 ```
