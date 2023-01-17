@@ -38,8 +38,8 @@ use clap::Parser;
 
 pub type Point2D = (f64, f64);
 
-// TODO: some/all of these constants should be
-// overrideable via commandline args, etc.
+// Some defaults; some of which can be overriden via CLI args
+const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 const AGENT_TYPE: &str = "lidarConsolidation";
 const AGENT_ID: &str = "rsTest";
 
@@ -48,17 +48,20 @@ const MIN_NEIGHBOURS: usize = 2;
 const MAX_CLUSTER_SIZE: f64 = 2500.;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(version, about, long_about = None)]
 
 struct Cli {
     #[arg(long="agentType",default_value_t=String::from(AGENT_TYPE))]
     agent_type: String,
 
-    #[arg(long = "tether.host",default_value_t=IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)))]
+    #[arg(long = "tether.host", default_value_t=TETHER_HOST)]
     tether_host: std::net::IpAddr,
 
     #[arg(long = "loglevel",default_value_t=String::from("info"))]
     log_level: String,
+
+    #[arg(long = "defaultMinDistanceThreshold", default_value_t = 20.)]
+    default_min_distance_threshold: f64,
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -161,6 +164,7 @@ fn main() {
                             &mut clustering_system,
                             &perspective_transformer,
                             &mut automask_samplers,
+                            cli.default_min_distance_threshold,
                         )
                         .await;
                     }
@@ -217,9 +221,10 @@ async fn handle_scans_message(
     clustering_system: &mut ClusteringSystem,
     perspective_transformer: &PerspectiveTransformer,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
+    default_min_distance: f64,
 ) {
     let serial = parse_agent_id(incoming_message.topic());
-    if let Some(()) = config.check_or_create_device(serial) {
+    if let Some(()) = config.check_or_create_device(serial, default_min_distance) {
         let message = config.publish_config(true);
         client.publish(message.unwrap()).await.unwrap();
     }

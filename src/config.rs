@@ -120,7 +120,11 @@ impl Config {
     /**  If the device is known, return None; if unknown, create it and return
     Some(())
     */
-    pub fn check_or_create_device(&mut self, serial: &str) -> Option<()> {
+    pub fn check_or_create_device(
+        &mut self,
+        serial: &str,
+        default_min_distance: f64,
+    ) -> Option<()> {
         let existing = self.devices.iter().find(|&d| d.serial.eq(serial));
         match existing {
             Some(_device) => None,
@@ -133,7 +137,7 @@ impl Config {
                     x: 0.,
                     y: 0.,
                     color: pick_from_palette(self.devices.len()), // TODO: use random colour
-                    min_distance_threshold: 0.,
+                    min_distance_threshold: default_min_distance,
                     scan_mask_thresholds: None,
                     flip_coords: None,
                 };

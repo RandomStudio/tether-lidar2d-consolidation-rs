@@ -1,5 +1,6 @@
 [package]
 name = "tether-lidar2d-consolidation-rs"
+description = "Tether Lidar2D Consolidator Agent, Rust edition"
 version = "0.1.0"
 edition = "2021"
 

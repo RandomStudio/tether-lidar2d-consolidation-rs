@@ -443,10 +443,7 @@
         "287.578125": 279.0,
         "276.328125": 778.0
       },
-      "flipCoords": [
-        -1,
-        1
-      ]
+      "flipCoords": [-1, 1]
     },
     {
       "serial": "dummy",
@@ -457,10 +454,7 @@
       "color": "#440000",
       "minDistanceThreshold": 20.0,
       "scanMaskThresholds": null,
-      "flipCoords": [
-        1,
-        1
-      ]
+      "flipCoords": [1, 1]
     }
   ],
   "regionOfInterest": [
