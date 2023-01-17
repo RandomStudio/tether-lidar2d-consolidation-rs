@@ -41,6 +41,12 @@ So far
 
 Finally, used a combination of `ndarray` (which was already installed, to support the clustering calculations) and `nalgebra`.
 
+### Logging
+We are using [log](https://crates.io/crates/log) and [env-logger](https://crates.io/crates/env_logger). Log level has been set to INFO by default, but can be overridden, for example by prefixing with an environment variable, e.g. 
+```
+RUST_LOG=debug cargo run
+```
+
 ## Notes on implementation
 - As with OG Agent, the serial string for the LIDAR device is extracted from the topic, specifically the `agentIdOrGroup` part in `lidar2d/{agentIdOrGroup}/scans`
 - The samples are copied from the array of arrays; each "sample" is an array with the elements `[angle, distance]` and sometimes `[angle, distance, quality]` (although the latter is not handled yet). The samples are converted into points and the list(vector) of all converted points are "inserted" (i.e. replaced, if key already exists) into the hashmap which represents all LIDAR devices (with serial strings as keys). 
@@ -62,7 +68,7 @@ Finally, used a combination of `ndarray` (which was already installed, to suppor
   - [x] Allow AutoMaskSampler to be created on request
   - [ ] Should test with multiple sensors
   - [x] Tracking output should apply ignoreOutside, ignoreOutsideMargin logic
-  - [ ] If receiving an unknown / unconfigured device, add it with some defaults to Config
+  - [x] If receiving an unknown / unconfigured device, add it with some defaults to Config
   - [ ] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
   - [ ] Retain messages, for config publish
   - [ ] Close the client properly on quit, so that the queue is also properly destroyed

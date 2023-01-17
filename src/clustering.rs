@@ -1,4 +1,4 @@
-use crate::{config::config_state::LidarDevice, Point2D};
+use crate::{config::LidarDevice, Point2D};
 
 use log::debug;
 use rmp_serde as rmps;

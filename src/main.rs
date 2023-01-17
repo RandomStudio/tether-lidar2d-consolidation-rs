@@ -1,5 +1,5 @@
 use automasking::AutoMaskMessage;
-use config::config_state::Config;
+use config::Config;
 
 use env_logger::Env;
 use futures::{executor::block_on, stream::StreamExt};
@@ -50,7 +50,7 @@ const MAX_CLUSTER_SIZE: f64 = 2500.;
 fn main() {
     // Initialize the logger from the environment
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-    info!("Started");
+    debug!("Started");
 
     let host = env::args()
         .nth(1)
@@ -82,7 +82,7 @@ fn main() {
             .finalize();
 
         // Make the connection to the broker
-        info!("Connecting to the MQTT server...");
+        debug!("Connecting to the MQTT server...");
         client.connect(conn_opts).await?;
 
         // Initialise config, now that we have the MQTT client ready
@@ -92,7 +92,7 @@ fn main() {
         );
         match config.load_config_from_file() {
             Ok(count) => {
-                println!("Loaded {} devices OK into Config", count);
+                info!("Loaded {} devices OK into Config", count);
                 let message = config.publish_config(false);
                 client.publish(message.unwrap()).await.unwrap();
             }
@@ -111,7 +111,7 @@ fn main() {
             MAX_CLUSTER_SIZE,
         );
 
-        info!("Clustering system init OK");
+        debug!("Clustering system init OK");
 
         let mut perspective_transformer = PerspectiveTransformer::new(
             &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
@@ -126,7 +126,7 @@ fn main() {
             Some(0.04), // TODO: set through config
         );
 
-        info!("Perspective transformer system init OK");
+        debug!("Perspective transformer system init OK");
 
         let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
 
