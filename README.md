@@ -86,30 +86,30 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
   - There is possibly some allocation / copying of data going on; this needs to be reduced as far as is practical
   - There are some of instances of `.unwrap()` in this process; errors should be handled more carefully in some cases
 
-  ## TODO
-  - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
-  - [x] Use rmp-serde for MessagePack instead of msgpack-simple
-  - [x] Read/write config data from/to disk
-  - [x] Transform incoming scan points: rotation and position/offset
-  - [x] Apply Scan Mask Thresholds on incoming samples
-  - [x] Apply maxClusterSize filtering
-  - [x] Handle ROI, transformation (warping)
-  - [x] Allow incoming config (devices, ROI) to be saved via "saveLidarConfig"
-  - [x] Allow AutoMaskSampler to be created on request
-  - [ ] Should test with multiple sensors
-  - [x] Tracking output should apply ignoreOutside, ignoreOutsideMargin logic
-  - [x] If receiving an unknown / unconfigured device, add it with some defaults to Config
-  - [x] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
-  - [x] Generate agent UUID automatically
-  - [ ] Retain messages, for config publish
-  - [ ] Close the client properly on quit, so that the queue is also properly destroyed
-  - [ ] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
-  - [ ] Add (optional) tether-tracking-smooth functionality, built-in
-  - [ ] Possible memory leak when clearing and/or setting new AutoMask Samplers
+## TODO
+- [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
+- [x] Use rmp-serde for MessagePack instead of msgpack-simple
+- [x] Read/write config data from/to disk
+- [x] Transform incoming scan points: rotation and position/offset
+- [x] Apply Scan Mask Thresholds on incoming samples
+- [x] Apply maxClusterSize filtering
+- [x] Handle ROI, transformation (warping)
+- [x] Allow incoming config (devices, ROI) to be saved via "saveLidarConfig"
+- [x] Allow AutoMaskSampler to be created on request
+- [ ] Should test with multiple sensors
+- [x] Tracking output should apply ignoreOutside, ignoreOutsideMargin logic
+- [x] If receiving an unknown / unconfigured device, add it with some defaults to Config
+- [x] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
+- [x] Generate agent UUID automatically
+- [ ] Retain messages, for config publish
+- [ ] Close the client properly on quit, so that the queue is also properly destroyed
+- [ ] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
+- [ ] Add (optional) tether-tracking-smooth functionality, built-in
+- [ ] Possible memory leak when clearing and/or setting new AutoMask Samplers
 
-  ## Useful resources
-  - General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
-  - MessagePack spec (includes details about supported types): https://github.com/msgpack/msgpack/blob/master/spec.md
-  - Rust by Example, including custom types (structs): https://doc.rust-lang.org/rust-by-example/custom_types/structs.html
-  - Rust Programming Language "Book", including useful info about hash maps: https://doc.rust-lang.org/book/ch08-03-hash-maps.html
-  - Useful tips for debugging via VSCode + LLDB
+## Useful resources
+- General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
+- MessagePack spec (includes details about supported types): https://github.com/msgpack/msgpack/blob/master/spec.md
+- Rust by Example, including custom types (structs): https://doc.rust-lang.org/rust-by-example/custom_types/structs.html
+- Rust Programming Language "Book", including useful info about hash maps: https://doc.rust-lang.org/book/ch08-03-hash-maps.html
+- Useful tips for debugging via VSCode + LLDB
