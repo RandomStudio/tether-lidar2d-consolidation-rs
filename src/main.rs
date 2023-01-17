@@ -54,8 +54,11 @@ struct Cli {
     #[arg(long="agentType",default_value_t=String::from(AGENT_TYPE))]
     agent_type: String,
 
-    #[arg(long = "tetherHost",default_value_t=IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)))]
+    #[arg(long = "tether.host",default_value_t=IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)))]
     tether_host: std::net::IpAddr,
+
+    #[arg(long = "loglevel",default_value_t=String::from("info"))]
+    log_level: String,
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -64,7 +67,7 @@ fn main() {
     let cli = Cli::parse();
 
     // Initialize the logger from the environment
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level)).init();
     debug!("Started");
 
     let broker_uri = format!("tcp://{}:1883", cli.tether_host);
