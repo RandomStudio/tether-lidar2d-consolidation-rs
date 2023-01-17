@@ -52,6 +52,9 @@ const MAX_CLUSTER_SIZE: f64 = 2500.;
 
 const IGNORE_OUTSIDE_MARGIN: f64 = 0.04;
 
+const AUTOMASK_SCANS_REQUIRED: usize = 45;
+const AUTOMASK_MIN_THRESHOLD_MARGIN: f64 = 50.;
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 
@@ -82,6 +85,12 @@ struct Cli {
 
     #[arg(long = "perspectiveTransform.ignoreOutsideMargin", default_value_t=IGNORE_OUTSIDE_MARGIN)]
     transform_ignore_outside_margin: f64,
+
+    #[arg(long = "autoMask.numScansRequired", default_value_t = AUTOMASK_SCANS_REQUIRED)]
+    automask_scans_required: usize,
+
+    #[arg(long = "autoMask.minThresholdMargin", default_value_t = AUTOMASK_MIN_THRESHOLD_MARGIN)]
+    automask_threshold_margin: f64,
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -216,6 +225,8 @@ fn main() {
                             &mut automask_samplers,
                             &mut config,
                             &client,
+                            cli.automask_scans_required,
+                            cli.automask_threshold_margin,
                         )
                         .await;
                     }
@@ -324,6 +335,8 @@ async fn handle_automask_message(
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
     config: &mut Config,
     client: &mqtt::AsyncClient,
+    scans_required: usize,
+    threshold_margin: f64,
 ) {
     let payload = incoming_message.payload().to_vec();
 
@@ -339,8 +352,10 @@ async fn handle_automask_message(
                     automask_samplers.clear();
                     config.clear_device_masking();
                     for device in config.devices().iter() {
-                        automask_samplers
-                            .insert(String::from(&device.serial), AutoMaskSampler::new(45, 50.));
+                        automask_samplers.insert(
+                            String::from(&device.serial),
+                            AutoMaskSampler::new(scans_required, threshold_margin),
+                        );
                     }
                     Ok(())
                 }
