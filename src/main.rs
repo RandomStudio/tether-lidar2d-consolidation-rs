@@ -6,7 +6,8 @@ use futures::{executor::block_on, stream::StreamExt};
 use log::{debug, error, info, warn};
 use paho_mqtt as mqtt;
 use std::collections::HashMap;
-use std::{env, process, time::Duration};
+use std::net::{IpAddr, Ipv4Addr};
+use std::{process, time::Duration};
 
 mod automasking;
 mod clustering;
@@ -33,6 +34,7 @@ use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
 use crate::tether_utils::{build_topic, parse_agent_id, parse_plug_name};
 use crate::tracking::PerspectiveTransformer;
+use clap::Parser;
 
 pub type Point2D = (f64, f64);
 
@@ -45,21 +47,37 @@ const NEIGHBOURHOOD_RADIUS: f64 = 300.;
 const MIN_NEIGHBOURS: usize = 2;
 const MAX_CLUSTER_SIZE: f64 = 2500.;
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+
+struct Cli {
+    #[arg(long="agentType",default_value_t=String::from(AGENT_TYPE))]
+    agent_type: String,
+
+    #[arg(long = "tetherHost")]
+    tether_host: Option<std::net::IpAddr>,
+}
+
 /////////////////////////////////////////////////////////////////////////////
 
 fn main() {
+    let cli = Cli::parse();
+
     // Initialize the logger from the environment
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     debug!("Started");
 
-    let host = env::args()
-        .nth(1)
-        .unwrap_or_else(|| "tcp://localhost:1883".to_string());
+    let broker_uri = format!(
+        "tcp://{}:1883",
+        cli.tether_host
+            .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)))
+    );
 
+    info!("Connecting to Tether @ {} ...", broker_uri);
     // Create the client. Use an ID for a persistent session.
     // A real system should try harder to use a unique ID.
     let create_opts = mqtt::CreateOptionsBuilder::new()
-        .server_uri(host)
+        .server_uri(broker_uri)
         .client_id("")
         .finalize();
 
@@ -87,7 +105,7 @@ fn main() {
 
         // Initialise config, now that we have the MQTT client ready
         let mut config = Config::new(
-            &build_topic(AGENT_TYPE, AGENT_ID, "provideLidarConfig"),
+            &build_topic(&cli.agent_type, AGENT_ID, "provideLidarConfig"),
             "./dummyConfig.json",
         );
         match config.load_config_from_file() {
@@ -107,14 +125,14 @@ fn main() {
         let mut clustering_system = ClusteringSystem::new(
             NEIGHBOURHOOD_RADIUS,
             MIN_NEIGHBOURS,
-            &build_topic(AGENT_TYPE, AGENT_ID, "clusters"),
+            &build_topic(&cli.agent_type, AGENT_ID, "clusters"),
             MAX_CLUSTER_SIZE,
         );
 
         debug!("Clustering system init OK");
 
         let mut perspective_transformer = PerspectiveTransformer::new(
-            &build_topic(AGENT_TYPE, AGENT_ID, "trackedPoints"),
+            &build_topic(&AGENT_TYPE, AGENT_ID, "trackedPoints"),
             match config.region_of_interest() {
                 Some(region_of_interest) => {
                     let (c1, c2, c3, c4) = region_of_interest;
