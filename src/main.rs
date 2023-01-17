@@ -8,6 +8,7 @@ use paho_mqtt as mqtt;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::{process, time::Duration};
+use uuid::Uuid;
 
 mod automasking;
 mod clustering;
@@ -42,7 +43,6 @@ pub type Point2D = (f64, f64);
 const CONFIG_FILE_PATH: &str = "./dummyConfig.json";
 const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 const AGENT_TYPE: &str = "lidarConsolidation";
-const AGENT_ID: &str = "rsTest";
 const CLUSTERS_PLUG_NAME: &str = "clusters";
 const TRACKING_PLUG_NAME: &str = "trackedPoints";
 
@@ -109,6 +109,7 @@ struct Cli {
 /////////////////////////////////////////////////////////////////////////////
 
 fn main() {
+    let agent_id = Uuid::new_v4().to_string();
     let cli = Cli::parse();
 
     // Initialize the logger from the environment
@@ -147,7 +148,7 @@ fn main() {
 
         // Initialise config, now that we have the MQTT client ready
         let mut config = Config::new(
-            &build_topic(&cli.agent_type, AGENT_ID, "provideLidarConfig"),
+            &build_topic(&cli.agent_type, &agent_id, "provideLidarConfig"),
             &cli.config_path,
         );
         match config.load_config_from_file() {
@@ -167,14 +168,14 @@ fn main() {
         let mut clustering_system = ClusteringSystem::new(
             cli.clustering_neighbourhood_radius,
             cli.clustering_min_neighbours,
-            &build_topic(&cli.agent_type, AGENT_ID, CLUSTERS_PLUG_NAME),
+            &build_topic(&cli.agent_type, &agent_id, CLUSTERS_PLUG_NAME),
             cli.clustering_max_cluster_size,
         );
 
         debug!("Clustering system init OK");
 
         let mut perspective_transformer = PerspectiveTransformer::new(
-            &build_topic(&AGENT_TYPE, AGENT_ID, TRACKING_PLUG_NAME),
+            &build_topic(&AGENT_TYPE, &agent_id, TRACKING_PLUG_NAME),
             match config.region_of_interest() {
                 Some(region_of_interest) => {
                     let (c1, c2, c3, c4) = region_of_interest;
