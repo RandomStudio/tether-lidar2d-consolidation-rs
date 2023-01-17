@@ -69,7 +69,7 @@ RUST_LOG=debug cargo run
   - [ ] Should test with multiple sensors
   - [x] Tracking output should apply ignoreOutside, ignoreOutsideMargin logic
   - [x] If receiving an unknown / unconfigured device, add it with some defaults to Config
-  - [ ] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
+  - [x] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
   - [ ] Generate agent UUID automatically
   - [ ] Retain messages, for config publish
   - [ ] Close the client properly on quit, so that the queue is also properly destroyed
