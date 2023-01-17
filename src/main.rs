@@ -39,6 +39,7 @@ use clap::Parser;
 pub type Point2D = (f64, f64);
 
 // Some defaults; some of which can be overriden via CLI args
+const CONFIG_FILE_PATH: &str = "./dummyConfig.json";
 const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 const AGENT_TYPE: &str = "lidarConsolidation";
 const AGENT_ID: &str = "rsTest";
@@ -59,6 +60,9 @@ const AUTOMASK_MIN_THRESHOLD_MARGIN: f64 = 50.;
 #[command(version, about, long_about = None)]
 
 struct Cli {
+    #[arg(long="lidarConfigPath",default_value_t=String::from(CONFIG_FILE_PATH))]
+    config_path: String,
+
     #[arg(long="agentType",default_value_t=String::from(AGENT_TYPE))]
     agent_type: String,
 
@@ -105,8 +109,6 @@ fn main() {
     let broker_uri = format!("tcp://{}:1883", cli.tether_host);
 
     info!("Connecting to Tether @ {} ...", broker_uri);
-    // Create the client. Use an ID for a persistent session.
-    // A real system should try harder to use a unique ID.
     let create_opts = mqtt::CreateOptionsBuilder::new()
         .server_uri(broker_uri)
         .client_id("")
@@ -137,7 +139,7 @@ fn main() {
         // Initialise config, now that we have the MQTT client ready
         let mut config = Config::new(
             &build_topic(&cli.agent_type, AGENT_ID, "provideLidarConfig"),
-            "./dummyConfig.json",
+            &cli.config_path,
         );
         match config.load_config_from_file() {
             Ok(count) => {
