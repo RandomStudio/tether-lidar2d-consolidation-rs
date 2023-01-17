@@ -77,10 +77,7 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 - As with OG Agent, the serial string for the LIDAR device is extracted from the topic, specifically the `agentIdOrGroup` part in `lidar2d/{agentIdOrGroup}/scans`
 - The samples are copied from the array of arrays; each "sample" is an array with the elements `[angle, distance]` and sometimes `[angle, distance, quality]` (although the latter is not handled yet). The samples are converted into points and the list(vector) of all converted points are "inserted" (i.e. replaced, if key already exists) into the hashmap which represents all LIDAR devices (with serial strings as keys). 
   - There is possibly some allocation / copying of data going on; this needs to be reduced as far as is practical
-  - There are plenty of instances of `.unwrap()` in this process; errors should be handled more carefully
-- It might be wortwhile to revisit the mechanism for timing of calculations and publishing messages, compared to OG Agent
-  - Calculations should probably be updated on each message, but only for the incoming device
-  - Clustering should be recalculated on every incoming message because point data has now been updated. Possibly this message should also be re-emitted on an interval (timeout/debounce).
+  - There are some of instances of `.unwrap()` in this process; errors should be handled more carefully in some cases
 
   ## TODO
   - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
