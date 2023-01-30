@@ -101,6 +101,7 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 - [x] If receiving an unknown / unconfigured device, add it with some defaults to Config
 - [x] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
 - [x] Generate agent UUID automatically
+- [ ] Move potentially blocking processes (e.g. Config write to disk) into a separate thread or non-blocking functions
 - [ ] Retain messages, for config publish
 - [ ] Close the client properly on quit, so that the queue is also properly destroyed
 - [ ] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
