@@ -58,13 +58,15 @@ impl Config {
         }
     }
 
-    pub fn publish_config(&self, also_save: bool) -> Result<mqtt::Message, ()> {
+    pub async fn publish_config(&self, also_save: bool) -> Result<mqtt::Message, Error> {
         let payload: Vec<u8> = to_vec_named(&self).unwrap();
         let message = mqtt::Message::new(&self.output_topic, payload, 2);
         if also_save {
-            self.write_config_to_file().unwrap();
+            self.write_config_to_file().await?;
+            Ok(message)
+        } else {
+            Ok(message)
         }
-        Ok(message)
     }
 
     pub fn parse_remote_config(&mut self, incoming_message: &mqtt::Message) -> Result<(), ()> {
@@ -108,13 +110,18 @@ impl Config {
         }
     }
 
-    pub fn write_config_to_file(&self) -> Result<(), Error> {
+    pub async fn write_config_to_file(&self) -> Result<(), Error> {
         let text = serde_json::to_string_pretty(self).unwrap();
-        std::fs::write(&self.config_file_path, text).unwrap();
-
-        info!("Wrote config to file: {:?}", self.config_file_path);
-
-        Ok(())
+        match async_fs::write(&self.config_file_path, text).await {
+            Ok(()) => {
+                info!("Wrote config to file: {:?}", self.config_file_path);
+                Ok(())
+            }
+            Err(e) => {
+                error!("Error writing config to file: {:?}", e);
+                Err(Error)
+            }
+        }
     }
 
     /**  If the device is known, return None; if unknown, create it and return

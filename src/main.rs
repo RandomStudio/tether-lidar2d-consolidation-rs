@@ -6,6 +6,7 @@ use futures::{executor::block_on, stream::StreamExt};
 use log::{debug, error, info, warn};
 use paho_mqtt as mqtt;
 use std::collections::HashMap;
+use std::fmt::Error;
 use std::net::{IpAddr, Ipv4Addr};
 use std::{process, time::Duration};
 use uuid::Uuid;
@@ -154,7 +155,7 @@ fn main() {
         match config.load_config_from_file() {
             Ok(count) => {
                 info!("Loaded {} devices OK into Config", count);
-                let message = config.publish_config(false);
+                let message = config.publish_config(false).await;
                 client.publish(message.unwrap()).await.unwrap();
             }
             Err(()) => {
@@ -223,12 +224,13 @@ fn main() {
                             &client,
                             &mut perspective_transformer,
                         )
-                        .await;
+                        .await
+                        .expect("config should save");
                     }
                     "requestLidarConfig" => {
                         info!("requestLidarConfig; respond with provideLidarConfig message");
-                        let message = config.publish_config(true);
-                        client.publish(message.unwrap()).await.unwrap();
+                        let message = config.publish_config(false).await;
+                        client.publish(message.unwrap()).await?;
                     }
                     "requestAutoMask" => {
                         info!("requestAutoMask message");
@@ -274,8 +276,11 @@ async fn handle_scans_message(
 ) {
     let serial = parse_agent_id(incoming_message.topic());
     if let Some(()) = config.check_or_create_device(serial, default_min_distance) {
-        let message = config.publish_config(true);
-        client.publish(message.unwrap()).await.unwrap();
+        let message = config.publish_config(true).await;
+        client
+            .publish(message.unwrap())
+            .await
+            .expect("message should publish");
     }
     let device = config.get_device(serial).unwrap();
     if let Ok((clusters, clusters_message)) = clustering_system
@@ -306,8 +311,11 @@ async fn handle_scans_message(
                     match config.update_device_masking(new_mask, serial) {
                         Ok(()) => {
                             info!("Updated masking for device {}", serial);
-                            let message = config.publish_config(true);
-                            client.publish(message.unwrap()).await.unwrap();
+                            let message = config.publish_config(true).await;
+                            client
+                                .publish(message.unwrap())
+                                .await
+                                .expect("message should publish");
                             sampler.angles_with_thresholds.clear();
                         }
                         Err(()) => {
@@ -325,20 +333,33 @@ async fn handle_save_message(
     config: &mut Config,
     client: &mqtt::AsyncClient,
     perspective_transformer: &mut PerspectiveTransformer,
-) {
+) -> Result<(), Error> {
     match config.parse_remote_config(incoming_message) {
         Ok(()) => {
             info!("Remote-provided config parsed OK; now save to disk and (re) publish");
-            let message = config.publish_config(true);
-            client.publish(message.unwrap()).await.unwrap();
+            let message = config.publish_config(true).await;
+            match message {
+                Ok(m) => {
+                    client
+                        .publish(m)
+                        .await
+                        .expect("config message should publish");
+                }
+                Err(e) => {
+                    error!("Could not get valid Config message; {:?}", e)
+                }
+            }
 
             if let Some(region_of_interest) = config.region_of_interest() {
                 let (c1, c2, c3, c4) = region_of_interest;
                 let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                perspective_transformer.set_new_quad(&corners)
+                perspective_transformer.set_new_quad(&corners);
+                Ok(())
+            } else {
+                Err(Error)
             }
         }
-        Err(()) => error!("There was an error saving the remote-provided config"),
+        Err(()) => Err(Error),
     }
 }
 
@@ -385,8 +406,11 @@ async fn handle_automask_message(
 
             match result {
                 Ok(()) => {
-                    let message = config.publish_config(true);
-                    client.publish(message.unwrap()).await.unwrap();
+                    let message = config.publish_config(true).await;
+                    client
+                        .publish(message.unwrap())
+                        .await
+                        .expect("config should publish");
                 }
                 Err(()) => {
                     error!("Error publishing updated config");

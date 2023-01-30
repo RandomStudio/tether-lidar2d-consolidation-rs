@@ -46,6 +46,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-fs"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "279cf904654eeebfa37ac9bb1598880884924aab82e290aa65c9e77a0e142e06"
+dependencies = [
+ "async-lock",
+ "autocfg",
+ "blocking",
+ "futures-lite",
+]
+
+[[package]]
 name = "async-global-executor"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1133,6 +1145,7 @@ dependencies = [
 name = "tether-lidar2d-consolidation-rs"
 version = "0.1.0"
 dependencies = [
+ "async-fs",
  "async-std",
  "clap",
  "env_logger",
