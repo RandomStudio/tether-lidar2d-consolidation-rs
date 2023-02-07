@@ -9,5 +9,5 @@ pub fn parse_plug_name(topic: &str) -> &str {
 }
 
 pub fn build_topic(agent_type: &str, agent_id: &str, plug_name: &str) -> String {
-    format!("{}/{}/{}", agent_type, agent_id, plug_name)
+    format!("{agent_type}/{agent_id}/{plug_name}")
 }
