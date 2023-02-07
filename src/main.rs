@@ -257,7 +257,8 @@ fn main() {
                     }
                 }
             }
-        }
+        } // while block end
+
         // Explicit return type for the async block
         Ok::<(), mqtt::Error>(())
     }) {
