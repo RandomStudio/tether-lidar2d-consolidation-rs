@@ -133,7 +133,7 @@ fn main() {
 
     if let Err(err) = block_on(async {
         // Get message stream before connecting.
-        let mut strm = client.get_stream(25);
+        let mut message_stream = client.get_stream(25);
 
         let conn_opts = mqtt::ConnectOptionsBuilder::new()
             .user_name("tether")
@@ -201,7 +201,7 @@ fn main() {
         // Just loop on incoming messages.
         debug!("Waiting for messages...");
 
-        while let Some(msg_opt) = strm.next().await {
+        while let Some(msg_opt) = message_stream.next().await {
             match msg_opt {
                 Some(incoming_message) => match parse_plug_name(incoming_message.topic()) {
                     "scans" => {
