@@ -7,6 +7,18 @@ All the essential features of the OG Agent have been implemented, but the struct
 The two main goals were
 - Learn to use Rust in a real-world application, following an existing codebase which was well known and where the fundamental engineering challenges had already been "solved"
 - Produce a usable version of the Lidar Consolidator Agent that was faster and lighter (e.g. on RAM) which could be deployed to lower-resource platforms (e.g. Raspberry Pi) without putting as much strain on the system
+## Dev dependencies
+Paho Eclipse MQTT has some (non-Rust) dependencies of its own. On Mac, you might need to the following:
+
+```
+brew install openssh cmake
+```
+
+And on Linux:
+```
+sudo apt install libssl-dev build-essential cmake
+```
+
 ## Basic usage
 If using cargo, you can simply use
 ```
