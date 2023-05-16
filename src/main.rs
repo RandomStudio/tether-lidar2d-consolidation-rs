@@ -48,13 +48,13 @@ const CLUSTERS_PLUG_NAME: &str = "clusters";
 const TRACKING_PLUG_NAME: &str = "trackedPoints";
 
 const MIN_DISTANCE_THRESHOLD: f64 = 20.;
-const NEIGHBOURHOOD_RADIUS: f64 = 300.;
-const MIN_NEIGHBOURS: usize = 2;
+const NEIGHBOURHOOD_RADIUS: f64 = 200.;
+const MIN_NEIGHBOURS: usize = 3;
 const MAX_CLUSTER_SIZE: f64 = 2500.;
 
 const IGNORE_OUTSIDE_MARGIN: f64 = 0.04;
 
-const AUTOMASK_SCANS_REQUIRED: usize = 45;
+const AUTOMASK_SCANS_REQUIRED: usize = 60;
 const AUTOMASK_MIN_THRESHOLD_MARGIN: f64 = 50.;
 
 #[derive(Parser, Debug)]
