@@ -227,7 +227,7 @@ fn passes_mask_threshold(
     match mask_thresholds {
         None => true,
         Some(masking_map) => {
-            let angle_key = angle.to_string();
+            let angle_key = angle.round().to_string();
             if let Some(threshold) = masking_map.get(&angle_key) {
                 *distance < *threshold
             } else {
