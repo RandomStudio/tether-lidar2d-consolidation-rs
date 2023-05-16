@@ -14,6 +14,7 @@ use uuid::Uuid;
 mod automasking;
 mod clustering;
 mod config;
+mod smoothing;
 mod tether_utils;
 mod tracking;
 
