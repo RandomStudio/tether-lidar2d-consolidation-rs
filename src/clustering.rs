@@ -63,7 +63,8 @@ impl ClusteringSystem {
         );
         let payload = incoming_message.payload().to_vec();
 
-        let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
+        let scans: Vec<(f64, f64)> =
+            rmp_serde::from_slice(&payload).expect("failed to decode scans message");
 
         debug!("Decoded {} scans", scans.len());
 
