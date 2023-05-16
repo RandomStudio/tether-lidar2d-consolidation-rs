@@ -1,3 +1,4 @@
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -34,11 +35,15 @@ impl AutoMaskSampler {
                 let distance_minus_threshold = *distance - self.threshold_margin;
                 if *distance > 0. && distance_minus_threshold > 0. {
                     self.angles_with_thresholds
-                        .insert(angle.to_string(), distance_minus_threshold);
+                        .insert(angle.round().to_string(), distance_minus_threshold);
                 }
             }
             None
         } else {
+            info!(
+                "Set new automask using {} angles",
+                self.angles_with_thresholds.len()
+            );
             Some(&self.angles_with_thresholds)
         }
     }
