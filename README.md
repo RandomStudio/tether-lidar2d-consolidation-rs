@@ -99,6 +99,7 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
   - There are some of instances of `.unwrap()` in this process; errors should be handled more carefully in some cases
 
 ## TODO
+- [ ] Add (optional) tether-tracking-smooth functionality, built-in
 - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
 - [x] Use rmp-serde for MessagePack instead of msgpack-simple
 - [x] Read/write config data from/to disk
@@ -108,16 +109,16 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 - [x] Handle ROI, transformation (warping)
 - [x] Allow incoming config (devices, ROI) to be saved via "saveLidarConfig"
 - [x] Allow AutoMaskSampler to be created on request
-- [ ] Should test with multiple sensors
+- [x] Should test with multiple sensors
 - [x] Tracking output should apply ignoreOutside, ignoreOutsideMargin logic
 - [x] If receiving an unknown / unconfigured device, add it with some defaults to Config
 - [x] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
 - [x] Generate agent UUID automatically
-- [ ] Move potentially blocking processes (e.g. Config write to disk) into a separate thread or non-blocking functions
+- [ ] Use "real" Tether Agent crate - although currently this is not set up for async
+- [x] Move potentially blocking processes (e.g. Config write to disk) into a separate thread or non-blocking functions
 - [ ] Retain messages, for config publish
 - [ ] Close the client properly on quit, so that the queue is also properly destroyed
-- [ ] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
-- [ ] Add (optional) tether-tracking-smooth functionality, built-in
+- [x] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
 - [ ] Possible memory leak when clearing and/or setting new AutoMask Samplers
 
 ## Useful resources
