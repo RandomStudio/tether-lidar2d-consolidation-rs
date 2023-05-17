@@ -4,11 +4,18 @@ use log::debug;
 
 use crate::{tracking::TrackedPoint2D, Point2D};
 
+pub enum EmptyListSendMode {
+    Never,
+    Once,
+    Always,
+}
+
 pub struct SmoothSettings {
     pub merge_radius: f64,
     pub wait_before_active_ms: u128,
     pub expire_ms: u128,
     pub lerp_factor: f64,
+    pub empty_list_send_mode: EmptyListSendMode,
 }
 
 #[derive(Debug)]
@@ -23,6 +30,7 @@ struct SmoothedPoint {
 pub struct TrackingSmoother {
     settings: SmoothSettings,
     known_points: Vec<SmoothedPoint>,
+    empty_lists_sent: u128,
 }
 
 impl TrackingSmoother {
@@ -33,6 +41,7 @@ impl TrackingSmoother {
         TrackingSmoother {
             settings,
             known_points: Vec::new(),
+            empty_lists_sent: 0,
         }
     }
 
@@ -146,13 +155,42 @@ impl TrackingSmoother {
         })
     }
 
-    pub fn get_smoothed_points(&self) -> Vec<TrackedPoint2D> {
-        self.known_points
+    pub fn get_smoothed_points(&mut self) -> Option<Vec<TrackedPoint2D>> {
+        let known_points: Vec<TrackedPoint2D> = self
+            .known_points
             .iter()
             .filter(|p| p.ready)
             .enumerate()
             .map(|(i, p)| TrackedPoint2D::new(i, p.current_position))
-            .collect()
+            .collect();
+
+        let points_count = known_points.len();
+
+        let points = match self.settings.empty_list_send_mode {
+            EmptyListSendMode::Always => Some(known_points),
+            EmptyListSendMode::Once => {
+                if known_points.len() > 0 || known_points.len() == 0 && self.empty_lists_sent < 1 {
+                    Some(known_points)
+                } else {
+                    None
+                }
+            }
+            EmptyListSendMode::Never => {
+                if known_points.len() == 0 {
+                    None
+                } else {
+                    Some(known_points)
+                }
+            }
+        };
+
+        if points_count == 0 {
+            self.empty_lists_sent += 1; // count
+        } else {
+            self.empty_lists_sent = 0; // reset
+        }
+
+        points
     }
 }
 

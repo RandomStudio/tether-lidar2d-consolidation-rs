@@ -135,6 +135,8 @@ fn main() {
         wait_before_active_ms: cli.smoothing_wait_before_active_ms,
         expire_ms: cli.smoothing_expire_ms,
         lerp_factor: cli.smoothing_lerp_factor,
+        // TODO: set this from CLI
+        empty_list_send_mode: smoothing::EmptyListSendMode::Once,
     });
 
     debug!("Perspective transformer system init OK");
@@ -195,11 +197,11 @@ fn main() {
 
         // TODO: this should happen on interval check
         smoothing.update_smoothing();
-        let smoothed_points = smoothing.get_smoothed_points();
-        // TODO: decide whether to publish empty lists (always, once, never)
-        tether_agent
-            .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
-            .expect("failed to publish smoothed tracking points");
+        if let Some(smoothed_points) = smoothing.get_smoothed_points() {
+            tether_agent
+                .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
+                .expect("failed to publish smoothed tracking points");
+        }
     }
 }
 
