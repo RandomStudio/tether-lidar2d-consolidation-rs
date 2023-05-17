@@ -196,12 +196,17 @@ fn main() {
             };
         }
 
-        // TODO: this should happen on interval check
-        smoothing.update_smoothing();
-        if let Some(smoothed_points) = smoothing.get_smoothed_points() {
-            tether_agent
-                .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
-                .expect("failed to publish smoothed tracking points");
+        if !cli.smoothing_disable {
+            if let Ok(elapsed) = smoothing.last_updated().elapsed() {
+                if elapsed.as_millis() > cli.smoothing_update_interval {
+                    smoothing.update_smoothing();
+                    if let Some(smoothed_points) = smoothing.get_smoothed_points() {
+                        tether_agent
+                            .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
+                            .expect("failed to publish smoothed tracking points");
+                    }
+                }
+            }
         }
     }
 }
@@ -272,6 +277,9 @@ fn handle_scans_message(
                                 tether_agent
                                     .encode_and_publish(&config_output, &config)
                                     .expect("failed to publish config");
+                                config
+                                    .write_config_to_file()
+                                    .expect("failed to save config");
                                 sampler.angles_with_thresholds.clear();
                             }
                             Err(()) => {

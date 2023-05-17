@@ -31,6 +31,7 @@ pub struct TrackingSmoother {
     settings: SmoothSettings,
     known_points: Vec<SmoothedPoint>,
     empty_lists_sent: u128,
+    last_updated: SystemTime,
 }
 
 impl TrackingSmoother {
@@ -42,6 +43,7 @@ impl TrackingSmoother {
             settings,
             known_points: Vec::new(),
             empty_lists_sent: 0,
+            last_updated: SystemTime::now(),
         }
     }
 
@@ -107,6 +109,7 @@ impl TrackingSmoother {
     /// that are "stale". This function should be called as often as possible, not necessarily
     /// only when a new TrackedPoint message comes in.
     pub fn update_smoothing(&mut self) {
+        self.last_updated = SystemTime::now();
         // First, remove all points which were waiting too long to become "active"...
         if let Some(i) = self
             .known_points
@@ -191,6 +194,10 @@ impl TrackingSmoother {
         }
 
         points
+    }
+
+    pub fn last_updated(&self) -> SystemTime {
+        self.last_updated
     }
 }
 

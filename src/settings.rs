@@ -56,6 +56,10 @@ pub struct Cli {
     pub clustering_max_cluster_size: f64,
 
     // -------- SMOOTHING SETTINGS
+    /// Flag to disable integrated time-based "smoothed tracking" output
+    #[arg(long = "smoothing.disable")]
+    pub smoothing_disable: bool,
+
     /// How close (in normalised `[0;1]` units) to count two points as the same Tracked Point
     #[arg(long = "smoothing.mergeRadius", default_value_t = 0.25)]
     pub smoothing_merge_radius: f64,
@@ -77,6 +81,11 @@ pub struct Cli {
     /// list "once", "never" or "always"
     #[arg(long = "smoothing.emptySendMode", default_value_t = String::from("once"))]
     pub smoothing_empty_send_mode: String,
+
+    /// How often (ms) to update smoothed tracking points - regardless of scan
+    /// message rate
+    #[arg(long = "smoothing.updateInterval", default_value_t = 16)]
+    pub smoothing_update_interval: u128,
 
     // -------- PERSPECTIVE TRANSFORM SETTINGS
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad;
