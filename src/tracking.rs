@@ -24,6 +24,16 @@ pub struct TrackedPoint2D {
     y: f64,
 }
 
+impl TrackedPoint2D {
+    pub fn new(id: usize, position: (f64, f64)) -> Self {
+        TrackedPoint2D {
+            id,
+            x: position.0,
+            y: position.1,
+        }
+    }
+}
+
 /**
 clockwise: 'left top', 'right top', 'right bottom', 'left bottom',
  */
@@ -95,7 +105,7 @@ impl PerspectiveTransformer {
                 }
             })
             .collect();
-        let payload: Vec<u8> = to_vec_named(&points).unwrap();
+        let payload: Vec<u8> = to_vec_named(&points).expect("failed to encode tracked points");
         let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_1);
         Ok((points, message))
     }
