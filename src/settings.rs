@@ -73,6 +73,11 @@ pub struct Cli {
     #[arg(long = "smoothing.lerpFactor", default_value_t = 0.1)]
     pub smoothing_lerp_factor: f64,
 
+    /// How to treat empty smoothed tracking points lists - either send an empty
+    /// list "once", "never" or "always"
+    #[arg(long = "smoothing.emptySendMode", default_value_t = String::from("once"))]
+    pub smoothing_empty_send_mode: String,
+
     // -------- PERSPECTIVE TRANSFORM SETTINGS
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad;
     /// enable (use) this flag to include them

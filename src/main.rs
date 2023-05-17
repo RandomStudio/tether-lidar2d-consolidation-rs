@@ -21,7 +21,7 @@ use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
 use crate::perspective::PerspectiveTransformer;
 use crate::settings::Cli;
-use crate::smoothing::{SmoothSettings, TrackingSmoother};
+use crate::smoothing::{get_mode, SmoothSettings, TrackingSmoother};
 
 pub type Point2D = (f64, f64);
 
@@ -136,7 +136,8 @@ fn main() {
         expire_ms: cli.smoothing_expire_ms,
         lerp_factor: cli.smoothing_lerp_factor,
         // TODO: set this from CLI
-        empty_list_send_mode: smoothing::EmptyListSendMode::Once,
+        empty_list_send_mode: get_mode(&cli.smoothing_empty_send_mode)
+            .unwrap_or(smoothing::EmptyListSendMode::Once),
     });
 
     debug!("Perspective transformer system init OK");

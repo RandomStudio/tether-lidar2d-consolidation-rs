@@ -204,3 +204,12 @@ fn distance(a: &Point2D, b: &Point2D) -> f64 {
 fn lerp(a: f64, b: f64, t: f64) -> f64 {
     a * (1. - t) + (b * t)
 }
+
+pub fn get_mode(string_mode: &str) -> Result<EmptyListSendMode, ()> {
+    match string_mode {
+        "once" => Ok(EmptyListSendMode::Once),
+        "never" => Ok(EmptyListSendMode::Never),
+        "always" => Ok(EmptyListSendMode::Always),
+        _ => Err(()),
+    }
+}
