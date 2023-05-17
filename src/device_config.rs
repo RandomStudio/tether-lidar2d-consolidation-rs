@@ -2,8 +2,6 @@ use log::{debug, error, info, warn};
 use std::{collections::HashMap, fmt::Error, fs};
 use tether_agent::mqtt::Message;
 
-use rmp_serde as rmps;
-use rmps::to_vec_named;
 use serde::{Deserialize, Serialize};
 
 use crate::automasking::MaskThresholdMap;

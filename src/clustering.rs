@@ -7,7 +7,6 @@ use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
 use std::collections::HashMap;
-use tether_agent::mqtt::Message;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Cluster2D {

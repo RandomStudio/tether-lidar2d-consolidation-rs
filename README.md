@@ -101,7 +101,8 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 ## TODO
 - [ ] Add (optional) tether-tracking-smooth functionality, built-in
 - [ ] Retain messages, for config publish - remove the need for "request config" topic
-- [ ] Debug loglevel should suppress MQTT log messages (too verbose)
+- [x] Debug loglevel should suppress MQTT log messages (too verbose)
+- [ ] Print warning/error (and optionally panic?) if no data received from known devices after timeout
 - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
 - [x] Use rmp-serde for MessagePack instead of msgpack-simple
 - [x] Read/write config data from/to disk

@@ -6,6 +6,8 @@ use env_logger::Env;
 use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::fmt::Error;
+use std::thread;
+use std::time::Duration;
 use tether_agent::mqtt::Message;
 use tether_agent::{parse_agent_id, PlugDefinition, TetherAgent};
 
@@ -24,16 +26,15 @@ use crate::settings::Cli;
 
 pub type Point2D = (f64, f64);
 
-const CLUSTERS_PLUG_NAME: &str = "clusters";
-const TRACKING_PLUG_NAME: &str = "trackedPoints";
-
-/////////////////////////////////////////////////////////////////////////////
-
 fn main() {
     let cli = Cli::parse();
 
     // Initialize the logger from the environment
-    env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level)).init();
+
+    env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
+        .filter_module("paho_mqtt", log::LevelFilter::Warn)
+        .init();
+
     debug!("Started; args: {:?}", cli);
 
     let tether_agent = TetherAgent::new(
@@ -41,6 +42,9 @@ fn main() {
         Some(&cli.agent_group),
         Some(cli.tether_host),
     );
+    tether_agent
+        .connect(None, None)
+        .expect("failed to connect Tether Agent");
 
     // Initialise config, now that we have the MQTT client ready
     let config_output = tether_agent
@@ -50,7 +54,9 @@ fn main() {
     match device_config.load_config_from_file() {
         Ok(count) => {
             info!("Loaded {} devices OK into Config", count);
-            tether_agent.encode_and_publish(&config_output, &device_config);
+            tether_agent
+                .encode_and_publish(&config_output, &device_config)
+                .expect("failed to publish config");
         }
         Err(()) => {
             panic!("Error loading devices into config manager!")
@@ -66,16 +72,16 @@ fn main() {
         .expect("failed to create output plug");
 
     // Some subscriptions
-    let scans_input = tether_agent
-        .create_input_plug("name", Some(0), None)
+    let _scans_input = tether_agent
+        .create_input_plug("scans", Some(0), None)
         .expect("failed to create input plug");
-    let save_config_input = tether_agent
+    let _save_config_input = tether_agent
         .create_input_plug("saveLidarConfig", Some(1), None)
         .expect("failed to create input plug");
-    let request_config_input = tether_agent
+    let _request_config_input = tether_agent
         .create_input_plug("requestLidarConfig", Some(1), None)
         .expect("failed to create input plug");
-    let request_automask_input = tether_agent
+    let _request_automask_input = tether_agent
         .create_input_plug("requestAutoMask", Some(1), None)
         .expect("failed to create input plug");
 
@@ -114,8 +120,10 @@ fn main() {
 
     loop {
         if let Some((plug_name, message)) = tether_agent.check_messages() {
+            // debug!("Received {:?}", message);
             match plug_name.as_str() {
                 "scans" => {
+                    // debug!("Received scans message");
                     handle_scans_message(
                         &message,
                         &tether_agent,
@@ -181,7 +189,9 @@ fn handle_scans_message(
 
     // If an unknown device was found (and added), re-publish the Device config
     if let Some(()) = config.check_or_create_device(serial, default_min_distance) {
-        tether_agent.encode_and_publish(config_output, &config);
+        tether_agent
+            .encode_and_publish(config_output, &config)
+            .expect("failed to publish config");
     }
 
     let scans: Vec<(f64, f64)> =
@@ -189,7 +199,9 @@ fn handle_scans_message(
 
     if let Some(device) = config.get_device(serial) {
         if let Ok(clusters) = clustering_system.handle_scan_message(&scans, device) {
-            tether_agent.encode_and_publish(clusters_output, &clusters);
+            tether_agent
+                .encode_and_publish(clusters_output, &clusters)
+                .expect("failed to publish clusters");
 
             if perspective_transformer.is_ready() {
                 let points: Vec<Point2D> = clusters
@@ -206,14 +218,15 @@ fn handle_scans_message(
 
             if let Some(sampler) = automask_samplers.get_mut(serial) {
                 if !sampler.is_complete() {
-                    let payload = incoming_message.payload().to_vec();
                     if let Some(new_mask) = sampler.add_samples(&scans) {
                         debug!("Sufficient samples for masking device {}", serial);
                         match config.update_device_masking(new_mask, serial) {
                             Ok(()) => {
                                 info!("Updated masking for device {}", serial);
                                 // Automasking was updated, so re-publish Device Config
-                                tether_agent.encode_and_publish(&config_output, &config);
+                                tether_agent
+                                    .encode_and_publish(&config_output, &config)
+                                    .expect("failed to publish config");
                                 sampler.angles_with_thresholds.clear();
                             }
                             Err(()) => {
