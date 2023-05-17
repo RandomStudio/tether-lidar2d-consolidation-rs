@@ -57,7 +57,7 @@ pub struct Cli {
 
     // -------- SMOOTHING SETTINGS
     /// How close (in normalised `[0;1]` units) to count two points as the same Tracked Point
-    #[arg(long = "smoothing.mergeRadius", default_value_t = 0.1)]
+    #[arg(long = "smoothing.mergeRadius", default_value_t = 0.25)]
     pub smoothing_merge_radius: f64,
 
     /// How long (ms) before deciding a new point is valid/active

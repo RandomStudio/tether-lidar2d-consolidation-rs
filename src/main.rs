@@ -196,11 +196,10 @@ fn main() {
         // TODO: this should happen on interval check
         smoothing.update_smoothing();
         let smoothed_points = smoothing.get_smoothed_points();
-        if !smoothed_points.is_empty() {
-            tether_agent
-                .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
-                .expect("failed to publish smoothed tracking points");
-        }
+        // TODO: decide whether to publish empty lists (always, once, never)
+        tether_agent
+            .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
+            .expect("failed to publish smoothed tracking points");
     }
 }
 
