@@ -1,7 +1,6 @@
 use log::{debug, error, info, warn};
-use std::{collections::HashMap, fmt::Error};
-
-use paho_mqtt as mqtt;
+use std::{collections::HashMap, fmt::Error, fs};
+use tether_agent::mqtt::Message;
 
 use rmp_serde as rmps;
 use rmps::to_vec_named;
@@ -39,42 +38,39 @@ type CornerPoints = (
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct Config {
+pub struct DeviceConfig {
     devices: Vec<LidarDevice>,
     region_of_interest: Option<CornerPoints>,
-    #[serde(skip)]
-    output_topic: String,
     #[serde(skip)]
     config_file_path: String,
 }
 
-impl Config {
-    pub fn new(output_topic: &str, config_file_path: &str) -> Config {
-        Config {
+impl DeviceConfig {
+    pub fn new(config_file_path: &str) -> DeviceConfig {
+        DeviceConfig {
             devices: vec![],
             region_of_interest: None,
-            output_topic: String::from(output_topic),
             config_file_path: String::from(config_file_path),
         }
     }
 
-    pub async fn publish_config(&self, also_save: bool) -> Result<mqtt::Message, Error> {
-        let payload: Vec<u8> = to_vec_named(&self).unwrap();
-        let message = mqtt::Message::new(&self.output_topic, payload, 2);
-        if also_save {
-            self.write_config_to_file().await?;
-            Ok(message)
-        } else {
-            Ok(message)
-        }
-    }
+    // pub async fn publish_config(&self, also_save: bool) -> Result<mqtt::Message, Error> {
+    //     let payload: Vec<u8> = to_vec_named(&self).unwrap();
+    //     let message = mqtt::Message::new(&self.output_topic, payload, 2);
+    //     if also_save {
+    //         self.write_config_to_file().await?;
+    //         Ok(message)
+    //     } else {
+    //         Ok(message)
+    //     }
+    // }
 
-    pub fn parse_remote_config(&mut self, incoming_message: &mqtt::Message) -> Result<(), ()> {
+    pub fn parse_remote_config(&mut self, incoming_message: &Message) -> Result<(), ()> {
         let payload = incoming_message.payload().to_vec();
 
-        match rmp_serde::from_slice::<Config>(&payload) {
+        match rmp_serde::from_slice::<DeviceConfig>(&payload) {
             Ok(config) => {
-                let Config {
+                let DeviceConfig {
                     devices,
                     region_of_interest,
                     ..
@@ -94,7 +90,7 @@ impl Config {
         let text =
             std::fs::read_to_string(&self.config_file_path).expect("Error opening config file");
 
-        match serde_json::from_str::<Config>(&text) {
+        match serde_json::from_str::<DeviceConfig>(&text) {
             Ok(data) => {
                 debug!("Config parsed data from file: {:?}", data);
 
@@ -110,9 +106,9 @@ impl Config {
         }
     }
 
-    pub async fn write_config_to_file(&self) -> Result<(), Error> {
+    pub fn write_config_to_file(&self) -> Result<(), Error> {
         let text = serde_json::to_string_pretty(self).unwrap();
-        match async_fs::write(&self.config_file_path, text).await {
+        match fs::write(&self.config_file_path, text) {
             Ok(()) => {
                 info!("Wrote config to file: {:?}", self.config_file_path);
                 Ok(())

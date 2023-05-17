@@ -1,15 +1,13 @@
 use crate::{device_config::LidarDevice, Point2D};
 
 use log::debug;
-use rmp_serde as rmps;
-use rmps::to_vec_named;
 use serde::{Deserialize, Serialize};
 
 use ndarray::{Array, ArrayView};
-use paho_mqtt as mqtt;
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
 use std::collections::HashMap;
+use tether_agent::mqtt::Message;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Cluster2D {
@@ -29,7 +27,6 @@ struct Bounds2D {
 pub struct ClusteringSystem {
     scan_points: HashMap<String, Vec<Point2D>>,
     clustering_engine: Dbscan<f64, Euclidean>,
-    output_topic: String,
     max_cluster_size: f64,
 }
 
@@ -37,7 +34,6 @@ impl ClusteringSystem {
     pub fn new(
         neighbourhood_radius: f64,
         min_neighbourss: usize,
-        output_topic: &str,
         max_cluster_size: f64,
     ) -> ClusteringSystem {
         ClusteringSystem {
@@ -47,25 +43,15 @@ impl ClusteringSystem {
                 min_samples: min_neighbourss,
                 metric: Euclidean::default(),
             },
-            output_topic: String::from(output_topic),
             max_cluster_size,
         }
     }
 
-    pub async fn handle_scan_message(
+    pub fn handle_scan_message(
         &mut self,
-        incoming_message: &mqtt::Message,
+        scans: &[(f64, f64)],
         device: &LidarDevice,
-    ) -> Result<(Vec<Cluster2D>, mqtt::Message), ()> {
-        debug!(
-            "Received message on topic \"{}\":",
-            incoming_message.topic()
-        );
-        let payload = incoming_message.payload().to_vec();
-
-        let scans: Vec<(f64, f64)> =
-            rmp_serde::from_slice(&payload).expect("failed to decode scans message");
-
+    ) -> Result<Vec<Cluster2D>, ()> {
         debug!("Decoded {} scans", scans.len());
 
         let mut points_this_scan: Vec<Point2D> = Vec::new();
@@ -73,7 +59,7 @@ impl ClusteringSystem {
         for sample in scans {
             let (angle, distance) = sample;
 
-            if distance > 0.0 {
+            if *distance > 0.0 {
                 if let Some(point) = measurement_to_point(&angle, &distance, device) {
                     points_this_scan.push(point);
                 }
@@ -121,10 +107,10 @@ impl ClusteringSystem {
             .filter(|cluster| cluster.size <= self.max_cluster_size)
             .collect();
 
-        let payload: Vec<u8> = to_vec_named(&clusters).unwrap();
-        let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_0);
+        // let payload: Vec<u8> = to_vec_named(&clusters).unwrap();
+        // let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_0);
 
-        Ok((clusters, message))
+        Ok(clusters)
     }
 
     pub fn combine_all_points(&self) -> ndarray::Array2<f64> {

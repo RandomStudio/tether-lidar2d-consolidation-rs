@@ -1,5 +1,3 @@
-use paho_mqtt as mqtt;
-use rmp_serde::to_vec_named;
 use std::time::SystemTime;
 
 use crate::{tracking::TrackedPoint2D, Point2D};
@@ -127,17 +125,13 @@ impl TrackingSmoother {
         })
     }
 
-    pub fn publish_smoothed_points(&self) -> mqtt::Message {
-        let ready_points_only: Vec<TrackedPoint2D> = self
-            .known_points
+    pub fn get_smoothed_points(&self) -> Vec<TrackedPoint2D> {
+        self.known_points
             .iter()
             .filter(|p| p.ready)
             .enumerate()
             .map(|(i, p)| TrackedPoint2D::new(i, p.current_position))
-            .collect();
-
-        let payload = to_vec_named(&ready_points_only).expect("failed to encode ready points only");
-        mqtt::Message::new(&self.topic, payload, 1)
+            .collect()
     }
 }
 

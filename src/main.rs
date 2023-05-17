@@ -1,44 +1,26 @@
 use automasking::AutoMaskMessage;
 use clap::Parser;
-use device_config::Config;
+use device_config::DeviceConfig;
 
 use env_logger::Env;
-use futures::{executor::block_on, stream::StreamExt};
 use log::{debug, error, info, warn};
-use paho_mqtt as mqtt;
 use std::collections::HashMap;
 use std::fmt::Error;
-use std::{process, time::Duration};
-use uuid::Uuid;
+use tether_agent::mqtt::Message;
+use tether_agent::{parse_agent_id, PlugDefinition, TetherAgent};
 
 mod automasking;
 mod clustering;
 mod device_config;
+mod perspective;
 mod settings;
 mod smoothing;
-mod tether_utils;
 mod tracking;
-
-// The topics to which we subscribe (Input Plugs)
-const SCANS_TOPIC: &str = "+/+/scans";
-const SAVE_CONFIG_TOPIC: &str = "+/+/saveLidarConfig";
-const REQUEST_CONFIG_TOPIC: &str = "+/+/requestLidarConfig";
-const REQUEST_AUTOMASK_TOPIC: &str = "+/+/requestAutoMask";
-const TOPICS: &[&str] = &[
-    SCANS_TOPIC,
-    SAVE_CONFIG_TOPIC,
-    REQUEST_CONFIG_TOPIC,
-    REQUEST_AUTOMASK_TOPIC,
-];
-
-// Corresponding QOS level for each of the above
-const QOS: &[i32; TOPICS.len()] = &[0, 2, 2, 2];
 
 use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
+use crate::perspective::PerspectiveTransformer;
 use crate::settings::Cli;
-use crate::tether_utils::{build_topic, parse_agent_id, parse_plug_name};
-use crate::tracking::PerspectiveTransformer;
 
 pub type Point2D = (f64, f64);
 
@@ -48,248 +30,225 @@ const TRACKING_PLUG_NAME: &str = "trackedPoints";
 /////////////////////////////////////////////////////////////////////////////
 
 fn main() {
-    let agent_id = Uuid::new_v4().to_string();
     let cli = Cli::parse();
 
     // Initialize the logger from the environment
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level)).init();
     debug!("Started; args: {:?}", cli);
 
-    let broker_uri = format!("tcp://{}:1883", cli.tether_host);
+    let tether_agent = TetherAgent::new(
+        &cli.agent_role,
+        Some(&cli.agent_group),
+        Some(cli.tether_host),
+    );
 
-    info!("Connecting to Tether @ {} ...", broker_uri);
-    let create_opts = mqtt::CreateOptionsBuilder::new()
-        .server_uri(broker_uri)
-        .client_id("")
-        .finalize();
-
-    // Create the client connection
-    let mut client = mqtt::AsyncClient::new(create_opts).unwrap_or_else(|e| {
-        error!("Error creating the client: {:?}", e);
-        process::exit(1);
-    });
-
-    if let Err(err) = block_on(async {
-        // Get message stream before connecting.
-        let mut message_stream = client.get_stream(25);
-
-        let conn_opts = mqtt::ConnectOptionsBuilder::new()
-            .user_name("tether")
-            .password("sp_ceB0ss!")
-            .keep_alive_interval(Duration::from_secs(30))
-            .mqtt_version(mqtt::MQTT_VERSION_3_1_1)
-            .clean_session(true)
-            .finalize();
-
-        // Make the connection to the broker
-        debug!("Connecting to the MQTT server...");
-        client.connect(conn_opts).await?;
-
-        // Initialise config, now that we have the MQTT client ready
-        let mut config = Config::new(
-            &build_topic(&cli.agent_type, &agent_id, "provideLidarConfig"),
-            &cli.config_path,
-        );
-        match config.load_config_from_file() {
-            Ok(count) => {
-                info!("Loaded {} devices OK into Config", count);
-                let message = config.publish_config(false).await;
-                client.publish(message.unwrap()).await.unwrap();
-            }
-            Err(()) => {
-                panic!("Error loading devices into config manager!")
-            }
+    // Initialise config, now that we have the MQTT client ready
+    let config_output = tether_agent
+        .create_output_plug("provideLidarConfig", Some(2), None)
+        .expect("failed to create output plug");
+    let mut device_config = DeviceConfig::new(&cli.config_path);
+    match device_config.load_config_from_file() {
+        Ok(count) => {
+            info!("Loaded {} devices OK into Config", count);
+            tether_agent.encode_and_publish(&config_output, &device_config);
         }
+        Err(()) => {
+            panic!("Error loading devices into config manager!")
+        }
+    }
 
-        info!("Subscribing to topics: {:?}", TOPICS);
-        client.subscribe_many(TOPICS, QOS).await?;
+    // Clusters, tracking, automask outputs
+    let tracking_output = tether_agent
+        .create_output_plug("trackedPoints", Some(1), None)
+        .expect("failed to create output plug");
+    let clusters_output = tether_agent
+        .create_output_plug("clusters", Some(0), None)
+        .expect("failed to create output plug");
 
-        let mut clustering_system = ClusteringSystem::new(
-            cli.clustering_neighbourhood_radius,
-            cli.clustering_min_neighbours,
-            &build_topic(&cli.agent_type, &agent_id, CLUSTERS_PLUG_NAME),
-            cli.clustering_max_cluster_size,
-        );
+    // Some subscriptions
+    let scans_input = tether_agent
+        .create_input_plug("name", Some(0), None)
+        .expect("failed to create input plug");
+    let save_config_input = tether_agent
+        .create_input_plug("saveLidarConfig", Some(1), None)
+        .expect("failed to create input plug");
+    let request_config_input = tether_agent
+        .create_input_plug("requestLidarConfig", Some(1), None)
+        .expect("failed to create input plug");
+    let request_automask_input = tether_agent
+        .create_input_plug("requestAutoMask", Some(1), None)
+        .expect("failed to create input plug");
 
-        debug!("Clustering system init OK");
+    let mut clustering_system = ClusteringSystem::new(
+        cli.clustering_neighbourhood_radius,
+        cli.clustering_min_neighbours,
+        cli.clustering_max_cluster_size,
+    );
 
-        let mut perspective_transformer = PerspectiveTransformer::new(
-            &build_topic(&cli.agent_type, &agent_id, TRACKING_PLUG_NAME),
-            match config.region_of_interest() {
-                Some(region_of_interest) => {
-                    let (c1, c2, c3, c4) = region_of_interest;
-                    let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                    Some(corners)
-                }
-                None => None,
-            },
-            {
-                if cli.transform_include_outside {
-                    None
-                } else {
-                    Some(cli.transform_ignore_outside_margin)
-                }
-            },
-        );
+    debug!("Clustering system init OK");
 
-        debug!("Perspective transformer system init OK");
-
-        let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
-
-        // Just loop on incoming messages.
-        debug!("Waiting for messages...");
-
-        while let Some(msg_opt) = message_stream.next().await {
-            match msg_opt {
-                Some(incoming_message) => match parse_plug_name(incoming_message.topic()) {
-                    "scans" => {
-                        handle_scans_message(
-                            &incoming_message,
-                            &mut config,
-                            &client,
-                            &mut clustering_system,
-                            &perspective_transformer,
-                            &mut automask_samplers,
-                            cli.default_min_distance_threshold,
-                        )
-                        .await;
-                    }
-                    "saveLidarConfig" => {
-                        debug!("Save Config topic");
-                        handle_save_message(
-                            &incoming_message,
-                            &mut config,
-                            &client,
-                            &mut perspective_transformer,
-                        )
-                        .await
-                        .expect("config should save");
-                    }
-                    "requestLidarConfig" => {
-                        info!("requestLidarConfig; respond with provideLidarConfig message");
-                        let message = config.publish_config(false).await;
-                        client.publish(message.unwrap()).await?;
-                    }
-                    "requestAutoMask" => {
-                        info!("requestAutoMask message");
-                        handle_automask_message(
-                            &incoming_message,
-                            &mut automask_samplers,
-                            &mut config,
-                            &client,
-                            cli.automask_scans_required,
-                            cli.automask_threshold_margin,
-                        )
-                        .await;
-                    }
-                    _ => {
-                        warn!("Unknown topic: {}", incoming_message.topic());
-                    }
-                },
-                None => {
-                    // A "None" means we were disconnected. Try to reconnect...
-                    warn!("Lost connection. Attempting reconnect.");
-                    while let Err(err) = client.reconnect().await {
-                        error!("Error reconnecting: {}", err);
-                        async_std::task::sleep(Duration::from_millis(1000)).await;
-                    }
-                }
+    let mut perspective_transformer = PerspectiveTransformer::new(
+        match device_config.region_of_interest() {
+            Some(region_of_interest) => {
+                let (c1, c2, c3, c4) = region_of_interest;
+                let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
+                Some(corners)
             }
-        } // while block end
+            None => None,
+        },
+        {
+            if cli.transform_include_outside {
+                None
+            } else {
+                Some(cli.transform_ignore_outside_margin)
+            }
+        },
+    );
 
-        // Explicit return type for the async block
-        Ok::<(), mqtt::Error>(())
-    }) {
-        error!("{}", err);
+    debug!("Perspective transformer system init OK");
+
+    let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
+
+    // Just loop on incoming messages.
+    debug!("Waiting for messages...");
+
+    loop {
+        if let Some((plug_name, message)) = tether_agent.check_messages() {
+            match plug_name.as_str() {
+                "scans" => {
+                    handle_scans_message(
+                        &message,
+                        &tether_agent,
+                        &config_output,
+                        &clusters_output,
+                        &tracking_output,
+                        &mut device_config,
+                        &mut clustering_system,
+                        &perspective_transformer,
+                        &mut automask_samplers,
+                        cli.default_min_distance_threshold,
+                    );
+                }
+                "saveLidarConfig" => {
+                    debug!("Save Config request");
+                    handle_save_message(
+                        &tether_agent,
+                        &config_output,
+                        &message,
+                        &mut device_config,
+                        &mut perspective_transformer,
+                    )
+                    .expect("config should save");
+                }
+                "requestLidarConfig" => {
+                    info!("requestLidarConfig; respond with provideLidarConfig message");
+                    tether_agent
+                        .encode_and_publish(&config_output, &device_config)
+                        .expect("failed to publish config");
+                }
+                "requestAutoMask" => {
+                    info!("requestAutoMask message");
+                    handle_automask_message(
+                        &message,
+                        &mut automask_samplers,
+                        &mut device_config,
+                        cli.automask_scans_required,
+                        cli.automask_threshold_margin,
+                    )
+                    .expect("failed to publish automask config");
+                }
+                _ => {
+                    warn!("Unknown topic: {}", message.topic());
+                }
+            };
+        }
     }
 }
 
-async fn handle_scans_message(
-    incoming_message: &mqtt::Message,
-    config: &mut Config,
-    client: &mqtt::AsyncClient,
+fn handle_scans_message(
+    incoming_message: &Message,
+    tether_agent: &TetherAgent,
+    config_output: &PlugDefinition,
+    clusters_output: &PlugDefinition,
+    tracking_output: &PlugDefinition,
+    config: &mut DeviceConfig,
     clustering_system: &mut ClusteringSystem,
     perspective_transformer: &PerspectiveTransformer,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
     default_min_distance: f64,
 ) {
-    let serial = parse_agent_id(incoming_message.topic());
+    let serial = parse_agent_id(incoming_message.topic()).unwrap_or("unknown");
+
+    // If an unknown device was found (and added), re-publish the Device config
     if let Some(()) = config.check_or_create_device(serial, default_min_distance) {
-        let message = config.publish_config(true).await;
-        client
-            .publish(message.unwrap())
-            .await
-            .expect("message should publish");
+        tether_agent.encode_and_publish(config_output, &config);
     }
-    let device = config.get_device(serial).unwrap();
-    if let Ok((clusters, clusters_message)) = clustering_system
-        .handle_scan_message(incoming_message, device)
-        .await
-    {
-        client.publish(clusters_message).await.unwrap();
 
-        if perspective_transformer.is_ready() {
-            let points: Vec<Point2D> = clusters
-                .into_iter()
-                .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
-                .collect();
+    let scans: Vec<(f64, f64)> =
+        rmp_serde::from_slice(incoming_message.payload()).expect("failed to decode scans");
 
-            if let Ok((_tracked_points, message)) =
-                perspective_transformer.publish_tracked_points(&points)
-            {
-                client.publish(message).await.unwrap();
+    if let Some(device) = config.get_device(serial) {
+        if let Ok(clusters) = clustering_system.handle_scan_message(&scans, device) {
+            tether_agent.encode_and_publish(clusters_output, &clusters);
+
+            if perspective_transformer.is_ready() {
+                let points: Vec<Point2D> = clusters
+                    .into_iter()
+                    .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
+                    .collect();
+
+                if let Ok(tracked_points) = perspective_transformer.get_tracked_points(&points) {
+                    tether_agent
+                        .encode_and_publish(tracking_output, &tracked_points)
+                        .expect("failed to publish tracked points");
+                }
             }
-        }
 
-        if let Some(sampler) = automask_samplers.get_mut(serial) {
-            if !sampler.is_complete() {
-                let payload = incoming_message.payload().to_vec();
-                let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
-                if let Some(new_mask) = sampler.add_samples(&scans) {
-                    debug!("Sufficient samples for masking device {}", serial);
-                    match config.update_device_masking(new_mask, serial) {
-                        Ok(()) => {
-                            info!("Updated masking for device {}", serial);
-                            let message = config.publish_config(true).await;
-                            client
-                                .publish(message.unwrap())
-                                .await
-                                .expect("message should publish");
-                            sampler.angles_with_thresholds.clear();
-                        }
-                        Err(()) => {
-                            error!("Error updating masking for device {}", serial);
+            if let Some(sampler) = automask_samplers.get_mut(serial) {
+                if !sampler.is_complete() {
+                    let payload = incoming_message.payload().to_vec();
+                    if let Some(new_mask) = sampler.add_samples(&scans) {
+                        debug!("Sufficient samples for masking device {}", serial);
+                        match config.update_device_masking(new_mask, serial) {
+                            Ok(()) => {
+                                info!("Updated masking for device {}", serial);
+                                // Automasking was updated, so re-publish Device Config
+                                tether_agent.encode_and_publish(&config_output, &config);
+                                sampler.angles_with_thresholds.clear();
+                            }
+                            Err(()) => {
+                                error!("Error updating masking for device {}", serial);
+                            }
                         }
                     }
                 }
             }
         }
+    } else {
+        error!("Failed to find device; it should have been added if it was unknown");
     }
 }
 
-async fn handle_save_message(
-    incoming_message: &mqtt::Message,
-    config: &mut Config,
-    client: &mqtt::AsyncClient,
+pub fn handle_save_message(
+    tether_agent: &TetherAgent,
+    config_output: &PlugDefinition,
+    incoming_message: &Message,
+    config: &mut DeviceConfig,
     perspective_transformer: &mut PerspectiveTransformer,
 ) -> Result<(), Error> {
     match config.parse_remote_config(incoming_message) {
         Ok(()) => {
             info!("Remote-provided config parsed OK; now save to disk and (re) publish");
-            let message = config.publish_config(true).await;
-            match message {
-                Ok(m) => {
-                    client
-                        .publish(m)
-                        .await
-                        .expect("config message should publish");
-                }
-                Err(e) => {
-                    error!("Could not get valid Config message; {:?}", e)
-                }
-            }
+            config
+                .write_config_to_file()
+                .expect("failed to save to disk");
+
+            tether_agent
+                .encode_and_publish(config_output, &config)
+                .expect("failed to publish config");
 
             if let Some(region_of_interest) = config.region_of_interest() {
+                info!("New Region of Interest was provided remotely; update the Perspective Transformer");
                 let (c1, c2, c3, c4) = region_of_interest;
                 let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
                 perspective_transformer.set_new_quad(&corners);
@@ -302,62 +261,43 @@ async fn handle_save_message(
     }
 }
 
-async fn handle_automask_message(
-    incoming_message: &mqtt::Message,
+fn handle_automask_message(
+    incoming_message: &Message,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
-    config: &mut Config,
-    client: &mqtt::AsyncClient,
+    config: &mut DeviceConfig,
     scans_required: usize,
     threshold_margin: f64,
-) {
+) -> Result<(), ()> {
     let payload = incoming_message.payload().to_vec();
 
-    // let scans: Vec<(f64, f64)> = rmp_serde::from_slice(&payload).unwrap();
-    let automask_command: Result<AutoMaskMessage, rmp_serde::decode::Error> =
-        rmp_serde::from_slice(&payload);
-    match automask_command {
-        Ok(parsed_message) => {
-            let command_type: &str = &parsed_message.r#type;
-            let result: Result<(), ()> = match command_type {
-                "new" => {
-                    info!("request NEW auto mask samplers");
-                    automask_samplers.clear();
-                    config.clear_device_masking();
-                    for device in config.devices().iter() {
-                        automask_samplers.insert(
-                            String::from(&device.serial),
-                            AutoMaskSampler::new(scans_required, threshold_margin),
-                        );
-                    }
-                    Ok(())
+    if let Ok(automask_command) = rmp_serde::from_slice::<AutoMaskMessage>(&payload) {
+        let command_type: &str = &automask_command.r#type;
+        match command_type {
+            "new" => {
+                info!("request NEW auto mask samplers");
+                automask_samplers.clear();
+                config.clear_device_masking();
+                for device in config.devices().iter() {
+                    automask_samplers.insert(
+                        String::from(&device.serial),
+                        AutoMaskSampler::new(scans_required, threshold_margin),
+                    );
                 }
-                "clear" => {
-                    info!("request CLEAR all device masking thresholds");
-                    automask_samplers.clear();
-                    config.clear_device_masking();
-                    Ok(())
-                }
-                _ => {
-                    error!("Unrecognised command type for RequestAutoMask message");
-                    Err(())
-                }
-            };
-
-            match result {
-                Ok(()) => {
-                    let message = config.publish_config(true).await;
-                    client
-                        .publish(message.unwrap())
-                        .await
-                        .expect("config should publish");
-                }
-                Err(()) => {
-                    error!("Error publishing updated config");
-                }
+                Ok(())
+            }
+            "clear" => {
+                info!("request CLEAR all device masking thresholds");
+                automask_samplers.clear();
+                config.clear_device_masking();
+                Ok(())
+            }
+            _ => {
+                error!("Unrecognised command type for RequestAutoMask message");
+                Err(())
             }
         }
-        Err(e) => {
-            error!("Failed to parse auto mask command: {}", e)
-        }
+    } else {
+        error!("Failed to parse auto mask command");
+        Err(())
     }
 }

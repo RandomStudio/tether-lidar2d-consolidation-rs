@@ -100,6 +100,8 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 
 ## TODO
 - [ ] Add (optional) tether-tracking-smooth functionality, built-in
+- [ ] Retain messages, for config publish - remove the need for "request config" topic
+- [ ] Debug loglevel should suppress MQTT log messages (too verbose)
 - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
 - [x] Use rmp-serde for MessagePack instead of msgpack-simple
 - [x] Read/write config data from/to disk
@@ -116,7 +118,6 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 - [x] Generate agent UUID automatically
 - [ ] Use "real" Tether Agent crate - although currently this is not set up for async
 - [x] Move potentially blocking processes (e.g. Config write to disk) into a separate thread or non-blocking functions
-- [ ] Retain messages, for config publish
 - [ ] Close the client properly on quit, so that the queue is also properly destroyed
 - [x] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
 - [ ] Possible memory leak when clearing and/or setting new AutoMask Samplers

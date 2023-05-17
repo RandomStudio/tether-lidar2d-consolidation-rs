@@ -16,8 +16,6 @@ const IGNORE_OUTSIDE_MARGIN: f64 = 0.04;
 const AUTOMASK_SCANS_REQUIRED: usize = 60;
 const AUTOMASK_MIN_THRESHOLD_MARGIN: f64 = 50.;
 
-const AGENT_TYPE: &str = "lidarConsolidation";
-
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
@@ -25,12 +23,17 @@ pub struct Cli {
     #[arg(long="lidarConfigPath",default_value_t=String::from(CONFIG_FILE_PATH))]
     pub config_path: String,
 
-    #[arg(long="agentType",default_value_t=String::from(AGENT_TYPE))]
-    pub agent_type: String,
-
     /// The IP address of the MQTT broker (server)
     #[arg(long = "tether.host", default_value_t=TETHER_HOST)]
     pub tether_host: std::net::IpAddr,
+
+    /// The Agent Role (type)
+    #[arg(long="tether.role",default_value_t=String::from("lidarConsolidation"))]
+    pub agent_role: String,
+
+    /// The Agent Group (ID)
+    #[arg(long="tether.group",default_value_t=String::from("any"))]
+    pub agent_group: String,
 
     #[arg(long = "loglevel",default_value_t=String::from("info"))]
     pub log_level: String,
