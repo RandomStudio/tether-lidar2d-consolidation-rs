@@ -1,14 +1,17 @@
 use std::time::SystemTime;
 
+use log::debug;
+
 use crate::{tracking::TrackedPoint2D, Point2D};
 
 pub struct SmoothSettings {
-    merge_radius: f64,
-    expire_ms: u128,
-    lerp_factor: f64,
-    wait_before_active_ms: u128,
+    pub merge_radius: f64,
+    pub wait_before_active_ms: u128,
+    pub expire_ms: u128,
+    pub lerp_factor: f64,
 }
 
+#[derive(Debug)]
 struct SmoothedPoint {
     current_position: Point2D,
     target_position: Point2D,
@@ -20,33 +23,37 @@ struct SmoothedPoint {
 pub struct TrackingSmoother {
     settings: SmoothSettings,
     known_points: Vec<SmoothedPoint>,
-    topic: String,
 }
 
 impl TrackingSmoother {
-    pub fn new(settings: SmoothSettings, topic: &str) -> Self {
+    pub fn new(settings: SmoothSettings) -> Self {
+        if settings.lerp_factor <= 0. {
+            panic!("Smoothing lerp factor must be above 0");
+        }
         TrackingSmoother {
             settings,
             known_points: Vec::new(),
-            topic: String::from(topic),
         }
     }
 
-    pub fn update_tracked_points(&mut self, points: &[Point2D]) {
-        points.iter().for_each(|p| {
+    pub fn update_tracked_points(&mut self, points: &[TrackedPoint2D]) {
+        points.iter().for_each(|new_point| {
             // Fist, check if this "is" actually an existing point that wasn't (yet)
             // marked active
             if let Some(existing) = self.known_points.iter_mut().find(|known_point| {
-                let (x, y) = *p;
-                distance(&(x, y), &known_point.current_position) > self.settings.merge_radius
+                let TrackedPoint2D { x, y, .. } = new_point;
+                distance(&(*x, *y), &known_point.current_position) <= self.settings.merge_radius
             }) {
                 // ---- CASE A: This "is" a point we already know
 
                 if !existing.ready {
                     if let Ok(elapsed) = existing.first_updated.elapsed() {
                         if elapsed.as_millis() > self.settings.wait_before_active_ms {
+                            debug!("Existing point {:?} ready to become active", &existing);
                             existing.ready = true;
                         }
+                    } else {
+                        panic!("Failed to get elapsed time");
                     }
                 }
 
@@ -57,19 +64,21 @@ impl TrackingSmoother {
                 // If this "is" actually the same point, and only if it's "ready",
                 // update its target position
                 if existing.ready {
-                    let (x, y) = *p;
-                    existing.target_position = (x, y);
+                    let TrackedPoint2D { x, y, .. } = new_point;
+                    existing.target_position = (*x, *y);
                 }
             } else {
                 // ---- CASE B: This is not (close to) a point we already know
 
                 // Append to list
 
-                let (x, y) = *p;
+                let TrackedPoint2D { x, y, .. } = new_point;
+
+                debug!("Added new, unknown point {:?}", &new_point);
 
                 let new_point = SmoothedPoint {
-                    current_position: (x, y),
-                    target_position: (x, y),
+                    current_position: (*x, *y),
+                    target_position: (*x, *y),
                     first_updated: SystemTime::now(),
                     last_updated: SystemTime::now(),
                     ready: {
@@ -94,7 +103,18 @@ impl TrackingSmoother {
             .known_points
             .iter()
             .position(|p| match p.last_updated.elapsed() {
-                Ok(elapsed) => elapsed.as_millis() > self.settings.wait_before_active_ms,
+                Ok(elapsed) => {
+                    if elapsed.as_millis() > self.settings.wait_before_active_ms && !p.ready {
+                        debug!(
+                            "Remove point waiting too long to become active; {}ms > {} ms",
+                            elapsed.as_millis(),
+                            self.settings.wait_before_active_ms
+                        );
+                        true
+                    } else {
+                        false
+                    }
+                }
                 Err(_) => false,
             })
         {
@@ -112,6 +132,7 @@ impl TrackingSmoother {
                 Err(_) => false,
             })
         {
+            debug!("Remove point expired");
             self.known_points.swap_remove(i);
         }
 
@@ -143,5 +164,5 @@ fn distance(a: &Point2D, b: &Point2D) -> f64 {
 }
 
 fn lerp(a: f64, b: f64, t: f64) -> f64 {
-    a + t * (a - b)
+    a * (1. - t) + (b * t)
 }

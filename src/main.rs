@@ -6,10 +6,8 @@ use env_logger::Env;
 use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::fmt::Error;
-use std::thread;
-use std::time::Duration;
 use tether_agent::mqtt::Message;
-use tether_agent::{parse_agent_id, PlugDefinition, TetherAgent};
+use tether_agent::{build_topic, parse_agent_id, PlugDefinition, TetherAgent};
 
 mod automasking;
 mod clustering;
@@ -23,6 +21,7 @@ use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
 use crate::perspective::PerspectiveTransformer;
 use crate::settings::Cli;
+use crate::smoothing::{SmoothSettings, TrackingSmoother};
 
 pub type Point2D = (f64, f64);
 
@@ -71,6 +70,26 @@ fn main() {
         .create_output_plug("clusters", Some(0), None)
         .expect("failed to create output plug");
 
+    // Smoothed traacked points output
+    let smoothed_tracking_output = tether_agent
+        .create_output_plug(
+            "trackedPoints",
+            Some(1),
+            Some(&build_topic(
+                "trackingSmooth",
+                &cli.agent_group,
+                "trackedPoints",
+            )),
+        )
+        .expect("failed to create output plug");
+
+    // Collect all outputs for easier passing
+    let all_outputs = ConsolidatorOutputs {
+        tracking_output: &tracking_output,
+        clusters_output: &clusters_output,
+        config_output: &config_output,
+    };
+
     // Some subscriptions
     let _scans_input = tether_agent
         .create_input_plug("scans", Some(0), None)
@@ -111,12 +130,16 @@ fn main() {
         },
     );
 
+    let mut smoothing = TrackingSmoother::new(SmoothSettings {
+        merge_radius: cli.smoothing_merge_radius,
+        wait_before_active_ms: cli.smoothing_wait_before_active_ms,
+        expire_ms: cli.smoothing_expire_ms,
+        lerp_factor: cli.smoothing_lerp_factor,
+    });
+
     debug!("Perspective transformer system init OK");
 
     let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
-
-    // Just loop on incoming messages.
-    debug!("Waiting for messages...");
 
     loop {
         if let Some((plug_name, message)) = tether_agent.check_messages() {
@@ -127,13 +150,12 @@ fn main() {
                     handle_scans_message(
                         &message,
                         &tether_agent,
-                        &config_output,
-                        &clusters_output,
-                        &tracking_output,
+                        &all_outputs,
                         &mut device_config,
                         &mut clustering_system,
                         &perspective_transformer,
                         &mut automask_samplers,
+                        &mut smoothing,
                         cli.default_min_distance_threshold,
                     );
                 }
@@ -170,21 +192,40 @@ fn main() {
                 }
             };
         }
+
+        // TODO: this should happen on interval check
+        smoothing.update_smoothing();
+        let smoothed_points = smoothing.get_smoothed_points();
+        if !smoothed_points.is_empty() {
+            tether_agent
+                .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
+                .expect("failed to publish smoothed tracking points");
+        }
     }
+}
+
+struct ConsolidatorOutputs<'a> {
+    config_output: &'a PlugDefinition,
+    clusters_output: &'a PlugDefinition,
+    tracking_output: &'a PlugDefinition,
 }
 
 fn handle_scans_message(
     incoming_message: &Message,
     tether_agent: &TetherAgent,
-    config_output: &PlugDefinition,
-    clusters_output: &PlugDefinition,
-    tracking_output: &PlugDefinition,
+    outputs: &ConsolidatorOutputs,
     config: &mut DeviceConfig,
     clustering_system: &mut ClusteringSystem,
     perspective_transformer: &PerspectiveTransformer,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
+    smoothing: &mut TrackingSmoother,
     default_min_distance: f64,
 ) {
+    let ConsolidatorOutputs {
+        config_output,
+        clusters_output,
+        tracking_output,
+    } = outputs;
     let serial = parse_agent_id(incoming_message.topic()).unwrap_or("unknown");
 
     // If an unknown device was found (and added), re-publish the Device config
@@ -210,9 +251,11 @@ fn handle_scans_message(
                     .collect();
 
                 if let Ok(tracked_points) = perspective_transformer.get_tracked_points(&points) {
+                    // Normal (unsmoothed) tracked points...
                     tether_agent
                         .encode_and_publish(tracking_output, &tracked_points)
                         .expect("failed to publish tracked points");
+                    smoothing.update_tracked_points(&tracked_points);
                 }
             }
 

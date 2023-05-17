@@ -8,7 +8,7 @@ const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
 const MIN_DISTANCE_THRESHOLD: f64 = 20.;
 const NEIGHBOURHOOD_RADIUS: f64 = 200.;
-const MIN_NEIGHBOURS: usize = 3;
+const MIN_NEIGHBOURS: usize = 4;
 const MAX_CLUSTER_SIZE: f64 = 2500.;
 
 const IGNORE_OUTSIDE_MARGIN: f64 = 0.04;
@@ -42,6 +42,7 @@ pub struct Cli {
     #[arg(long = "defaultMinDistanceThreshold", default_value_t = MIN_DISTANCE_THRESHOLD)]
     pub default_min_distance_threshold: f64,
 
+    // -------- CLUSTERING SETTINGS
     /// Max distance in mm to a point which can be included in a cluster
     #[arg(long = "clustering.neighbourhoodRadius", default_value_t = NEIGHBOURHOOD_RADIUS)]
     pub clustering_neighbourhood_radius: f64,
@@ -54,6 +55,25 @@ pub struct Cli {
     #[arg(long = "clustering.maxClusterSize", default_value_t = MAX_CLUSTER_SIZE)]
     pub clustering_max_cluster_size: f64,
 
+    // -------- SMOOTHING SETTINGS
+    /// How close (in normalised `[0;1]` units) to count two points as the same Tracked Point
+    #[arg(long = "smoothing.mergeRadius", default_value_t = 0.1)]
+    pub smoothing_merge_radius: f64,
+
+    /// How long (ms) before deciding a new point is valid/active
+    #[arg(long = "smoothing.waitBeforeActive", default_value_t = 100)]
+    pub smoothing_wait_before_active_ms: u128,
+
+    /// How long (ms) before removing a non-updated known tracking point
+    #[arg(long = "smoothing.expire", default_value_t = 3000)]
+    pub smoothing_expire_ms: u128,
+
+    /// How much to interpolate (smooth) current position towards target position
+    /// (1.0 is immediate, i.e. no smoothing, 0 is invalid)
+    #[arg(long = "smoothing.lerpFactor", default_value_t = 0.1)]
+    pub smoothing_lerp_factor: f64,
+
+    // -------- PERSPECTIVE TRANSFORM SETTINGS
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad;
     /// enable (use) this flag to include them
     #[arg(long = "perspectiveTransform.includeOutside")]
