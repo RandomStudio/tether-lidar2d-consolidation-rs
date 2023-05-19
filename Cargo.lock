@@ -710,19 +710,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
 
 [[package]]
-name = "openssl-sys"
-version = "0.9.80"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23bbbf7854cd45b83958ebe919f0e8e516793727652e27fda10a8384cfc790b7"
-dependencies = [
- "autocfg",
- "cc",
- "libc",
- "pkg-config",
- "vcpkg",
-]
-
-[[package]]
 name = "ordered-float"
 version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -739,22 +726,6 @@ checksum = "9b7820b9daea5457c9f21c69448905d723fbd21136ccf521748f23fd49e723ee"
 
 [[package]]
 name = "paho-mqtt"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fac58bae33ba9679bb4908ffa7c3950114345860d3f9b98340c4943f18ff324"
-dependencies = [
- "async-channel",
- "crossbeam-channel",
- "futures",
- "futures-timer",
- "libc",
- "log",
- "paho-mqtt-sys 0.7.2",
- "thiserror",
-]
-
-[[package]]
-name = "paho-mqtt"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6a19171f5b405f350373e32b6c2c4b47c225afccc837c11d2e7e22ba1749c62"
@@ -765,18 +736,8 @@ dependencies = [
  "futures-timer",
  "libc",
  "log",
- "paho-mqtt-sys 0.8.1",
+ "paho-mqtt-sys",
  "thiserror",
-]
-
-[[package]]
-name = "paho-mqtt-sys"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9a32c2ecd70105b9410210de25aad2a2382e97d43684d10f2150d059f9f11c8"
-dependencies = [
- "cmake",
- "openssl-sys",
 ]
 
 [[package]]
@@ -837,12 +798,6 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
-
-[[package]]
-name = "pkg-config"
-version = "0.3.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ac9a59f73473f1b8d852421e59e64809f025994837ef743615c6d0c5b305160"
 
 [[package]]
 name = "polling"
@@ -1115,7 +1070,7 @@ checksum = "50b30e4bce1fe2e6c16d4b1ed3adb8c1c2d19dba64da7c904fa16c45693e75ba"
 dependencies = [
  "env_logger",
  "log",
- "paho-mqtt 0.12.1",
+ "paho-mqtt",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -1131,7 +1086,6 @@ dependencies = [
  "log",
  "nalgebra",
  "ndarray",
- "paho-mqtt 0.11.1",
  "petal-clustering",
  "petal-neighbors",
  "rmp-serde",
@@ -1181,12 +1135,6 @@ dependencies = [
  "ctor",
  "version_check",
 ]
-
-[[package]]
-name = "vcpkg"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "version_check"

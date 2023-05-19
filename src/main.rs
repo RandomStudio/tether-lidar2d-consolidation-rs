@@ -6,6 +6,8 @@ use env_logger::Env;
 use log::{debug, error, info, warn};
 use std::collections::HashMap;
 use std::fmt::Error;
+use std::thread;
+use std::time::Duration;
 use tether_agent::mqtt::Message;
 use tether_agent::{build_topic, parse_agent_id, PlugDefinition, TetherAgent};
 
@@ -145,7 +147,10 @@ fn main() {
     let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
 
     loop {
+        let mut work_done = false;
+
         if let Some((plug_name, message)) = tether_agent.check_messages() {
+            work_done = true;
             // debug!("Received {:?}", message);
             match plug_name.as_str() {
                 "scans" => {
@@ -199,6 +204,7 @@ fn main() {
         if !cli.smoothing_disable {
             if let Ok(elapsed) = smoothing.last_updated().elapsed() {
                 if elapsed.as_millis() > cli.smoothing_update_interval {
+                    work_done = true;
                     smoothing.update_smoothing();
                     if let Some(smoothed_points) = smoothing.get_smoothed_points() {
                         tether_agent
@@ -207,6 +213,10 @@ fn main() {
                     }
                 }
             }
+        }
+
+        if !work_done {
+            thread::sleep(Duration::from_millis(1));
         }
     }
 }
