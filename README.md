@@ -101,6 +101,7 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 ## TODO
 - [x] Add (optional) tether-tracking-smooth functionality, built-in
 - [ ] Smoothing should also remove duplicate existing points that should be merged (do not leave "stale" points behind)
+- [ ] Ensure that this compiles on Raspberry Pi, then cross-compiles (e.g. from Mac)
 - [ ] Retain messages, for config publish - remove the need for "request config" topic
 - [x] Debug loglevel should suppress MQTT log messages (too verbose)
 - [ ] Allow all critical settings (clustering, smoothing) to be updated live on command
