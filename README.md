@@ -98,6 +98,12 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
   - There is possibly some allocation / copying of data going on; this needs to be reduced as far as is practical
   - There are some of instances of `.unwrap()` in this process; errors should be handled more carefully in some cases
 
+### Cross compiling
+For Pi, on Mac:
+```
+brew install arm-linux-gnueabihf-binutils
+```
+
 ## TODO
 - [x] Add (optional) tether-tracking-smooth functionality, built-in
 - [ ] Smoothing should also remove duplicate existing points that should be merged (do not leave "stale" points behind)
