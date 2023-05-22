@@ -88,7 +88,7 @@ impl DeviceConfig {
         let text = match std::fs::read_to_string(&self.config_file_path) {
             Err(e) => {
                 if e.kind().to_string() == "entity not found" {
-                    warn!("Device Config file not found, will create a blank one...");
+                    warn!("Device Config file not found, will create a blank one");
                     String::from("{\"devices\": [] }")
                 } else {
                     println!("kind: {}", e.kind());
