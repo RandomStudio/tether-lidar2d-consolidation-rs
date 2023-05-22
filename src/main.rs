@@ -44,7 +44,7 @@ fn main() {
         Some(cli.tether_host),
     );
     tether_agent
-        .connect(None, None)
+        .connect(cli.tether_username, cli.tether_password)
         .expect("failed to connect Tether Agent");
 
     // Initialise config, now that we have the MQTT client ready

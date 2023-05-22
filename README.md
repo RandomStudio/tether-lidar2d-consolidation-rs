@@ -38,7 +38,7 @@ You can see a full list of available command-line arguments by appending `--help
 Options are deliberately made to be almost identical to those used in the OG Agent, with a few notable exceptions:
 
 - Here we use a flag `--perspectiveTransform.includeOutside` instead of setting a boolean `ignoreOutside`. This reflects the default usage better and makes more sense when using a flag (which defaults to `false` if not explicitly appended)
-- We currently only provide `tether.host` as an override - no other MQTT Client Options (for now)
+- For Tether, you can optionally provide `--tether.host`, `--tether.username`, `--tether.password` if these differ from the defaults
 - There are no options relating to `autoBroadcastConfig` as there is no need for this behaviour; we save and (re)publish configuration essentially every time it changes, on startup and when requested
 
 ## Notes on Libraries
