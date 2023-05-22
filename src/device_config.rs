@@ -1,5 +1,5 @@
 use log::{debug, error, info, warn};
-use std::{collections::HashMap, fmt::Error, fs};
+use std::{any::Any, collections::HashMap, fmt::Error, fs};
 use tether_agent::mqtt::Message;
 
 use serde::{Deserialize, Serialize};
@@ -85,8 +85,18 @@ impl DeviceConfig {
     }
 
     pub fn load_config_from_file(&mut self) -> Result<usize, ()> {
-        let text =
-            std::fs::read_to_string(&self.config_file_path).expect("Error opening config file");
+        let text = match std::fs::read_to_string(&self.config_file_path) {
+            Err(e) => {
+                if e.kind().to_string() == "entity not found" {
+                    warn!("Device Config file not found, will create a blank one...");
+                    String::from("{\"devices\": [] }")
+                } else {
+                    println!("kind: {}", e.kind());
+                    panic!("Failed to load config from disk; error: {:?}", e);
+                }
+            }
+            Ok(s) => s,
+        };
 
         match serde_json::from_str::<DeviceConfig>(&text) {
             Ok(data) => {

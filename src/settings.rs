@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use clap::{command, Parser};
 
 // Some defaults; some of which can be overriden via CLI args
-const CONFIG_FILE_PATH: &str = "./dummyConfig.json";
+const CONFIG_FILE_PATH: &str = "./lidar.json";
 const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
 const MIN_DISTANCE_THRESHOLD: f64 = 20.;

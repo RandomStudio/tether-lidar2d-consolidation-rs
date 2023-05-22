@@ -330,7 +330,7 @@ pub fn handle_save_message(
                 perspective_transformer.set_new_quad(&corners);
                 Ok(())
             } else {
-                Err(Error)
+                Ok(())
             }
         }
         Err(()) => Err(Error),
