@@ -1,5 +1,5 @@
 use log::{debug, error, info, warn};
-use std::{any::Any, collections::HashMap, fmt::Error, fs};
+use std::{collections::HashMap, fmt::Error, fs};
 use tether_agent::mqtt::Message;
 
 use serde::{Deserialize, Serialize};

@@ -106,6 +106,7 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 - [x] Debug loglevel should suppress MQTT log messages (too verbose)
 - [ ] Allow all critical settings (clustering, smoothing) to be updated live on command
 - [ ] Print warning/error (and optionally panic?) if no data received from known devices after timeout
+- [ ] If no Lidar Device configuration file is found, create one
 - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
 - [x] Use rmp-serde for MessagePack instead of msgpack-simple
 - [x] Read/write config data from/to disk
@@ -120,7 +121,7 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 - [x] If receiving an unknown / unconfigured device, add it with some defaults to Config
 - [x] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
 - [x] Generate agent UUID automatically
-- [ ] Use "real" Tether Agent crate - although currently this is not set up for async
+- [x] Use "real" Tether Agent crate - although currently this is not set up for async
 - [x] Move potentially blocking processes (e.g. Config write to disk) into a separate thread or non-blocking functions
 - [ ] Close the client properly on quit, so that the queue is also properly destroyed
 - [x] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
