@@ -59,7 +59,7 @@ pub struct Cli {
     #[arg(long = "clustering.minNeighbours", default_value_t = MIN_NEIGHBOURS)]
     pub clustering_min_neighbours: usize,
 
-    /// Exclude clusters above this size, in radius
+    /// Exclude clusters above this size, in cluster count
     #[arg(long = "clustering.maxClusterSize", default_value_t = MAX_CLUSTER_SIZE)]
     pub clustering_max_cluster_size: f64,
 

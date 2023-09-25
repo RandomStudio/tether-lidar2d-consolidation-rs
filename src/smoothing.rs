@@ -22,6 +22,7 @@ pub struct SmoothSettings {
 struct SmoothedPoint {
     current_position: Point2D,
     target_position: Point2D,
+    velocity: Option<[f64; 2]>,
     ready: bool,
     first_updated: SystemTime,
     last_updated: SystemTime,
@@ -92,6 +93,7 @@ impl TrackingSmoother {
                     target_position: (*x, *y),
                     first_updated: SystemTime::now(),
                     last_updated: SystemTime::now(),
+                    velocity: None,
                     ready: {
                         if self.settings.wait_before_active_ms > 0 {
                             false
@@ -154,6 +156,7 @@ impl TrackingSmoother {
             let (x1, y1) = p.current_position;
             let (x2, y2) = p.target_position;
             let [new_x, new_y] = [lerp(x1, x2, t), lerp(y1, y2, t)];
+            p.velocity = Some([x2 - x1, y2 - y1]);
             p.current_position = (new_x, new_y);
         })
     }
@@ -164,7 +167,11 @@ impl TrackingSmoother {
             .iter()
             .filter(|p| p.ready)
             .enumerate()
-            .map(|(i, p)| TrackedPoint2D::new(i, p.current_position))
+            .map(|(i, p)| {
+                let mut tp = TrackedPoint2D::new(i, p.current_position);
+                tp.set_velocity(p.velocity);
+                tp
+            })
             .collect();
 
         let points_count = known_points.len();
