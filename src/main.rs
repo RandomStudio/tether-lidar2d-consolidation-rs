@@ -1,19 +1,16 @@
 use automasking::AutoMaskMessage;
 use clap::Parser;
-use tether_agent::three_part_topic::parse_agent_id;
+use tether_agent::three_part_topic::{build_topic, parse_agent_id};
 use tracking_config::TrackingConfig;
 
 use env_logger::Env;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use std::collections::HashMap;
 use std::fmt::Error;
 use std::thread;
 use std::time::Duration;
 use tether_agent::mqtt::Message;
-use tether_agent::{
-    OutputPlugDefinition, PlugDefinition, PlugOptionsBuilder, TetherAgent,
-    TetherAgentOptionsBuilder,
-};
+use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 
 mod automasking;
 mod clustering;
@@ -163,7 +160,7 @@ fn main() {
     loop {
         let mut work_done = false;
 
-        if let Some((topic, message)) = tether_agent.check_messages() {
+        if let Some((_topic, message)) = tether_agent.check_messages() {
             work_done = true;
             // debug!("Received {:?}", message);
             if scans_input.matches(message.topic()) {
@@ -223,7 +220,16 @@ fn main() {
                             .expect("failed to publish smoothed tracking points");
                         for changed_zone in presence_detector.update_zones(&smoothed_points).iter()
                         {
-                            info!("ZONE CHANGED: {:?}", changed_zone);
+                            debug!("ZONE CHANGED: {:?}", changed_zone);
+                            let topic = build_topic(
+                                "presenceDetection",
+                                &changed_zone.id.to_string(),
+                                "presence",
+                            );
+                            let payload = if changed_zone.active { &[1] } else { &[0] };
+                            tether_agent
+                                .publish_raw(&topic, payload, Some(2), Some(false))
+                                .expect("failed to send presence update");
                         }
                     }
                 }

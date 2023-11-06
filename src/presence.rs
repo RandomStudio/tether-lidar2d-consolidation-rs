@@ -1,19 +1,18 @@
 use std::time::{Duration, SystemTime};
 
 use serde::{Deserialize, Serialize};
-use tether_agent::TetherAgent;
 
 use crate::tracking::TrackedPoint2D;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Zone {
-    id: usize,
-    x: f64,
-    y: f64,
-    width: f64,
-    height: f64,
+    pub id: usize,
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
     #[serde(default)]
-    active: bool,
+    pub active: bool,
     #[serde(skip)]
     last_active: Option<SystemTime>,
 }
@@ -63,7 +62,7 @@ impl PresenceDetectionZones {
         zones_changed
     }
 
-    pub fn get_zones(&self) -> &[Zone] {
-        &self.zones
-    }
+    // pub fn get_zones(&self) -> &[Zone] {
+    //     &self.zones
+    // }
 }
