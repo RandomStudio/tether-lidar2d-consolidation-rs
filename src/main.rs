@@ -1,5 +1,6 @@
 use automasking::AutoMaskMessage;
 use clap::Parser;
+use tether_agent::three_part_topic::parse_agent_id;
 use tracking_config::TrackingConfig;
 
 use env_logger::Env;
@@ -9,7 +10,10 @@ use std::fmt::Error;
 use std::thread;
 use std::time::Duration;
 use tether_agent::mqtt::Message;
-use tether_agent::{build_topic, parse_agent_id, PlugDefinition, TetherAgent};
+use tether_agent::{
+    OutputPlugDefinition, PlugDefinition, PlugOptionsBuilder, TetherAgent,
+    TetherAgentOptionsBuilder,
+};
 
 mod automasking;
 mod clustering;
@@ -29,6 +33,12 @@ use crate::smoothing::{get_mode, SmoothSettings, TrackingSmoother};
 
 pub type Point2D = (f64, f64);
 
+struct ConsolidatorOutputs<'a> {
+    config_output: &'a PlugDefinition,
+    clusters_output: &'a PlugDefinition,
+    tracking_output: &'a PlugDefinition,
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -40,19 +50,18 @@ fn main() {
 
     debug!("Started; args: {:?}", cli);
 
-    let tether_agent = TetherAgent::new(
-        &cli.agent_role,
-        Some(&cli.agent_group),
-        Some(cli.tether_host),
-    );
-    tether_agent
-        .connect(cli.tether_username, cli.tether_password)
-        .expect("failed to connect Tether Agent");
+    let tether_agent = TetherAgentOptionsBuilder::new(&cli.agent_role)
+        .id(Some(&cli.agent_group))
+        .host(Some(&cli.tether_host.to_string()))
+        .build()
+        .expect("failed to init and/or connect Tether Agent");
 
     // Initialise config, now that we have the MQTT client ready
-    let config_output = tether_agent
-        .create_output_plug("provideLidarConfig", Some(2), None)
-        .expect("failed to create output plug");
+    let config_output = PlugOptionsBuilder::create_output("provideLidarConfig")
+        .qos(Some(2))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+
     let mut tracking_config = TrackingConfig::new(&cli.config_path);
     match tracking_config.load_config_from_file() {
         Ok(count) => {
@@ -67,25 +76,21 @@ fn main() {
     }
 
     // Clusters, tracking, automask outputs
-    let tracking_output = tether_agent
-        .create_output_plug("trackedPoints", Some(1), None)
-        .expect("failed to create output plug");
-    let clusters_output = tether_agent
-        .create_output_plug("clusters", Some(0), None)
-        .expect("failed to create output plug");
+    let tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
+        .qos(Some(1))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+    let clusters_output = PlugOptionsBuilder::create_output("clusters")
+        .qos(Some(0))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
 
     // Smoothed traacked points output
-    let smoothed_tracking_output = tether_agent
-        .create_output_plug(
-            "trackedPoints",
-            Some(1),
-            Some(&build_topic(
-                "trackingSmooth",
-                &cli.agent_group,
-                "trackedPoints",
-            )),
-        )
-        .expect("failed to create output plug");
+    let smoothed_tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
+        .qos(Some(1))
+        .role(Some("trackingSmooth"))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
 
     // Collect all outputs for easier passing
     let all_outputs = ConsolidatorOutputs {
@@ -95,18 +100,22 @@ fn main() {
     };
 
     // Some subscriptions
-    let _scans_input = tether_agent
-        .create_input_plug("scans", Some(0), None)
-        .expect("failed to create input plug");
-    let _save_config_input = tether_agent
-        .create_input_plug("saveLidarConfig", Some(1), None)
-        .expect("failed to create input plug");
-    let _request_config_input = tether_agent
-        .create_input_plug("requestLidarConfig", Some(1), None)
-        .expect("failed to create input plug");
-    let _request_automask_input = tether_agent
-        .create_input_plug("requestAutoMask", Some(1), None)
-        .expect("failed to create input plug");
+    let scans_input = PlugOptionsBuilder::create_input("scans")
+        .qos(Some(0))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+    let save_config_input = PlugOptionsBuilder::create_input("saveLidarConfig")
+        .qos(Some(2))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+    let request_config_input = PlugOptionsBuilder::create_input("requestLidarConfig")
+        .qos(Some(2))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+    let request_automask_input = PlugOptionsBuilder::create_input("requestAutoMask")
+        .qos(Some(2))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
 
     let mut clustering_system = ClusteringSystem::new(
         cli.clustering_neighbourhood_radius,
@@ -154,56 +163,53 @@ fn main() {
     loop {
         let mut work_done = false;
 
-        if let Some((plug_name, message)) = tether_agent.check_messages() {
+        if let Some((topic, message)) = tether_agent.check_messages() {
             work_done = true;
             // debug!("Received {:?}", message);
-            match plug_name.as_str() {
-                "scans" => {
-                    // debug!("Received scans message");
-                    handle_scans_message(
-                        &message,
-                        &tether_agent,
-                        &all_outputs,
-                        &mut tracking_config,
-                        &mut clustering_system,
-                        &perspective_transformer,
-                        &mut automask_samplers,
-                        &mut smoothing,
-                        cli.default_min_distance_threshold,
-                    );
-                }
-                "saveLidarConfig" => {
-                    debug!("Save Config request");
-                    handle_save_message(
-                        &tether_agent,
-                        &config_output,
-                        &message,
-                        &mut tracking_config,
-                        &mut perspective_transformer,
-                    )
-                    .expect("config should save");
-                }
-                "requestLidarConfig" => {
-                    info!("requestLidarConfig; respond with provideLidarConfig message");
-                    tether_agent
-                        .encode_and_publish(&config_output, &tracking_config)
-                        .expect("failed to publish config");
-                }
-                "requestAutoMask" => {
-                    info!("requestAutoMask message");
-                    handle_automask_message(
-                        &message,
-                        &mut automask_samplers,
-                        &mut tracking_config,
-                        cli.automask_scans_required,
-                        cli.automask_threshold_margin,
-                    )
-                    .expect("failed to publish automask config");
-                }
-                _ => {
-                    warn!("Unknown topic: {}", message.topic());
-                }
-            };
+            if scans_input.matches(message.topic()) {
+                // debug!("Received scans message");
+                handle_scans_message(
+                    &message,
+                    &tether_agent,
+                    &all_outputs,
+                    &mut tracking_config,
+                    &mut clustering_system,
+                    &perspective_transformer,
+                    &mut automask_samplers,
+                    &mut smoothing,
+                    cli.default_min_distance_threshold,
+                );
+            }
+
+            if save_config_input.matches(message.topic()) {
+                handle_save_message(
+                    &tether_agent,
+                    &config_output,
+                    &message,
+                    &mut tracking_config,
+                    &mut perspective_transformer,
+                )
+                .expect("config should save");
+            }
+
+            if request_config_input.matches(message.topic()) {
+                info!("requestLidarConfig; respond with provideLidarConfig message");
+                tether_agent
+                    .encode_and_publish(&config_output, &tracking_config)
+                    .expect("failed to publish config");
+            }
+
+            if request_automask_input.matches(message.topic()) {
+                info!("requestAutoMask message");
+                handle_automask_message(
+                    &message,
+                    &mut automask_samplers,
+                    &mut tracking_config,
+                    cli.automask_scans_required,
+                    cli.automask_threshold_margin,
+                )
+                .expect("failed to publish automask config");
+            }
         }
 
         if !cli.smoothing_disable {
@@ -230,12 +236,6 @@ fn main() {
     }
 }
 
-struct ConsolidatorOutputs<'a> {
-    config_output: &'a PlugDefinition,
-    clusters_output: &'a PlugDefinition,
-    tracking_output: &'a PlugDefinition,
-}
-
 fn handle_scans_message(
     incoming_message: &Message,
     tether_agent: &TetherAgent,
@@ -252,6 +252,8 @@ fn handle_scans_message(
         clusters_output,
         tracking_output,
     } = outputs;
+
+    // TODO: this could be parsed from the ThreePartTopic earlier
     let serial = parse_agent_id(incoming_message.topic()).unwrap_or("unknown");
 
     // If an unknown device was found (and added), re-publish the Device config
