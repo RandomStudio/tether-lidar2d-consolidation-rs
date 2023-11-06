@@ -1,4 +1,4 @@
-use crate::{device_config::LidarDevice, Point2D};
+use crate::{tracking_config::LidarDevice, Point2D};
 
 use log::debug;
 use serde::{Deserialize, Serialize};

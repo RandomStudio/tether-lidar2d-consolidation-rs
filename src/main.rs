@@ -1,6 +1,6 @@
 use automasking::AutoMaskMessage;
 use clap::Parser;
-use device_config::DeviceConfig;
+use tracking_config::TrackingConfig;
 
 use env_logger::Env;
 use log::{debug, error, info, warn};
@@ -13,15 +13,17 @@ use tether_agent::{build_topic, parse_agent_id, PlugDefinition, TetherAgent};
 
 mod automasking;
 mod clustering;
-mod device_config;
 mod perspective;
+mod presence;
 mod settings;
 mod smoothing;
 mod tracking;
+mod tracking_config;
 
 use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
 use crate::perspective::PerspectiveTransformer;
+use crate::presence::PresenceDetectionZones;
 use crate::settings::Cli;
 use crate::smoothing::{get_mode, SmoothSettings, TrackingSmoother};
 
@@ -51,12 +53,12 @@ fn main() {
     let config_output = tether_agent
         .create_output_plug("provideLidarConfig", Some(2), None)
         .expect("failed to create output plug");
-    let mut device_config = DeviceConfig::new(&cli.config_path);
-    match device_config.load_config_from_file() {
+    let mut tracking_config = TrackingConfig::new(&cli.config_path);
+    match tracking_config.load_config_from_file() {
         Ok(count) => {
             info!("Loaded {} devices OK into Config", count);
             tether_agent
-                .encode_and_publish(&config_output, &device_config)
+                .encode_and_publish(&config_output, &tracking_config)
                 .expect("failed to publish config");
         }
         Err(()) => {
@@ -115,7 +117,7 @@ fn main() {
     debug!("Clustering system init OK");
 
     let mut perspective_transformer = PerspectiveTransformer::new(
-        match device_config.region_of_interest() {
+        match tracking_config.region_of_interest() {
             Some(region_of_interest) => {
                 let (c1, c2, c3, c4) = region_of_interest;
                 let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
@@ -146,6 +148,9 @@ fn main() {
 
     let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
 
+    let mut presence_detector =
+        PresenceDetectionZones::new(tracking_config.zones().unwrap_or_default());
+
     loop {
         let mut work_done = false;
 
@@ -159,7 +164,7 @@ fn main() {
                         &message,
                         &tether_agent,
                         &all_outputs,
-                        &mut device_config,
+                        &mut tracking_config,
                         &mut clustering_system,
                         &perspective_transformer,
                         &mut automask_samplers,
@@ -173,7 +178,7 @@ fn main() {
                         &tether_agent,
                         &config_output,
                         &message,
-                        &mut device_config,
+                        &mut tracking_config,
                         &mut perspective_transformer,
                     )
                     .expect("config should save");
@@ -181,7 +186,7 @@ fn main() {
                 "requestLidarConfig" => {
                     info!("requestLidarConfig; respond with provideLidarConfig message");
                     tether_agent
-                        .encode_and_publish(&config_output, &device_config)
+                        .encode_and_publish(&config_output, &tracking_config)
                         .expect("failed to publish config");
                 }
                 "requestAutoMask" => {
@@ -189,7 +194,7 @@ fn main() {
                     handle_automask_message(
                         &message,
                         &mut automask_samplers,
-                        &mut device_config,
+                        &mut tracking_config,
                         cli.automask_scans_required,
                         cli.automask_threshold_margin,
                     )
@@ -210,6 +215,10 @@ fn main() {
                         tether_agent
                             .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
                             .expect("failed to publish smoothed tracking points");
+                        for changed_zone in presence_detector.update_zones(&smoothed_points).iter()
+                        {
+                            info!("ZONE CHANGED: {:?}", changed_zone);
+                        }
                     }
                 }
             }
@@ -231,7 +240,7 @@ fn handle_scans_message(
     incoming_message: &Message,
     tether_agent: &TetherAgent,
     outputs: &ConsolidatorOutputs,
-    config: &mut DeviceConfig,
+    config: &mut TrackingConfig,
     clustering_system: &mut ClusteringSystem,
     perspective_transformer: &PerspectiveTransformer,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
@@ -309,7 +318,7 @@ pub fn handle_save_message(
     tether_agent: &TetherAgent,
     config_output: &PlugDefinition,
     incoming_message: &Message,
-    config: &mut DeviceConfig,
+    config: &mut TrackingConfig,
     perspective_transformer: &mut PerspectiveTransformer,
 ) -> Result<(), Error> {
     match config.parse_remote_config(incoming_message) {
@@ -340,7 +349,7 @@ pub fn handle_save_message(
 fn handle_automask_message(
     incoming_message: &Message,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
-    config: &mut DeviceConfig,
+    config: &mut TrackingConfig,
     scans_required: usize,
     threshold_margin: f64,
 ) -> Result<(), ()> {

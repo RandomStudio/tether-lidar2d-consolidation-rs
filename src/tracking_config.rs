@@ -4,7 +4,7 @@ use tether_agent::mqtt::Message;
 
 use serde::{Deserialize, Serialize};
 
-use crate::automasking::MaskThresholdMap;
+use crate::{automasking::MaskThresholdMap, presence::Zone};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -36,18 +36,20 @@ type CornerPoints = (
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct DeviceConfig {
+pub struct TrackingConfig {
     devices: Vec<LidarDevice>,
     region_of_interest: Option<CornerPoints>,
+    zones: Option<Vec<Zone>>,
     #[serde(skip)]
     config_file_path: String,
 }
 
-impl DeviceConfig {
-    pub fn new(config_file_path: &str) -> DeviceConfig {
-        DeviceConfig {
+impl TrackingConfig {
+    pub fn new(config_file_path: &str) -> TrackingConfig {
+        TrackingConfig {
             devices: vec![],
             region_of_interest: None,
+            zones: None,
             config_file_path: String::from(config_file_path),
         }
     }
@@ -66,9 +68,9 @@ impl DeviceConfig {
     pub fn parse_remote_config(&mut self, incoming_message: &Message) -> Result<(), ()> {
         let payload = incoming_message.payload().to_vec();
 
-        match rmp_serde::from_slice::<DeviceConfig>(&payload) {
+        match rmp_serde::from_slice::<TrackingConfig>(&payload) {
             Ok(config) => {
-                let DeviceConfig {
+                let TrackingConfig {
                     devices,
                     region_of_interest,
                     ..
@@ -88,22 +90,29 @@ impl DeviceConfig {
         let text = match std::fs::read_to_string(&self.config_file_path) {
             Err(e) => {
                 if e.kind().to_string() == "entity not found" {
-                    warn!("Device Config file not found, will create a blank one");
+                    warn!("Tracking Config file not found, will create a blank one");
                     String::from("{\"devices\": [] }")
                 } else {
                     println!("kind: {}", e.kind());
-                    panic!("Failed to load config from disk; error: {:?}", e);
+                    panic!("Failed to load Tracking Config from disk; error: {:?}", e);
                 }
             }
-            Ok(s) => s,
+            Ok(s) => {
+                info!(
+                    "Loaded Tracking config OK from \"{}\"",
+                    &self.config_file_path
+                );
+                s
+            }
         };
 
-        match serde_json::from_str::<DeviceConfig>(&text) {
+        match serde_json::from_str::<TrackingConfig>(&text) {
             Ok(data) => {
                 debug!("Config parsed data from file: {:?}", data);
 
                 self.devices = data.devices;
                 self.region_of_interest = data.region_of_interest;
+                self.zones = data.zones;
 
                 Ok(self.devices.len())
             }
@@ -198,6 +207,10 @@ impl DeviceConfig {
 
     pub fn region_of_interest(&self) -> Option<&CornerPoints> {
         self.region_of_interest.as_ref()
+    }
+
+    pub fn zones(&self) -> Option<&[Zone]> {
+        self.zones.as_deref()
     }
 }
 
