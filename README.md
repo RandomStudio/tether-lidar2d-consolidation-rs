@@ -106,7 +106,7 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 - [x] Debug loglevel should suppress MQTT log messages (too verbose)
 - [ ] Allow all critical settings (clustering, smoothing) to be updated live on command
 - [ ] Print warning/error (and optionally panic?) if no data received from known devices after timeout
-- [ ] If no Lidar Device configuration file is found, create one
+- [x] If no Lidar Device configuration file is found, create one
 - [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
 - [x] Use rmp-serde for MessagePack instead of msgpack-simple
 - [x] Read/write config data from/to disk
