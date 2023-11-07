@@ -109,13 +109,6 @@ fn main() {
                 .expect("config should save");
             }
 
-            // if inputs.request_config_input.matches(&topic) {
-            //     info!("requestLidarConfig; respond with provideLidarConfig message");
-            //     tether_agent
-            //         .encode_and_publish(&outputs.config_output, &tracking_config)
-            //         .expect("failed to publish config");
-            // }
-
             if inputs.request_automask_input.matches(&topic) {
                 info!("requestAutoMask message");
                 handle_automask_message(
