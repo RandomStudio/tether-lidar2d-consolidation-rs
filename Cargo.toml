@@ -1,7 +1,7 @@
 [package]
 name = "tether-lidar2d-consolidation-rs"
 description = "Tether Lidar2D Consolidator Agent, Rust edition"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

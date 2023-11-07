@@ -95,13 +95,6 @@ impl TrackingSmoother {
                     last_updated: SystemTime::now(),
                     velocity: None,
                     ready: self.settings.wait_before_active_ms == 0,
-                    // {
-                    //     if self.settings.wait_before_active_ms > 0 {
-                    //         false
-                    //     } else {
-                    //         true
-                    //     }
-                    // },
                 };
                 self.known_points.push(new_point);
             }
