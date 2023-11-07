@@ -1,8 +1,6 @@
 # Tether Lidar2D Consolidator, in Rust
 
-This is more or a less a direct port of the [original NodeJS Agent](https://github.com/RandomStudio/tether-lidar2d-consolidation) (here referred to as "the OG Agent" ✌️) into Rust 🦀.
-
-All the essential features of the OG Agent have been implemented, but the structure of the application does not attempt to replicate the original. 
+This was originally a direct port of the [original NodeJS Agent](https://github.com/RandomStudio/tether-lidar2d-consolidation) (here referred to as "the OG Agent" ✌️) into Rust 🦀. Some new features have now been added after v0.3.
 
 The two main goals were
 - Learn to use Rust in a real-world application, following an existing codebase which was well known and where the fundamental engineering challenges had already been "solved"
@@ -18,8 +16,6 @@ cargo install tether-lidar2d-consolidation
 ```
 tether-lidar2d-consolidation
 ```
-
-
 
 ## Command-line configuration
 You can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `tether-lidar2d-consolidation --help` (installed) or `cargo run -- --help` (development)
@@ -93,42 +89,11 @@ RUST_LOG=debug cargo run
 We are using [clap](https://crates.io/crates/clap) which does command-line argument parsing only (no use of files, environment variables, etc.)
 
 Something like [more-config](https://crates.io/crates/more-config) could be useful, since it includes functionality similar to the [rc](https://www.npmjs.com/package/rc) package for NodeJS. 
-## Notes on implementation
-- As with OG Agent, the serial string for the LIDAR device is extracted from the topic, specifically the `agentIdOrGroup` part in `lidar2d/{agentIdOrGroup}/scans`
-- The samples are copied from the array of arrays; each "sample" is an array with the elements `[angle, distance]` and sometimes `[angle, distance, quality]` (although the latter is not handled yet). The samples are converted into points and the list(vector) of all converted points are "inserted" (i.e. replaced, if key already exists) into the hashmap which represents all LIDAR devices (with serial strings as keys). 
-  - There is possibly some allocation / copying of data going on; this needs to be reduced as far as is practical
-  - There are some of instances of `.unwrap()` in this process; errors should be handled more carefully in some cases
 
-## TODO
-- [x] Add (optional) tether-tracking-smooth functionality, built-in
-- [ ] Presence Zones should be defined within the real space (more sensible calibration) not the normalised tracking space
-- [ ] Presence Zones should be definable for shapes other than rectangles
-- [ ] Smoothing should also remove duplicate existing points that should be merged (do not leave "stale" points behind)
-- [ ] Ensure that this compiles on Raspberry Pi, then cross-compiles (e.g. from Mac)
-- [ ] Retain messages, for config publish - remove the need for "request config" topic
-- [x] Debug loglevel should suppress MQTT log messages (too verbose)
-- [ ] Allow all critical settings (clustering, smoothing) to be updated live on command
-- [ ] Print warning/error (and optionally panic?) if no data received from known devices after timeout
-- [x] If no Lidar Device configuration file is found, create one
-- [x] Maintain "state" (config data) and publish this on startup this should allow the visualiser to start showing scan data
-- [x] Use rmp-serde for MessagePack instead of msgpack-simple
-- [x] Read/write config data from/to disk
-- [x] Transform incoming scan points: rotation and position/offset
-- [x] Apply Scan Mask Thresholds on incoming samples
-- [x] Apply maxClusterSize filtering
-- [x] Handle ROI, transformation (warping)
-- [x] Allow incoming config (devices, ROI) to be saved via "saveLidarConfig"
-- [x] Allow AutoMaskSampler to be created on request
-- [x] Should test with multiple sensors
-- [x] Tracking output should apply ignoreOutside, ignoreOutsideMargin logic
-- [x] If receiving an unknown / unconfigured device, add it with some defaults to Config
-- [x] Load/override some settings (e.g. Tether, clustering) from command-line args / defaults
-- [x] Generate agent UUID automatically
-- [x] Use "real" Tether Agent crate - although currently this is not set up for async
-- [x] Move potentially blocking processes (e.g. Config write to disk) into a separate thread or non-blocking functions
-- [ ] Close the client properly on quit, so that the queue is also properly destroyed
-- [x] Currently, if "scan samples" are tuples of the form (f64,f64) i.e. (angle,distance), then the system will panic if quality is included. This implies we either need an array without fixed length, or simply drop the quality "field" altogether
-- [ ] Possible memory leak when clearing and/or setting new AutoMask Samplers
+## Some differences from OG version
+- There is no `requestLlidarConfig` Plug any more; the `retain` feature of MQTT is used to provide a persistent and up-to-date config for all clients
+- Smoothing is incorporated into this Agent; there is no need to run a separate `tether-tracking-smooth` agent any more
+- Zones for "presence detection" can be set up within this Agent
 
 ## Useful resources
 - General recipes, including some trigonometry: https://rust-lang-nursery.github.io/rust-cookbook/about.html
