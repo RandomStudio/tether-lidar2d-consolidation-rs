@@ -11,10 +11,10 @@ pub enum EmptyListSendMode {
 }
 
 pub struct SmoothSettings {
-    pub merge_radius: f64,
+    pub merge_radius: f32,
     pub wait_before_active_ms: u128,
     pub expire_ms: u128,
-    pub lerp_factor: f64,
+    pub lerp_factor: f32,
     pub empty_list_send_mode: EmptyListSendMode,
 }
 
@@ -22,7 +22,7 @@ pub struct SmoothSettings {
 struct SmoothedPoint {
     current_position: Point2D,
     target_position: Point2D,
-    velocity: Option<[f64; 2]>,
+    velocity: Option<[f32; 2]>,
     ready: bool,
     first_updated: SystemTime,
     last_updated: SystemTime,
@@ -208,14 +208,14 @@ impl TrackingSmoother {
     }
 }
 
-fn distance(a: &Point2D, b: &Point2D) -> f64 {
+fn distance(a: &Point2D, b: &Point2D) -> f32 {
     let (x1, y1) = a;
     let (x2, y2) = b;
 
-    f64::sqrt(f64::powi(x1 - x2, 2) + f64::powi(y1 - y2, 2))
+    f32::sqrt(f32::powi(x1 - x2, 2) + f32::powi(y1 - y2, 2))
 }
 
-fn lerp(a: f64, b: f64, t: f64) -> f64 {
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a * (1. - t) + (b * t)
 }
 

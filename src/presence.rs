@@ -7,10 +7,10 @@ use crate::tracking::TrackedPoint2D;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Zone {
     pub id: usize,
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
     #[serde(default)]
     pub active: bool,
     #[serde(skip)]

@@ -11,11 +11,11 @@ use crate::{automasking::MaskThresholdMap, presence::Zone};
 pub struct LidarDevice {
     pub serial: String,
     name: String,
-    pub rotation: f64,
-    pub x: f64,
-    pub y: f64,
+    pub rotation: f32,
+    pub x: f32,
+    pub y: f32,
     color: String,
-    pub min_distance_threshold: f64,
+    pub min_distance_threshold: f32,
     pub scan_mask_thresholds: Option<MaskThresholdMap>,
     pub flip_coords: Option<(i8, i8)>,
 }
@@ -23,8 +23,8 @@ pub struct LidarDevice {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigRectCornerPoint {
     corner: u8,
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 
 type CornerPoints = (
@@ -143,7 +143,7 @@ impl TrackingConfig {
     pub fn check_or_create_device(
         &mut self,
         serial: &str,
-        default_min_distance: f64,
+        default_min_distance: f32,
     ) -> Option<()> {
         let existing = self.devices.iter().find(|&d| d.serial.eq(serial));
         match existing {

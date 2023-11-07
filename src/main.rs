@@ -28,7 +28,7 @@ use crate::presence::PresenceDetectionZones;
 use crate::settings::Cli;
 use crate::smoothing::{get_mode, SmoothSettings, TrackingSmoother};
 
-pub type Point2D = (f64, f64);
+pub type Point2D = (f32, f32);
 
 struct ConsolidatorOutputs<'a> {
     config_output: &'a PlugDefinition,
@@ -264,7 +264,7 @@ fn handle_scans_message(
     perspective_transformer: &PerspectiveTransformer,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
     smoothing: &mut TrackingSmoother,
-    default_min_distance: f64,
+    default_min_distance: f32,
 ) {
     let ConsolidatorOutputs {
         config_output,
@@ -282,7 +282,7 @@ fn handle_scans_message(
             .expect("failed to publish config");
     }
 
-    let scans: Vec<(f64, f64)> =
+    let scans: Vec<(f32, f32)> =
         rmp_serde::from_slice(incoming_message.payload()).expect("failed to decode scans");
 
     if let Some(device) = config.get_device(serial) {
@@ -372,7 +372,7 @@ fn handle_automask_message(
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
     config: &mut TrackingConfig,
     scans_required: usize,
-    threshold_margin: f64,
+    threshold_margin: f32,
 ) -> Result<(), ()> {
     let payload = incoming_message.payload().to_vec();
 

@@ -6,15 +6,15 @@ use clap::{command, Parser};
 const CONFIG_FILE_PATH: &str = "./lidar.json";
 const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
-const MIN_DISTANCE_THRESHOLD: f64 = 20.;
-const NEIGHBOURHOOD_RADIUS: f64 = 200.;
+const MIN_DISTANCE_THRESHOLD: f32 = 20.;
+const NEIGHBOURHOOD_RADIUS: f32 = 200.;
 const MIN_NEIGHBOURS: usize = 4;
-const MAX_CLUSTER_SIZE: f64 = 2500.;
+const MAX_CLUSTER_SIZE: f32 = 2500.;
 
-const IGNORE_OUTSIDE_MARGIN: f64 = 0.04;
+const IGNORE_OUTSIDE_MARGIN: f32 = 0.04;
 
 const AUTOMASK_SCANS_REQUIRED: usize = 60;
-const AUTOMASK_MIN_THRESHOLD_MARGIN: f64 = 50.;
+const AUTOMASK_MIN_THRESHOLD_MARGIN: f32 = 50.;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -48,12 +48,12 @@ pub struct Cli {
 
     /// Default min distance threshold (in mm) to use for unconfigured new devices
     #[arg(long = "defaultMinDistanceThreshold", default_value_t = MIN_DISTANCE_THRESHOLD)]
-    pub default_min_distance_threshold: f64,
+    pub default_min_distance_threshold: f32,
 
     // -------- CLUSTERING SETTINGS
     /// Max distance in mm to a point which can be included in a cluster
     #[arg(long = "clustering.neighbourhoodRadius", default_value_t = NEIGHBOURHOOD_RADIUS)]
-    pub clustering_neighbourhood_radius: f64,
+    pub clustering_neighbourhood_radius: f32,
 
     /// Min points count that constitutes a valid cluster
     #[arg(long = "clustering.minNeighbours", default_value_t = MIN_NEIGHBOURS)]
@@ -61,7 +61,7 @@ pub struct Cli {
 
     /// Exclude clusters above this size, in cluster count
     #[arg(long = "clustering.maxClusterSize", default_value_t = MAX_CLUSTER_SIZE)]
-    pub clustering_max_cluster_size: f64,
+    pub clustering_max_cluster_size: f32,
 
     // -------- SMOOTHING SETTINGS
     /// Flag to disable integrated time-based "smoothed tracking" output
@@ -70,7 +70,7 @@ pub struct Cli {
 
     /// How close (in normalised `[0;1]` units) to count two points as the same Tracked Point
     #[arg(long = "smoothing.mergeRadius", default_value_t = 0.25)]
-    pub smoothing_merge_radius: f64,
+    pub smoothing_merge_radius: f32,
 
     /// How long (ms) before deciding a new point is valid/active
     #[arg(long = "smoothing.waitBeforeActive", default_value_t = 100)]
@@ -83,7 +83,7 @@ pub struct Cli {
     /// How much to interpolate (smooth) current position towards target position
     /// (1.0 is immediate, i.e. no smoothing, 0 is invalid)
     #[arg(long = "smoothing.lerpFactor", default_value_t = 0.1)]
-    pub smoothing_lerp_factor: f64,
+    pub smoothing_lerp_factor: f32,
 
     /// How to treat empty smoothed tracking points lists - either send an empty
     /// list "once", "never" or "always"
@@ -103,11 +103,11 @@ pub struct Cli {
 
     /// Unless perspectiveTransform.includeOutside is enabled, drop tracking points outside range [0-margin,1+margin]
     #[arg(long = "perspectiveTransform.ignoreOutsideMargin", default_value_t=IGNORE_OUTSIDE_MARGIN)]
-    pub transform_ignore_outside_margin: f64,
+    pub transform_ignore_outside_margin: f32,
 
     #[arg(long = "autoMask.numScansRequired", default_value_t = AUTOMASK_SCANS_REQUIRED)]
     pub automask_scans_required: usize,
 
     #[arg(long = "autoMask.minThresholdMargin", default_value_t = AUTOMASK_MIN_THRESHOLD_MARGIN)]
-    pub automask_threshold_margin: f64,
+    pub automask_threshold_margin: f32,
 }
