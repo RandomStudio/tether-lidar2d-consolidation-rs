@@ -1,5 +1,6 @@
 use automasking::AutoMaskMessage;
 use clap::Parser;
+use presence::Zone;
 use tether_agent::three_part_topic::{build_topic, parse_agent_id};
 use tracking_config::TrackingConfig;
 
@@ -214,35 +215,22 @@ fn main() {
                 if elapsed.as_millis() > cli.smoothing_update_interval {
                     work_done = true;
                     smoothing.update_smoothing();
-                    if let Some(smoothed_points) = smoothing.get_smoothed_points() {
+
+                    let smoothed_points = smoothing.get_smoothed_points();
+
+                    if let Some(active_smoothed_points) = smoothed_points {
                         tether_agent
-                            .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
+                            .encode_and_publish(&smoothed_tracking_output, &active_smoothed_points)
                             .expect("failed to publish smoothed tracking points");
-                        for changed_zone in presence_detector.update_zones(&smoothed_points).iter()
+                        for changed_zone in presence_detector
+                            .update_zones(&active_smoothed_points)
+                            .iter()
                         {
-                            debug!("ZONE CHANGED: {:?}", changed_zone);
-                            let topic = build_topic(
-                                "presenceDetection",
-                                &changed_zone.id.to_string(),
-                                "presence",
-                            );
-                            let payload = if changed_zone.active { &[1] } else { &[0] };
-                            tether_agent
-                                .publish_raw(&topic, payload, Some(2), Some(false))
-                                .expect("failed to send presence update");
+                            publish_presence_change(changed_zone, &tether_agent);
                         }
                     } else {
                         for changed_zone in presence_detector.update_zones(&[]).iter() {
-                            debug!("ZONE CHANGED: {:?}", changed_zone);
-                            let topic = build_topic(
-                                "presenceDetection",
-                                &changed_zone.id.to_string(),
-                                "presence",
-                            );
-                            let payload = if changed_zone.active { &[1] } else { &[0] };
-                            tether_agent
-                                .publish_raw(&topic, payload, Some(2), Some(false))
-                                .expect("failed to send presence update");
+                            publish_presence_change(changed_zone, &tether_agent);
                         }
                     }
                 }
@@ -253,6 +241,19 @@ fn main() {
             thread::sleep(Duration::from_millis(1));
         }
     }
+}
+
+fn publish_presence_change(changed_zone: &Zone, tether_agent: &TetherAgent) {
+    debug!("ZONE CHANGED: {:?}", changed_zone);
+    let topic = build_topic(
+        "presenceDetection",
+        &changed_zone.id.to_string(),
+        "presence",
+    );
+    let payload = if changed_zone.active { &[1] } else { &[0] };
+    tether_agent
+        .publish_raw(&topic, payload, Some(2), Some(false))
+        .expect("failed to send presence update");
 }
 
 fn handle_scans_message(
