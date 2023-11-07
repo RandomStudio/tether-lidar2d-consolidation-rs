@@ -1,4 +1,4 @@
-use crate::{device_config::LidarDevice, Point2D};
+use crate::{tracking_config::LidarDevice, Point2D};
 
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -11,29 +11,29 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Cluster2D {
     pub id: usize,
-    pub x: f64,
-    pub y: f64,
-    pub size: f64,
+    pub x: f32,
+    pub y: f32,
+    pub size: f32,
 }
 
 struct Bounds2D {
-    x_min: Option<f64>,
-    y_min: Option<f64>,
-    x_max: Option<f64>,
-    y_max: Option<f64>,
+    x_min: Option<f32>,
+    y_min: Option<f32>,
+    x_max: Option<f32>,
+    y_max: Option<f32>,
 }
 
 pub struct ClusteringSystem {
     scan_points: HashMap<String, Vec<Point2D>>,
-    clustering_engine: Dbscan<f64, Euclidean>,
-    max_cluster_size: f64,
+    clustering_engine: Dbscan<f32, Euclidean>,
+    max_cluster_size: f32,
 }
 
 impl ClusteringSystem {
     pub fn new(
-        neighbourhood_radius: f64,
+        neighbourhood_radius: f32,
         min_neighbourss: usize,
-        max_cluster_size: f64,
+        max_cluster_size: f32,
     ) -> ClusteringSystem {
         ClusteringSystem {
             scan_points: HashMap::new(),
@@ -48,7 +48,7 @@ impl ClusteringSystem {
 
     pub fn handle_scan_message(
         &mut self,
-        scans: &[(f64, f64)],
+        scans: &[(f32, f32)],
         device: &LidarDevice,
     ) -> Result<Vec<Cluster2D>, ()> {
         debug!("Decoded {} scans", scans.len());
@@ -112,7 +112,7 @@ impl ClusteringSystem {
         Ok(clusters)
     }
 
-    pub fn combine_all_points(&self) -> ndarray::Array2<f64> {
+    pub fn combine_all_points(&self) -> ndarray::Array2<f32> {
         let mut all_points = Array::zeros((0, 2));
         for points in self.scan_points.values() {
             for (x, y) in points {
@@ -166,7 +166,7 @@ pub fn consolidate_cluster_points(points: Vec<Point2D>, id: usize) -> Cluster2D 
     }
 }
 
-fn measurement_to_point(angle: &f64, distance: &f64, device: &LidarDevice) -> Option<Point2D> {
+fn measurement_to_point(angle: &f32, distance: &f32, device: &LidarDevice) -> Option<Point2D> {
     let LidarDevice {
         x,
         y,
@@ -194,8 +194,8 @@ fn measurement_to_point(angle: &f64, distance: &f64, device: &LidarDevice) -> Op
                     }
                 };
                 Some((
-                    *x + altered_angle.to_radians().cos() * *distance * (*flip_x as f64),
-                    *y + altered_angle.to_radians().sin() * *distance * (*flip_y as f64),
+                    *x + altered_angle.to_radians().cos() * *distance * (*flip_x as f32),
+                    *y + altered_angle.to_radians().sin() * *distance * (*flip_y as f32),
                 ))
             }
         }
@@ -205,9 +205,9 @@ fn measurement_to_point(angle: &f64, distance: &f64, device: &LidarDevice) -> Op
 }
 
 fn passes_mask_threshold(
-    angle: &f64,
-    distance: &f64,
-    mask_thresholds: &Option<HashMap<String, f64>>,
+    angle: &f32,
+    distance: &f32,
+    mask_thresholds: &Option<HashMap<String, f32>>,
 ) -> bool {
     match mask_thresholds {
         None => true,

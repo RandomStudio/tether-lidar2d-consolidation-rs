@@ -6,7 +6,7 @@ use crate::{tracking::TrackedPoint2D, Point2D};
 extern crate nalgebra as na;
 
 // A standardised "1x1" box to transform all coordinates into
-const DST_SIZE: f64 = 1.;
+const DST_SIZE: f32 = 1.;
 const DST_QUAD: RectCorners = [
     (0., 0.),
     (DST_SIZE, 0.),
@@ -18,16 +18,16 @@ const DST_QUAD: RectCorners = [
 clockwise: 'left top', 'right top', 'right bottom', 'left bottom',
  */
 pub type RectCorners = [Point2D; 4];
-type Matrix8x8 = na::SMatrix<f64, 8, 8>;
+type Matrix8x8 = na::SMatrix<f32, 8, 8>;
 pub struct PerspectiveTransformer {
-    transform_matrix: Option<Matrix3<f64>>,
-    ignore_outside_margin: Option<f64>,
+    transform_matrix: Option<Matrix3<f32>>,
+    ignore_outside_margin: Option<f32>,
 }
 
 impl PerspectiveTransformer {
     pub fn new(
         src_quad: Option<RectCorners>,
-        ignore_outside_margin: Option<f64>,
+        ignore_outside_margin: Option<f32>,
     ) -> PerspectiveTransformer {
         if ignore_outside_margin.is_none() {
             warn!("perspectiveTransform.includeOutside was enabled; points will not be restricted to src_quad");
@@ -85,10 +85,10 @@ impl PerspectiveTransformer {
     }
 }
 
-pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix3<f64> {
+pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix3<f32> {
     // Mappings by row - each should have 8 terms
 
-    let r1: [f64; 8] = [
+    let r1: [f32; 8] = [
         src_quad[0].0,
         src_quad[0].1,
         1.,
@@ -98,7 +98,7 @@ pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix
         -src_quad[0].0 * dst_quad[0].0,
         -src_quad[0].1 * dst_quad[0].0,
     ];
-    let r2: [f64; 8] = [
+    let r2: [f32; 8] = [
         0.,
         0.,
         0.,
@@ -108,7 +108,7 @@ pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix
         -src_quad[0].0 * dst_quad[0].1,
         -src_quad[0].1 * dst_quad[0].1,
     ];
-    let r3: [f64; 8] = [
+    let r3: [f32; 8] = [
         src_quad[1].0,
         src_quad[1].1,
         1.,
@@ -118,7 +118,7 @@ pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix
         -src_quad[1].0 * dst_quad[1].0,
         -src_quad[1].1 * dst_quad[1].0,
     ];
-    let r4: [f64; 8] = [
+    let r4: [f32; 8] = [
         0.,
         0.,
         0.,
@@ -128,7 +128,7 @@ pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix
         -src_quad[1].0 * dst_quad[1].1,
         -src_quad[1].1 * dst_quad[1].1,
     ];
-    let r5: [f64; 8] = [
+    let r5: [f32; 8] = [
         src_quad[2].0,
         src_quad[2].1,
         1.,
@@ -138,7 +138,7 @@ pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix
         -src_quad[2].0 * dst_quad[2].0,
         -src_quad[2].1 * dst_quad[2].0,
     ];
-    let r6: [f64; 8] = [
+    let r6: [f32; 8] = [
         0.,
         0.,
         0.,
@@ -148,7 +148,7 @@ pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix
         -src_quad[2].0 * dst_quad[2].1,
         -src_quad[2].1 * dst_quad[2].1,
     ];
-    let r7: [f64; 8] = [
+    let r7: [f32; 8] = [
         src_quad[3].0,
         src_quad[3].1,
         1.,
@@ -158,7 +158,7 @@ pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix
         -src_quad[3].0 * dst_quad[3].0,
         -src_quad[3].1 * dst_quad[3].0,
     ];
-    let r8: [f64; 8] = [
+    let r8: [f32; 8] = [
         0.,
         0.,
         0.,
@@ -184,8 +184,8 @@ pub fn build_transform(src_quad: &RectCorners, dst_quad: &RectCorners) -> Matrix
     ]
     .into_iter();
 
-    // let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
-    let matrix_b: na::SMatrix<f64, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
+    // let matrix_b: na::SMatrix<f32, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
+    let matrix_b: na::SMatrix<f32, 1, 8> = na::SMatrix::from_iterator(dst_quad_elements);
 
     // Solve for Ah = B
     let coefficients = matrix_b * matrix_a.try_inverse().unwrap();
@@ -245,8 +245,8 @@ mod tests {
         assert_eq!(
             (result.0.round(), result.1.round()),
             (
-                117.27521125839255_f64.round(),
-                530.9202410878403_f64.round(),
+                117.27521125839255_f32.round(),
+                530.9202410878403_f32.round(),
             ),
         );
     }

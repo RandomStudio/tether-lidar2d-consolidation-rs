@@ -1,31 +1,40 @@
 use automasking::AutoMaskMessage;
 use clap::Parser;
-use device_config::DeviceConfig;
+use tether_agent::three_part_topic::{build_topic, parse_agent_id};
+use tracking_config::TrackingConfig;
 
 use env_logger::Env;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use std::collections::HashMap;
 use std::fmt::Error;
 use std::thread;
 use std::time::Duration;
 use tether_agent::mqtt::Message;
-use tether_agent::{build_topic, parse_agent_id, PlugDefinition, TetherAgent};
+use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 
 mod automasking;
 mod clustering;
-mod device_config;
 mod perspective;
+mod presence;
 mod settings;
 mod smoothing;
 mod tracking;
+mod tracking_config;
 
 use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
 use crate::perspective::PerspectiveTransformer;
+use crate::presence::PresenceDetectionZones;
 use crate::settings::Cli;
 use crate::smoothing::{get_mode, SmoothSettings, TrackingSmoother};
 
-pub type Point2D = (f64, f64);
+pub type Point2D = (f32, f32);
+
+struct ConsolidatorOutputs<'a> {
+    config_output: &'a PlugDefinition,
+    clusters_output: &'a PlugDefinition,
+    tracking_output: &'a PlugDefinition,
+}
 
 fn main() {
     let cli = Cli::parse();
@@ -38,25 +47,24 @@ fn main() {
 
     debug!("Started; args: {:?}", cli);
 
-    let tether_agent = TetherAgent::new(
-        &cli.agent_role,
-        Some(&cli.agent_group),
-        Some(cli.tether_host),
-    );
-    tether_agent
-        .connect(cli.tether_username, cli.tether_password)
-        .expect("failed to connect Tether Agent");
+    let tether_agent = TetherAgentOptionsBuilder::new(&cli.agent_role)
+        .id(Some(&cli.agent_group))
+        .host(Some(&cli.tether_host.to_string()))
+        .build()
+        .expect("failed to init and/or connect Tether Agent");
 
     // Initialise config, now that we have the MQTT client ready
-    let config_output = tether_agent
-        .create_output_plug("provideLidarConfig", Some(2), None)
-        .expect("failed to create output plug");
-    let mut device_config = DeviceConfig::new(&cli.config_path);
-    match device_config.load_config_from_file() {
+    let config_output = PlugOptionsBuilder::create_output("provideLidarConfig")
+        .qos(Some(2))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+
+    let mut tracking_config = TrackingConfig::new(&cli.config_path);
+    match tracking_config.load_config_from_file() {
         Ok(count) => {
             info!("Loaded {} devices OK into Config", count);
             tether_agent
-                .encode_and_publish(&config_output, &device_config)
+                .encode_and_publish(&config_output, &tracking_config)
                 .expect("failed to publish config");
         }
         Err(()) => {
@@ -65,25 +73,21 @@ fn main() {
     }
 
     // Clusters, tracking, automask outputs
-    let tracking_output = tether_agent
-        .create_output_plug("trackedPoints", Some(1), None)
-        .expect("failed to create output plug");
-    let clusters_output = tether_agent
-        .create_output_plug("clusters", Some(0), None)
-        .expect("failed to create output plug");
+    let tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
+        .qos(Some(1))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+    let clusters_output = PlugOptionsBuilder::create_output("clusters")
+        .qos(Some(0))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
 
     // Smoothed traacked points output
-    let smoothed_tracking_output = tether_agent
-        .create_output_plug(
-            "trackedPoints",
-            Some(1),
-            Some(&build_topic(
-                "trackingSmooth",
-                &cli.agent_group,
-                "trackedPoints",
-            )),
-        )
-        .expect("failed to create output plug");
+    let smoothed_tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
+        .qos(Some(1))
+        .role(Some("trackingSmooth"))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
 
     // Collect all outputs for easier passing
     let all_outputs = ConsolidatorOutputs {
@@ -93,18 +97,22 @@ fn main() {
     };
 
     // Some subscriptions
-    let _scans_input = tether_agent
-        .create_input_plug("scans", Some(0), None)
-        .expect("failed to create input plug");
-    let _save_config_input = tether_agent
-        .create_input_plug("saveLidarConfig", Some(1), None)
-        .expect("failed to create input plug");
-    let _request_config_input = tether_agent
-        .create_input_plug("requestLidarConfig", Some(1), None)
-        .expect("failed to create input plug");
-    let _request_automask_input = tether_agent
-        .create_input_plug("requestAutoMask", Some(1), None)
-        .expect("failed to create input plug");
+    let scans_input = PlugOptionsBuilder::create_input("scans")
+        .qos(Some(0))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+    let save_config_input = PlugOptionsBuilder::create_input("saveLidarConfig")
+        .qos(Some(2))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+    let request_config_input = PlugOptionsBuilder::create_input("requestLidarConfig")
+        .qos(Some(2))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
+    let request_automask_input = PlugOptionsBuilder::create_input("requestAutoMask")
+        .qos(Some(2))
+        .build(&tether_agent)
+        .expect("failed to create Output Plug");
 
     let mut clustering_system = ClusteringSystem::new(
         cli.clustering_neighbourhood_radius,
@@ -115,7 +123,7 @@ fn main() {
     debug!("Clustering system init OK");
 
     let mut perspective_transformer = PerspectiveTransformer::new(
-        match device_config.region_of_interest() {
+        match tracking_config.region_of_interest() {
             Some(region_of_interest) => {
                 let (c1, c2, c3, c4) = region_of_interest;
                 let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
@@ -146,59 +154,59 @@ fn main() {
 
     let mut automask_samplers: HashMap<String, AutoMaskSampler> = HashMap::new();
 
+    let mut presence_detector =
+        PresenceDetectionZones::new(tracking_config.zones().unwrap_or_default());
+
     loop {
         let mut work_done = false;
 
-        if let Some((plug_name, message)) = tether_agent.check_messages() {
+        if let Some((topic, message)) = tether_agent.check_messages() {
             work_done = true;
             // debug!("Received {:?}", message);
-            match plug_name.as_str() {
-                "scans" => {
-                    // debug!("Received scans message");
-                    handle_scans_message(
-                        &message,
-                        &tether_agent,
-                        &all_outputs,
-                        &mut device_config,
-                        &mut clustering_system,
-                        &perspective_transformer,
-                        &mut automask_samplers,
-                        &mut smoothing,
-                        cli.default_min_distance_threshold,
-                    );
-                }
-                "saveLidarConfig" => {
-                    debug!("Save Config request");
-                    handle_save_message(
-                        &tether_agent,
-                        &config_output,
-                        &message,
-                        &mut device_config,
-                        &mut perspective_transformer,
-                    )
-                    .expect("config should save");
-                }
-                "requestLidarConfig" => {
-                    info!("requestLidarConfig; respond with provideLidarConfig message");
-                    tether_agent
-                        .encode_and_publish(&config_output, &device_config)
-                        .expect("failed to publish config");
-                }
-                "requestAutoMask" => {
-                    info!("requestAutoMask message");
-                    handle_automask_message(
-                        &message,
-                        &mut automask_samplers,
-                        &mut device_config,
-                        cli.automask_scans_required,
-                        cli.automask_threshold_margin,
-                    )
-                    .expect("failed to publish automask config");
-                }
-                _ => {
-                    warn!("Unknown topic: {}", message.topic());
-                }
-            };
+            if scans_input.matches(&topic) {
+                // debug!("Received scans message");
+                handle_scans_message(
+                    &message,
+                    &tether_agent,
+                    &all_outputs,
+                    &mut tracking_config,
+                    &mut clustering_system,
+                    &perspective_transformer,
+                    &mut automask_samplers,
+                    &mut smoothing,
+                    cli.default_min_distance_threshold,
+                );
+            }
+
+            if save_config_input.matches(&topic) {
+                handle_save_message(
+                    &tether_agent,
+                    &config_output,
+                    &message,
+                    &mut tracking_config,
+                    &mut perspective_transformer,
+                )
+                .expect("config should save");
+            }
+
+            if request_config_input.matches(&topic) {
+                info!("requestLidarConfig; respond with provideLidarConfig message");
+                tether_agent
+                    .encode_and_publish(&config_output, &tracking_config)
+                    .expect("failed to publish config");
+            }
+
+            if request_automask_input.matches(&topic) {
+                info!("requestAutoMask message");
+                handle_automask_message(
+                    &message,
+                    &mut automask_samplers,
+                    &mut tracking_config,
+                    cli.automask_scans_required,
+                    cli.automask_threshold_margin,
+                )
+                .expect("failed to publish automask config");
+            }
         }
 
         if !cli.smoothing_disable {
@@ -210,6 +218,32 @@ fn main() {
                         tether_agent
                             .encode_and_publish(&smoothed_tracking_output, &smoothed_points)
                             .expect("failed to publish smoothed tracking points");
+                        for changed_zone in presence_detector.update_zones(&smoothed_points).iter()
+                        {
+                            debug!("ZONE CHANGED: {:?}", changed_zone);
+                            let topic = build_topic(
+                                "presenceDetection",
+                                &changed_zone.id.to_string(),
+                                "presence",
+                            );
+                            let payload = if changed_zone.active { &[1] } else { &[0] };
+                            tether_agent
+                                .publish_raw(&topic, payload, Some(2), Some(false))
+                                .expect("failed to send presence update");
+                        }
+                    } else {
+                        for changed_zone in presence_detector.update_zones(&[]).iter() {
+                            debug!("ZONE CHANGED: {:?}", changed_zone);
+                            let topic = build_topic(
+                                "presenceDetection",
+                                &changed_zone.id.to_string(),
+                                "presence",
+                            );
+                            let payload = if changed_zone.active { &[1] } else { &[0] };
+                            tether_agent
+                                .publish_raw(&topic, payload, Some(2), Some(false))
+                                .expect("failed to send presence update");
+                        }
                     }
                 }
             }
@@ -221,28 +255,24 @@ fn main() {
     }
 }
 
-struct ConsolidatorOutputs<'a> {
-    config_output: &'a PlugDefinition,
-    clusters_output: &'a PlugDefinition,
-    tracking_output: &'a PlugDefinition,
-}
-
 fn handle_scans_message(
     incoming_message: &Message,
     tether_agent: &TetherAgent,
     outputs: &ConsolidatorOutputs,
-    config: &mut DeviceConfig,
+    config: &mut TrackingConfig,
     clustering_system: &mut ClusteringSystem,
     perspective_transformer: &PerspectiveTransformer,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
     smoothing: &mut TrackingSmoother,
-    default_min_distance: f64,
+    default_min_distance: f32,
 ) {
     let ConsolidatorOutputs {
         config_output,
         clusters_output,
         tracking_output,
     } = outputs;
+
+    // TODO: this could be parsed from the ThreePartTopic earlier
     let serial = parse_agent_id(incoming_message.topic()).unwrap_or("unknown");
 
     // If an unknown device was found (and added), re-publish the Device config
@@ -252,7 +282,7 @@ fn handle_scans_message(
             .expect("failed to publish config");
     }
 
-    let scans: Vec<(f64, f64)> =
+    let scans: Vec<(f32, f32)> =
         rmp_serde::from_slice(incoming_message.payload()).expect("failed to decode scans");
 
     if let Some(device) = config.get_device(serial) {
@@ -309,7 +339,7 @@ pub fn handle_save_message(
     tether_agent: &TetherAgent,
     config_output: &PlugDefinition,
     incoming_message: &Message,
-    config: &mut DeviceConfig,
+    config: &mut TrackingConfig,
     perspective_transformer: &mut PerspectiveTransformer,
 ) -> Result<(), Error> {
     match config.parse_remote_config(incoming_message) {
@@ -340,9 +370,9 @@ pub fn handle_save_message(
 fn handle_automask_message(
     incoming_message: &Message,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
-    config: &mut DeviceConfig,
+    config: &mut TrackingConfig,
     scans_required: usize,
-    threshold_margin: f64,
+    threshold_margin: f32,
 ) -> Result<(), ()> {
     let payload = incoming_message.payload().to_vec();
 
