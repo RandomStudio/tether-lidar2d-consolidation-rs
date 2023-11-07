@@ -59,7 +59,7 @@ impl ClusteringSystem {
             let (angle, distance) = sample;
 
             if *distance > 0.0 {
-                if let Some(point) = measurement_to_point(&angle, &distance, device) {
+                if let Some(point) = measurement_to_point(angle, distance, device) {
                     points_this_scan.push(point);
                 }
             }

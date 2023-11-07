@@ -94,13 +94,14 @@ impl TrackingSmoother {
                     first_updated: SystemTime::now(),
                     last_updated: SystemTime::now(),
                     velocity: None,
-                    ready: {
-                        if self.settings.wait_before_active_ms > 0 {
-                            false
-                        } else {
-                            true
-                        }
-                    },
+                    ready: self.settings.wait_before_active_ms == 0,
+                    // {
+                    //     if self.settings.wait_before_active_ms > 0 {
+                    //         false
+                    //     } else {
+                    //         true
+                    //     }
+                    // },
                 };
                 self.known_points.push(new_point);
             }
@@ -179,14 +180,15 @@ impl TrackingSmoother {
         let points = match self.settings.empty_list_send_mode {
             EmptyListSendMode::Always => Some(known_points),
             EmptyListSendMode::Once => {
-                if known_points.len() > 0 || known_points.len() == 0 && self.empty_lists_sent < 1 {
+                if !known_points.is_empty() || known_points.is_empty() && self.empty_lists_sent < 1
+                {
                     Some(known_points)
                 } else {
                     None
                 }
             }
             EmptyListSendMode::Never => {
-                if known_points.len() == 0 {
+                if known_points.is_empty() {
                     None
                 } else {
                     Some(known_points)

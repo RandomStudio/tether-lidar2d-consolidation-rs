@@ -23,24 +23,24 @@ impl Outputs {
     pub fn new(tether_agent: &TetherAgent) -> Outputs {
         let config_output = PlugOptionsBuilder::create_output("provideLidarConfig")
             .qos(Some(2))
-            .build(&tether_agent)
+            .build(tether_agent)
             .expect("failed to create Output Plug");
 
         // Clusters, tracking outputs
         let tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
             .qos(Some(1))
-            .build(&tether_agent)
+            .build(tether_agent)
             .expect("failed to create Output Plug");
         let clusters_output = PlugOptionsBuilder::create_output("clusters")
             .qos(Some(0))
-            .build(&tether_agent)
+            .build(tether_agent)
             .expect("failed to create Output Plug");
 
         // Smoothed traacked points output
         let smoothed_tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
             .qos(Some(1))
             .role(Some("trackingSmooth"))
-            .build(&tether_agent)
+            .build(tether_agent)
             .expect("failed to create Output Plug");
 
         Outputs {
@@ -64,19 +64,19 @@ impl Inputs {
         // Some subscriptions
         let scans_input = PlugOptionsBuilder::create_input("scans")
             .qos(Some(0))
-            .build(&tether_agent)
+            .build(tether_agent)
             .expect("failed to create Output Plug");
         let save_config_input = PlugOptionsBuilder::create_input("saveLidarConfig")
             .qos(Some(2))
-            .build(&tether_agent)
+            .build(tether_agent)
             .expect("failed to create Output Plug");
         let request_config_input = PlugOptionsBuilder::create_input("requestLidarConfig")
             .qos(Some(2))
-            .build(&tether_agent)
+            .build(tether_agent)
             .expect("failed to create Output Plug");
         let request_automask_input = PlugOptionsBuilder::create_input("requestAutoMask")
             .qos(Some(2))
-            .build(&tether_agent)
+            .build(tether_agent)
             .expect("failed to create Output Plug");
 
         Inputs {

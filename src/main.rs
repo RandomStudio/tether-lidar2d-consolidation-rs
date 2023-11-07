@@ -197,7 +197,7 @@ fn handle_scans_message(
     }
 
     if let Some(device) = tracking_config.get_device(serial) {
-        if let Ok(clusters) = clustering_system.handle_scan_message(&scans, device) {
+        if let Ok(clusters) = clustering_system.handle_scan_message(scans, device) {
             tether_agent
                 .encode_and_publish(clusters_output, &clusters)
                 .expect("failed to publish clusters");
@@ -219,14 +219,14 @@ fn handle_scans_message(
 
             if let Some(sampler) = automask_samplers.get_mut(serial) {
                 if !sampler.is_complete() {
-                    if let Some(new_mask) = sampler.add_samples(&scans) {
+                    if let Some(new_mask) = sampler.add_samples(scans) {
                         debug!("Sufficient samples for masking device {}", serial);
                         match tracking_config.update_device_masking(new_mask, serial) {
                             Ok(()) => {
                                 info!("Updated masking for device {}", serial);
                                 // Automasking was updated, so re-publish Device Config
                                 tether_agent
-                                    .encode_and_publish(&config_output, &tracking_config)
+                                    .encode_and_publish(config_output, &tracking_config)
                                     .expect("failed to publish config");
                                 tracking_config
                                     .write_config_to_file()
