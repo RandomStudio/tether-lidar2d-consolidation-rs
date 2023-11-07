@@ -100,6 +100,8 @@ Something like [more-config](https://crates.io/crates/more-config) could be usef
 
 ## TODO
 - [x] Add (optional) tether-tracking-smooth functionality, built-in
+- [ ] Presence Zones should be defined within the real space (more sensible calibration) not the normalised tracking space
+- [ ] Presence Zones should be definable for shapes other than rectangles
 - [ ] Smoothing should also remove duplicate existing points that should be merged (do not leave "stale" points behind)
 - [ ] Ensure that this compiles on Raspberry Pi, then cross-compiles (e.g. from Mac)
 - [ ] Retain messages, for config publish - remove the need for "request config" topic
