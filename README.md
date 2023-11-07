@@ -7,8 +7,31 @@ All the essential features of the OG Agent have been implemented, but the struct
 The two main goals were
 - Learn to use Rust in a real-world application, following an existing codebase which was well known and where the fundamental engineering challenges had already been "solved"
 - Produce a usable version of the Lidar Consolidator Agent that was faster and lighter (e.g. on RAM) which could be deployed to lower-resource platforms (e.g. Raspberry Pi) without putting as much strain on the system
+
+## Easy install via Cargo
+Since v0.3.1, you can install the binary via Cargo, ie.:
+```
+cargo install tether-lidar2d-consolidation
+```
+
+...and then run:
+```
+tether-lidar2d-consolidation
+```
+
+
+
+## Command-line configuration
+You can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `tether-lidar2d-consolidation --help` (installed) or `cargo run -- --help` (development)
+
+Options are deliberately made to be almost identical to those used in the OG Agent, with a few notable exceptions:
+
+- Here we use a flag `--perspectiveTransform.includeOutside` instead of setting a boolean `ignoreOutside`. This reflects the default usage better and makes more sense when using a flag (which defaults to `false` if not explicitly appended)
+- For Tether, you can optionally provide `--tether.host`, `--tether.username`, `--tether.password` if these differ from the defaults
+- There are no options relating to `autoBroadcastConfig` as there is no need for this behaviour; we save and (re)publish configuration essentially every time it changes, on startup and when requested
+
 ## Dev dependencies
-Paho Eclipse MQTT has some (non-Rust) dependencies of its own. On Mac, you might need to the following:
+If you are compiling on your own system, Paho Eclipse MQTT has some (non-Rust) dependencies of its own. On Mac, you might need to the following:
 
 ```
 brew install openssh cmake
@@ -17,29 +40,7 @@ brew install openssh cmake
 And on Linux:
 ```
 sudo apt install libssl-dev build-essential cmake
-```
-
-## Basic usage
-If using cargo, you can simply use
-```
-cargo run
-```
-
-Or, for example running in release (recommended) and with some command-line arguments:
-```
-cargo run --release -- --loglevel debug
-```
-
-Alternatively, run the compiled binary (assuming you've already run `cargo build --release`), typically located in `./target/release/tether-lidar2d-consolidation-rs`
-
-## Command-line configuration
-You can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `cargo run -- --help`
-
-Options are deliberately made to be almost identical to those used in the OG Agent, with a few notable exceptions:
-
-- Here we use a flag `--perspectiveTransform.includeOutside` instead of setting a boolean `ignoreOutside`. This reflects the default usage better and makes more sense when using a flag (which defaults to `false` if not explicitly appended)
-- For Tether, you can optionally provide `--tether.host`, `--tether.username`, `--tether.password` if these differ from the defaults
-- There are no options relating to `autoBroadcastConfig` as there is no need for this behaviour; we save and (re)publish configuration essentially every time it changes, on startup and when requested
+``
 
 ## Notes on Libraries
 
