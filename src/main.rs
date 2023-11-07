@@ -1,16 +1,12 @@
-use automasking::AutoMaskMessage;
 use clap::Parser;
 use consolidator_system::{Outputs, Systems};
 use tracking_config::TrackingConfig;
 
 use env_logger::Env;
-use log::{debug, error, info};
-use std::collections::HashMap;
-use std::fmt::Error;
+use log::{debug, info};
 use std::thread;
 use std::time::Duration;
-use tether_agent::mqtt::Message;
-use tether_agent::{PlugDefinition, TetherAgent, TetherAgentOptionsBuilder};
+use tether_agent::TetherAgentOptionsBuilder;
 
 mod automasking;
 mod clustering;
@@ -22,11 +18,12 @@ mod smoothing;
 mod tracking;
 mod tracking_config;
 
-use crate::automasking::AutoMaskSampler;
+use crate::automasking::handle_automask_message;
+use crate::clustering::handle_scans_message;
 use crate::consolidator_system::Inputs;
-use crate::perspective::PerspectiveTransformer;
 use crate::presence::publish_presence_change;
 use crate::settings::Cli;
+use crate::tracking_config::handle_save_message;
 
 pub type Point2D = (f32, f32);
 
@@ -162,159 +159,5 @@ fn main() {
         if !work_done {
             thread::sleep(Duration::from_millis(1));
         }
-    }
-}
-
-fn handle_scans_message(
-    serial: &str,
-    scans: &[Point2D],
-    tracking_config: &mut TrackingConfig,
-    tether_agent: &TetherAgent,
-    systems: &mut Systems,
-    outputs: &Outputs,
-    default_min_distance: f32,
-) {
-    let Systems {
-        clustering_system,
-        perspective_transformer,
-        automask_samplers,
-        smoothing_system,
-        ..
-    } = systems;
-
-    let Outputs {
-        config_output,
-        clusters_output,
-        tracking_output,
-        ..
-    } = outputs;
-
-    // If an unknown device was found (and added), re-publish the Device config
-    if let Some(()) = tracking_config.check_or_create_device(serial, default_min_distance) {
-        tether_agent
-            .encode_and_publish(config_output, &tracking_config)
-            .expect("failed to publish config");
-    }
-
-    if let Some(device) = tracking_config.get_device(serial) {
-        if let Ok(clusters) = clustering_system.handle_scan_message(scans, device) {
-            tether_agent
-                .encode_and_publish(clusters_output, &clusters)
-                .expect("failed to publish clusters");
-
-            if perspective_transformer.is_ready() {
-                let points: Vec<Point2D> = clusters
-                    .into_iter()
-                    .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
-                    .collect();
-
-                if let Ok(tracked_points) = perspective_transformer.get_tracked_points(&points) {
-                    // Normal (unsmoothed) tracked points...
-                    tether_agent
-                        .encode_and_publish(tracking_output, &tracked_points)
-                        .expect("failed to publish tracked points");
-                    smoothing_system.update_tracked_points(&tracked_points);
-                }
-            }
-
-            if let Some(sampler) = automask_samplers.get_mut(serial) {
-                if !sampler.is_complete() {
-                    if let Some(new_mask) = sampler.add_samples(scans) {
-                        debug!("Sufficient samples for masking device {}", serial);
-                        match tracking_config.update_device_masking(new_mask, serial) {
-                            Ok(()) => {
-                                info!("Updated masking for device {}", serial);
-                                // Automasking was updated, so re-publish Device Config
-                                tether_agent
-                                    .encode_and_publish(config_output, &tracking_config)
-                                    .expect("failed to publish config");
-                                tracking_config
-                                    .write_config_to_file()
-                                    .expect("failed to save config");
-                                sampler.angles_with_thresholds.clear();
-                            }
-                            Err(()) => {
-                                error!("Error updating masking for device {}", serial);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        error!("Failed to find device; it should have been added if it was unknown");
-    }
-}
-
-pub fn handle_save_message(
-    tether_agent: &TetherAgent,
-    config_output: &PlugDefinition,
-    incoming_message: &Message,
-    config: &mut TrackingConfig,
-    perspective_transformer: &mut PerspectiveTransformer,
-) -> Result<(), Error> {
-    match config.parse_remote_config(incoming_message) {
-        Ok(()) => {
-            info!("Remote-provided config parsed OK; now save to disk and (re) publish");
-            config
-                .write_config_to_file()
-                .expect("failed to save to disk");
-
-            tether_agent
-                .encode_and_publish(config_output, &config)
-                .expect("failed to publish config");
-
-            if let Some(region_of_interest) = config.region_of_interest() {
-                info!("New Region of Interest was provided remotely; update the Perspective Transformer");
-                let (c1, c2, c3, c4) = region_of_interest;
-                let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                perspective_transformer.set_new_quad(&corners);
-                Ok(())
-            } else {
-                Ok(())
-            }
-        }
-        Err(()) => Err(Error),
-    }
-}
-
-fn handle_automask_message(
-    incoming_message: &Message,
-    automask_samplers: &mut HashMap<String, AutoMaskSampler>,
-    config: &mut TrackingConfig,
-    scans_required: usize,
-    threshold_margin: f32,
-) -> Result<(), ()> {
-    let payload = incoming_message.payload().to_vec();
-
-    if let Ok(automask_command) = rmp_serde::from_slice::<AutoMaskMessage>(&payload) {
-        let command_type: &str = &automask_command.r#type;
-        match command_type {
-            "new" => {
-                info!("request NEW auto mask samplers");
-                automask_samplers.clear();
-                config.clear_device_masking();
-                for device in config.devices().iter() {
-                    automask_samplers.insert(
-                        String::from(&device.serial),
-                        AutoMaskSampler::new(scans_required, threshold_margin),
-                    );
-                }
-                Ok(())
-            }
-            "clear" => {
-                info!("request CLEAR all device masking thresholds");
-                automask_samplers.clear();
-                config.clear_device_masking();
-                Ok(())
-            }
-            _ => {
-                error!("Unrecognised command type for RequestAutoMask message");
-                Err(())
-            }
-        }
-    } else {
-        error!("Failed to parse auto mask command");
-        Err(())
     }
 }

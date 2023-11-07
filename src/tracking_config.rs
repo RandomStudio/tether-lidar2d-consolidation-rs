@@ -1,10 +1,10 @@
 use log::{debug, error, info, warn};
 use std::{collections::HashMap, fmt::Error, fs};
-use tether_agent::mqtt::Message;
+use tether_agent::{mqtt::Message, PlugDefinition, TetherAgent};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{automasking::MaskThresholdMap, presence::Zone};
+use crate::{automasking::MaskThresholdMap, perspective::PerspectiveTransformer, presence::Zone};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -219,4 +219,36 @@ const PALETTE: &[&str] = &["#ffff00", "#00ffff", "#ff00ff"];
 fn pick_from_palette(index: usize) -> String {
     let c = PALETTE[index % PALETTE.len()];
     String::from(c)
+}
+
+pub fn handle_save_message(
+    tether_agent: &TetherAgent,
+    config_output: &PlugDefinition,
+    incoming_message: &Message,
+    config: &mut TrackingConfig,
+    perspective_transformer: &mut PerspectiveTransformer,
+) -> Result<(), Error> {
+    match config.parse_remote_config(incoming_message) {
+        Ok(()) => {
+            info!("Remote-provided config parsed OK; now save to disk and (re) publish");
+            config
+                .write_config_to_file()
+                .expect("failed to save to disk");
+
+            tether_agent
+                .encode_and_publish(config_output, &config)
+                .expect("failed to publish config");
+
+            if let Some(region_of_interest) = config.region_of_interest() {
+                info!("New Region of Interest was provided remotely; update the Perspective Transformer");
+                let (c1, c2, c3, c4) = region_of_interest;
+                let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
+                perspective_transformer.set_new_quad(&corners);
+                Ok(())
+            } else {
+                Ok(())
+            }
+        }
+        Err(()) => Err(Error),
+    }
 }

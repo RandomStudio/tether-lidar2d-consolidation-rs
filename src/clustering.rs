@@ -1,12 +1,17 @@
-use crate::{tracking_config::LidarDevice, Point2D};
+use crate::{
+    consolidator_system::{Outputs, Systems},
+    tracking_config::{LidarDevice, TrackingConfig},
+    Point2D,
+};
 
-use log::debug;
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
 use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
 use std::collections::HashMap;
+use tether_agent::TetherAgent;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Cluster2D {
@@ -46,9 +51,9 @@ impl ClusteringSystem {
         }
     }
 
-    pub fn handle_scan_message(
+    pub fn update_from_scan(
         &mut self,
-        scans: &[(f32, f32)],
+        scans: &[Point2D],
         device: &LidarDevice,
     ) -> Result<Vec<Cluster2D>, ()> {
         debug!("Decoded {} scans", scans.len());
@@ -219,5 +224,86 @@ fn passes_mask_threshold(
                 true
             }
         }
+    }
+}
+
+pub fn handle_scans_message(
+    serial: &str,
+    scans: &[Point2D],
+    tracking_config: &mut TrackingConfig,
+    tether_agent: &TetherAgent,
+    systems: &mut Systems,
+    outputs: &Outputs,
+    default_min_distance: f32,
+) {
+    let Systems {
+        clustering_system,
+        perspective_transformer,
+        automask_samplers,
+        smoothing_system,
+        ..
+    } = systems;
+
+    let Outputs {
+        config_output,
+        clusters_output,
+        tracking_output,
+        ..
+    } = outputs;
+
+    // If an unknown device was found (and added), re-publish the Device config
+    if let Some(()) = tracking_config.check_or_create_device(serial, default_min_distance) {
+        tether_agent
+            .encode_and_publish(config_output, &tracking_config)
+            .expect("failed to publish config");
+    }
+
+    if let Some(device) = tracking_config.get_device(serial) {
+        if let Ok(clusters) = clustering_system.update_from_scan(scans, device) {
+            tether_agent
+                .encode_and_publish(clusters_output, &clusters)
+                .expect("failed to publish clusters");
+
+            if perspective_transformer.is_ready() {
+                let points: Vec<Point2D> = clusters
+                    .into_iter()
+                    .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
+                    .collect();
+
+                if let Ok(tracked_points) = perspective_transformer.get_tracked_points(&points) {
+                    // Normal (unsmoothed) tracked points...
+                    tether_agent
+                        .encode_and_publish(tracking_output, &tracked_points)
+                        .expect("failed to publish tracked points");
+                    smoothing_system.update_tracked_points(&tracked_points);
+                }
+            }
+
+            if let Some(sampler) = automask_samplers.get_mut(serial) {
+                if !sampler.is_complete() {
+                    if let Some(new_mask) = sampler.add_samples(scans) {
+                        debug!("Sufficient samples for masking device {}", serial);
+                        match tracking_config.update_device_masking(new_mask, serial) {
+                            Ok(()) => {
+                                info!("Updated masking for device {}", serial);
+                                // Automasking was updated, so re-publish Device Config
+                                tether_agent
+                                    .encode_and_publish(config_output, &tracking_config)
+                                    .expect("failed to publish config");
+                                tracking_config
+                                    .write_config_to_file()
+                                    .expect("failed to save config");
+                                sampler.angles_with_thresholds.clear();
+                            }
+                            Err(()) => {
+                                error!("Error updating masking for device {}", serial);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        error!("Failed to find device; it should have been added if it was unknown");
     }
 }
