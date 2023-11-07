@@ -40,7 +40,7 @@ brew install openssh cmake
 And on Linux:
 ```
 sudo apt install libssl-dev build-essential cmake
-``
+```
 
 ## Notes on Libraries
 
