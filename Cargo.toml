@@ -1,13 +1,16 @@
 [package]
 name = "tether-lidar2d-consolidation"
 description = "Tether Lidar2D Consolidator Agent, Rust edition"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/RandomStudio/tether-lidar2d-consolidation-rs"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "tether-lidar2d-consolidation"
 
 [dependencies]
 async-std = "1"
