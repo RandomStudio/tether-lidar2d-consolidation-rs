@@ -23,6 +23,7 @@ impl Outputs {
     pub fn new(tether_agent: &TetherAgent) -> Outputs {
         let config_output = PlugOptionsBuilder::create_output("provideLidarConfig")
             .qos(Some(2))
+            .retain(Some(true))
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
@@ -55,7 +56,6 @@ impl Outputs {
 pub struct Inputs {
     pub scans_input: PlugDefinition,
     pub save_config_input: PlugDefinition,
-    pub request_config_input: PlugDefinition,
     pub request_automask_input: PlugDefinition,
 }
 
@@ -70,10 +70,6 @@ impl Inputs {
             .qos(Some(2))
             .build(tether_agent)
             .expect("failed to create Output Plug");
-        let request_config_input = PlugOptionsBuilder::create_input("requestLidarConfig")
-            .qos(Some(2))
-            .build(tether_agent)
-            .expect("failed to create Output Plug");
         let request_automask_input = PlugOptionsBuilder::create_input("requestAutoMask")
             .qos(Some(2))
             .build(tether_agent)
@@ -82,7 +78,6 @@ impl Inputs {
         Inputs {
             scans_input,
             save_config_input,
-            request_config_input,
             request_automask_input,
         }
     }

@@ -51,7 +51,11 @@ fn main() {
 
     match tracking_config.load_config_from_file() {
         Ok(count) => {
-            info!("Loaded {} devices OK into Config", count);
+            info!(
+                "Loaded {} devices OK into Config; publish with retain=true",
+                count
+            );
+            // Always publish on first start/load...
             tether_agent
                 .encode_and_publish(&outputs.config_output, &tracking_config)
                 .expect("failed to publish config");
@@ -105,12 +109,12 @@ fn main() {
                 .expect("config should save");
             }
 
-            if inputs.request_config_input.matches(&topic) {
-                info!("requestLidarConfig; respond with provideLidarConfig message");
-                tether_agent
-                    .encode_and_publish(&outputs.config_output, &tracking_config)
-                    .expect("failed to publish config");
-            }
+            // if inputs.request_config_input.matches(&topic) {
+            //     info!("requestLidarConfig; respond with provideLidarConfig message");
+            //     tether_agent
+            //         .encode_and_publish(&outputs.config_output, &tracking_config)
+            //         .expect("failed to publish config");
+            // }
 
             if inputs.request_automask_input.matches(&topic) {
                 info!("requestAutoMask message");
