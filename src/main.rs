@@ -160,10 +160,10 @@ fn main() {
     loop {
         let mut work_done = false;
 
-        if let Some((_topic, message)) = tether_agent.check_messages() {
+        if let Some((topic, message)) = tether_agent.check_messages() {
             work_done = true;
             // debug!("Received {:?}", message);
-            if scans_input.matches(message.topic()) {
+            if scans_input.matches(&topic) {
                 // debug!("Received scans message");
                 handle_scans_message(
                     &message,
@@ -178,7 +178,7 @@ fn main() {
                 );
             }
 
-            if save_config_input.matches(message.topic()) {
+            if save_config_input.matches(&topic) {
                 handle_save_message(
                     &tether_agent,
                     &config_output,
@@ -189,14 +189,14 @@ fn main() {
                 .expect("config should save");
             }
 
-            if request_config_input.matches(message.topic()) {
+            if request_config_input.matches(&topic) {
                 info!("requestLidarConfig; respond with provideLidarConfig message");
                 tether_agent
                     .encode_and_publish(&config_output, &tracking_config)
                     .expect("failed to publish config");
             }
 
-            if request_automask_input.matches(message.topic()) {
+            if request_automask_input.matches(&topic) {
                 info!("requestAutoMask message");
                 handle_automask_message(
                     &message,
@@ -220,6 +220,19 @@ fn main() {
                             .expect("failed to publish smoothed tracking points");
                         for changed_zone in presence_detector.update_zones(&smoothed_points).iter()
                         {
+                            debug!("ZONE CHANGED: {:?}", changed_zone);
+                            let topic = build_topic(
+                                "presenceDetection",
+                                &changed_zone.id.to_string(),
+                                "presence",
+                            );
+                            let payload = if changed_zone.active { &[1] } else { &[0] };
+                            tether_agent
+                                .publish_raw(&topic, payload, Some(2), Some(false))
+                                .expect("failed to send presence update");
+                        }
+                    } else {
+                        for changed_zone in presence_detector.update_zones(&[]).iter() {
                             debug!("ZONE CHANGED: {:?}", changed_zone);
                             let topic = build_topic(
                                 "presenceDetection",
