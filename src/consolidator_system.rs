@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use log::info;
-use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
+use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
 
 use crate::{
     automasking::AutoMaskSamplerMap,
@@ -13,57 +12,19 @@ use crate::{
     tracking_config::TrackingConfig,
 };
 
-// struct Outputs
-
-pub struct ConsolidatorSystem {
-    pub tether_agent: TetherAgent,
-
-    // Some outputs (separate struct?)
+pub struct Outputs {
     pub config_output: PlugDefinition,
     pub clusters_output: PlugDefinition,
     pub tracking_output: PlugDefinition,
     pub smoothed_tracking_output: PlugDefinition,
-
-    // Some intputs (separate struct?)
-    pub scans_input: PlugDefinition,
-    pub save_config_input: PlugDefinition,
-    pub request_config_input: PlugDefinition,
-    pub request_automask_input: PlugDefinition,
-
-    // Config, systems
-    pub tracking_config: TrackingConfig,
-    pub clustering_system: ClusteringSystem,
-    pub perspective_transformer: PerspectiveTransformer,
-    pub smoothing_system: TrackingSmoother,
-    pub automask_samplers: AutoMaskSamplerMap,
-    pub presence_detector: PresenceDetectionZones,
 }
 
-impl ConsolidatorSystem {
-    pub fn new(cli: &Cli) -> Self {
-        let tether_agent = TetherAgentOptionsBuilder::new(&cli.agent_role)
-            .id(Some(&cli.agent_group))
-            .host(Some(&cli.tether_host.to_string()))
-            .build()
-            .expect("failed to init and/or connect Tether Agent");
-
+impl Outputs {
+    pub fn new(tether_agent: &TetherAgent) -> Outputs {
         let config_output = PlugOptionsBuilder::create_output("provideLidarConfig")
             .qos(Some(2))
             .build(&tether_agent)
             .expect("failed to create Output Plug");
-
-        let mut tracking_config = TrackingConfig::new(&cli.config_path);
-        match tracking_config.load_config_from_file() {
-            Ok(count) => {
-                info!("Loaded {} devices OK into Config", count);
-                tether_agent
-                    .encode_and_publish(&config_output, &tracking_config)
-                    .expect("failed to publish config");
-            }
-            Err(()) => {
-                panic!("Error loading devices into config manager!")
-            }
-        }
 
         // Clusters, tracking outputs
         let tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
@@ -82,6 +43,24 @@ impl ConsolidatorSystem {
             .build(&tether_agent)
             .expect("failed to create Output Plug");
 
+        Outputs {
+            config_output,
+            tracking_output,
+            clusters_output,
+            smoothed_tracking_output,
+        }
+    }
+}
+
+pub struct Inputs {
+    pub scans_input: PlugDefinition,
+    pub save_config_input: PlugDefinition,
+    pub request_config_input: PlugDefinition,
+    pub request_automask_input: PlugDefinition,
+}
+
+impl Inputs {
+    pub fn new(tether_agent: &TetherAgent) -> Inputs {
         // Some subscriptions
         let scans_input = PlugOptionsBuilder::create_input("scans")
             .qos(Some(0))
@@ -100,13 +79,32 @@ impl ConsolidatorSystem {
             .build(&tether_agent)
             .expect("failed to create Output Plug");
 
-        let mut clustering_system = ClusteringSystem::new(
+        Inputs {
+            scans_input,
+            save_config_input,
+            request_config_input,
+            request_automask_input,
+        }
+    }
+}
+
+pub struct Systems {
+    pub clustering_system: ClusteringSystem,
+    pub perspective_transformer: PerspectiveTransformer,
+    pub smoothing_system: TrackingSmoother,
+    pub automask_samplers: AutoMaskSamplerMap,
+    pub presence_detector: PresenceDetectionZones,
+}
+
+impl Systems {
+    pub fn new(cli: &Cli, tracking_config: &TrackingConfig) -> Systems {
+        let clustering_system = ClusteringSystem::new(
             cli.clustering_neighbourhood_radius,
             cli.clustering_min_neighbours,
             cli.clustering_max_cluster_size,
         );
 
-        let mut perspective_transformer = PerspectiveTransformer::new(
+        let perspective_transformer = PerspectiveTransformer::new(
             match tracking_config.region_of_interest() {
                 Some(region_of_interest) => {
                     let (c1, c2, c3, c4) = region_of_interest;
@@ -124,7 +122,7 @@ impl ConsolidatorSystem {
             },
         );
 
-        let mut smoothing_system = TrackingSmoother::new(SmoothSettings {
+        let smoothing_system = TrackingSmoother::new(SmoothSettings {
             merge_radius: cli.smoothing_merge_radius,
             wait_before_active_ms: cli.smoothing_wait_before_active_ms,
             expire_ms: cli.smoothing_expire_ms,
@@ -134,24 +132,14 @@ impl ConsolidatorSystem {
                 .unwrap_or(smoothing::EmptyListSendMode::Once),
         });
 
-        let mut presence_detector =
+        let presence_detector =
             PresenceDetectionZones::new(tracking_config.zones().unwrap_or_default());
 
-        ConsolidatorSystem {
-            tether_agent,
-            config_output,
-            clusters_output,
-            tracking_output,
-            smoothed_tracking_output,
-            scans_input,
-            save_config_input,
-            request_config_input,
-            request_automask_input,
-            tracking_config,
+        Systems {
             clustering_system,
-            perspective_transformer,
             smoothing_system,
             automask_samplers: HashMap::new(),
+            perspective_transformer,
             presence_detector,
         }
     }
