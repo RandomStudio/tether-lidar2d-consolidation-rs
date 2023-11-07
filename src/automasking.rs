@@ -1,6 +1,9 @@
-use log::info;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tether_agent::mqtt::Message;
+
+use crate::{tracking_config::TrackingConfig, Point2D};
 
 pub type MaskThresholdMap = HashMap<String, f32>;
 
@@ -9,6 +12,8 @@ pub struct AutoMaskSampler {
     pub angles_with_thresholds: MaskThresholdMap,
     scans_remaining: usize,
 }
+
+pub type AutoMaskSamplerMap = HashMap<String, AutoMaskSampler>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AutoMaskMessage {
@@ -27,7 +32,7 @@ impl AutoMaskSampler {
     /** Add samples (vector of angles with distances) until sufficient scans have been recorded;
      * return the mapping once we're done, otherwise return None
      */
-    pub fn add_samples(&mut self, samples: &Vec<(f32, f32)>) -> Option<&MaskThresholdMap> {
+    pub fn add_samples(&mut self, samples: &[Point2D]) -> Option<&MaskThresholdMap> {
         self.scans_remaining -= 1;
 
         if self.scans_remaining > 0 {
@@ -50,5 +55,46 @@ impl AutoMaskSampler {
 
     pub fn is_complete(&self) -> bool {
         self.scans_remaining == 0
+    }
+}
+
+pub fn handle_automask_message(
+    incoming_message: &Message,
+    automask_samplers: &mut HashMap<String, AutoMaskSampler>,
+    config: &mut TrackingConfig,
+    scans_required: usize,
+    threshold_margin: f32,
+) -> Result<(), ()> {
+    let payload = incoming_message.payload().to_vec();
+
+    if let Ok(automask_command) = rmp_serde::from_slice::<AutoMaskMessage>(&payload) {
+        let command_type: &str = &automask_command.r#type;
+        match command_type {
+            "new" => {
+                info!("request NEW auto mask samplers");
+                automask_samplers.clear();
+                config.clear_device_masking();
+                for device in config.devices().iter() {
+                    automask_samplers.insert(
+                        String::from(&device.serial),
+                        AutoMaskSampler::new(scans_required, threshold_margin),
+                    );
+                }
+                Ok(())
+            }
+            "clear" => {
+                info!("request CLEAR all device masking thresholds");
+                automask_samplers.clear();
+                config.clear_device_masking();
+                Ok(())
+            }
+            _ => {
+                error!("Unrecognised command type for RequestAutoMask message");
+                Err(())
+            }
+        }
+    } else {
+        error!("Failed to parse auto mask command");
+        Err(())
     }
 }
