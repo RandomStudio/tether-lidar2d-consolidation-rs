@@ -12,6 +12,8 @@ pub struct AutoMaskSampler {
     scans_remaining: usize,
 }
 
+pub type AutoMaskSamplerMap = HashMap<String, AutoMaskSampler>;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AutoMaskMessage {
     pub r#type: String,
