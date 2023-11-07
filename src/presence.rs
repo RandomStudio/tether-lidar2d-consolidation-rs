@@ -1,6 +1,8 @@
 use std::time::{Duration, SystemTime};
 
+use log::debug;
 use serde::{Deserialize, Serialize};
+use tether_agent::{three_part_topic::build_topic, TetherAgent};
 
 use crate::tracking::TrackedPoint2D;
 
@@ -65,4 +67,17 @@ impl PresenceDetectionZones {
     // pub fn get_zones(&self) -> &[Zone] {
     //     &self.zones
     // }
+}
+
+pub fn publish_presence_change(changed_zone: &Zone, tether_agent: &TetherAgent) {
+    debug!("ZONE CHANGED: {:?}", changed_zone);
+    let topic = build_topic(
+        "presenceDetection",
+        &changed_zone.id.to_string(),
+        "presence",
+    );
+    let payload = if changed_zone.active { &[1] } else { &[0] };
+    tether_agent
+        .publish_raw(&topic, payload, Some(2), Some(false))
+        .expect("failed to send presence update");
 }

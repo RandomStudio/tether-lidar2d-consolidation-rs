@@ -2,6 +2,8 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::Point2D;
+
 pub type MaskThresholdMap = HashMap<String, f32>;
 
 pub struct AutoMaskSampler {
@@ -27,7 +29,7 @@ impl AutoMaskSampler {
     /** Add samples (vector of angles with distances) until sufficient scans have been recorded;
      * return the mapping once we're done, otherwise return None
      */
-    pub fn add_samples(&mut self, samples: &Vec<(f32, f32)>) -> Option<&MaskThresholdMap> {
+    pub fn add_samples(&mut self, samples: &[Point2D]) -> Option<&MaskThresholdMap> {
         self.scans_remaining -= 1;
 
         if self.scans_remaining > 0 {

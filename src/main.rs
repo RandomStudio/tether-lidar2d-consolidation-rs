@@ -1,7 +1,5 @@
 use automasking::AutoMaskMessage;
 use clap::Parser;
-use presence::Zone;
-use tether_agent::three_part_topic::{build_topic, parse_agent_id};
 use tracking_config::TrackingConfig;
 
 use env_logger::Env;
@@ -25,7 +23,7 @@ mod tracking_config;
 use crate::automasking::AutoMaskSampler;
 use crate::clustering::ClusteringSystem;
 use crate::perspective::PerspectiveTransformer;
-use crate::presence::PresenceDetectionZones;
+use crate::presence::{publish_presence_change, PresenceDetectionZones};
 use crate::settings::Cli;
 use crate::smoothing::{get_mode, SmoothSettings, TrackingSmoother};
 
@@ -165,9 +163,22 @@ fn main() {
             work_done = true;
             // debug!("Received {:?}", message);
             if scans_input.matches(&topic) {
-                // debug!("Received scans message");
+                let serial_number = match &topic {
+                    tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
+                    tether_agent::TetherOrCustomTopic::Custom(s) => {
+                        panic!(
+                            "The topic \"{}\" is not expected for Lidar scan messages",
+                            &s
+                        );
+                    }
+                };
+
+                let scans: Vec<(f32, f32)> =
+                    rmp_serde::from_slice(message.payload()).expect("failed to decode scans");
+
                 handle_scans_message(
-                    &message,
+                    &serial_number,
+                    &scans,
                     &tether_agent,
                     &all_outputs,
                     &mut tracking_config,
@@ -243,21 +254,9 @@ fn main() {
     }
 }
 
-fn publish_presence_change(changed_zone: &Zone, tether_agent: &TetherAgent) {
-    debug!("ZONE CHANGED: {:?}", changed_zone);
-    let topic = build_topic(
-        "presenceDetection",
-        &changed_zone.id.to_string(),
-        "presence",
-    );
-    let payload = if changed_zone.active { &[1] } else { &[0] };
-    tether_agent
-        .publish_raw(&topic, payload, Some(2), Some(false))
-        .expect("failed to send presence update");
-}
-
 fn handle_scans_message(
-    incoming_message: &Message,
+    serial: &str,
+    scans: &[Point2D],
     tether_agent: &TetherAgent,
     outputs: &ConsolidatorOutputs,
     config: &mut TrackingConfig,
@@ -273,18 +272,12 @@ fn handle_scans_message(
         tracking_output,
     } = outputs;
 
-    // TODO: this could be parsed from the ThreePartTopic earlier
-    let serial = parse_agent_id(incoming_message.topic()).unwrap_or("unknown");
-
     // If an unknown device was found (and added), re-publish the Device config
     if let Some(()) = config.check_or_create_device(serial, default_min_distance) {
         tether_agent
             .encode_and_publish(config_output, &config)
             .expect("failed to publish config");
     }
-
-    let scans: Vec<(f32, f32)> =
-        rmp_serde::from_slice(incoming_message.payload()).expect("failed to decode scans");
 
     if let Some(device) = config.get_device(serial) {
         if let Ok(clusters) = clustering_system.handle_scan_message(&scans, device) {
