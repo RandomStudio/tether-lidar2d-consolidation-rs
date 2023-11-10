@@ -64,7 +64,8 @@ pub struct Cli {
     pub clustering_max_cluster_size: f32,
 
     // -------- SMOOTHING SETTINGS
-    /// Flag to disable integrated time-based "smoothed tracking" output
+    /// Flag to disable integrated time-based "smoothed tracking" output. Note that this will
+    /// also disable presence detection + movement analysis.
     #[arg(long = "smoothing.disable")]
     pub smoothing_disable: bool,
 
