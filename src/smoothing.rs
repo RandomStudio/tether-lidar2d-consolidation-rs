@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use log::debug;
 
@@ -198,8 +198,8 @@ impl TrackingSmoother {
         points
     }
 
-    pub fn last_updated(&self) -> SystemTime {
-        self.last_updated
+    pub fn get_elapsed(&self) -> Duration {
+        self.last_updated.elapsed().unwrap_or_default()
     }
 }
 

@@ -112,8 +112,8 @@ pub struct Cli {
     pub automask_threshold_margin: f32,
 
     // -------- MOVEMENT ANALYSIS SETTINGS
-    /// Enable movement analysis
-    #[arg(long = "movement.enable")]
+    /// Disable movement analysis calculation and output, even if available
+    #[arg(long = "movement.disable")]
     pub movement_disable: bool,
 
     /// How often (ms) to send movement messages
