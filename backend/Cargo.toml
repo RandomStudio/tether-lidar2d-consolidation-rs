@@ -1,0 +1,31 @@
+[package]
+name = "tether-lidar2d-consolidation"
+description = "Tether Lidar2D Consolidator Agent, Rust edition"
+version = "0.5.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/RandomStudio/tether-lidar2d-consolidation-rs"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+
+[[bin]]
+name = "lidar2d-backend"
+
+
+
+[dependencies]
+async-std = "1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.91"
+rmp-serde = "1.1.1"
+petal-clustering = "0.5.1"
+petal-neighbors = "0.8.0"
+ndarray = "0.15.2"
+nalgebra = "0.31.4"
+clap = { version = "4.1.1", features = ["derive"] }
+env_logger = "0.7"
+log = "0.4.17"
+tether-agent = "0.12"

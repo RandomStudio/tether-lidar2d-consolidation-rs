@@ -1,6 +1,6 @@
 use clap::Parser;
-use consolidator_system::{Outputs, Systems};
-use tracking_config::TrackingConfig;
+use tether_lidar2d_consolidation::consolidator_system::{Outputs, Systems};
+use tether_lidar2d_consolidation::tracking_config::TrackingConfig;
 
 use env_logger::Env;
 use log::{debug, info};
@@ -8,26 +8,13 @@ use std::thread;
 use std::time::Duration;
 use tether_agent::TetherAgentOptionsBuilder;
 
-mod automasking;
-mod clustering;
-mod consolidator_system;
-mod movement;
-mod perspective;
-mod presence;
-mod settings;
-mod smoothing;
-mod tracking;
-mod tracking_config;
-
-use crate::automasking::handle_automask_message;
-use crate::clustering::handle_scans_message;
-use crate::consolidator_system::Inputs;
-use crate::movement::get_total_movement;
-use crate::presence::publish_presence_change;
-use crate::settings::Cli;
-use crate::tracking_config::handle_save_message;
-
-pub type Point2D = (f32, f32);
+use tether_lidar2d_consolidation::automasking::handle_automask_message;
+use tether_lidar2d_consolidation::clustering::handle_scans_message;
+use tether_lidar2d_consolidation::consolidator_system::Inputs;
+use tether_lidar2d_consolidation::movement::get_total_movement;
+use tether_lidar2d_consolidation::presence::publish_presence_change;
+use tether_lidar2d_consolidation::settings::Cli;
+use tether_lidar2d_consolidation::tracking_config::handle_save_message;
 
 fn main() {
     let cli = Cli::parse();
