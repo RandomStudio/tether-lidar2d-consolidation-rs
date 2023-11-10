@@ -145,7 +145,7 @@ fn main() {
                     let movement_vector = get_total_movement(&active_smoothed_points);
 
                     tether_agent
-                        .encode_and_publish(&outputs.movement_output, &movement_vector)
+                        .encode_and_publish(&outputs.movement_output, movement_vector)
                         .expect("failed to publish movement vector");
 
                     systems.movement_analysis.reset_timer();
