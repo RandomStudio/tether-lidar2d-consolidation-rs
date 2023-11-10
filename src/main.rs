@@ -11,6 +11,7 @@ use tether_agent::TetherAgentOptionsBuilder;
 mod automasking;
 mod clustering;
 mod consolidator_system;
+mod movement;
 mod perspective;
 mod presence;
 mod settings;
@@ -21,6 +22,7 @@ mod tracking_config;
 use crate::automasking::handle_automask_message;
 use crate::clustering::handle_scans_message;
 use crate::consolidator_system::Inputs;
+use crate::movement::get_total_movement;
 use crate::presence::publish_presence_change;
 use crate::settings::Cli;
 use crate::tracking_config::handle_save_message;
@@ -122,33 +124,58 @@ fn main() {
             }
         }
 
-        if !cli.smoothing_disable {
-            if let Ok(elapsed) = systems.smoothing_system.last_updated().elapsed() {
-                if elapsed.as_millis() > cli.smoothing_update_interval {
-                    work_done = true;
-                    systems.smoothing_system.update_smoothing();
+        if !cli.smoothing_disable
+            && systems.smoothing_system.get_elapsed().as_millis() > cli.smoothing_update_interval
+        {
+            work_done = true;
+            systems.smoothing_system.update_smoothing();
 
-                    let smoothed_points = systems.smoothing_system.get_smoothed_points();
+            let smoothed_points = systems.smoothing_system.get_smoothed_points();
 
-                    if let Some(active_smoothed_points) = smoothed_points {
-                        tether_agent
-                            .encode_and_publish(
-                                &outputs.smoothed_tracking_output,
-                                &active_smoothed_points,
-                            )
-                            .expect("failed to publish smoothed tracking points");
-                        for changed_zone in systems
-                            .presence_detector
-                            .update_zones(&active_smoothed_points)
-                            .iter()
-                        {
-                            publish_presence_change(changed_zone, &tether_agent);
-                        }
-                    } else {
-                        for changed_zone in systems.presence_detector.update_zones(&[]).iter() {
-                            publish_presence_change(changed_zone, &tether_agent);
-                        }
-                    }
+            if let Some(active_smoothed_points) = smoothed_points {
+                tether_agent
+                    .encode_and_publish(&outputs.smoothed_tracking_output, &active_smoothed_points)
+                    .expect("failed to publish smoothed tracking points");
+
+                if !cli.movement_disable
+                    && systems.movement_analysis.get_elapsed()
+                        >= Duration::from_millis(cli.movement_interval as u64)
+                {
+                    // Use smoothed points for movement analysis...
+                    let movement_vector = get_total_movement(&active_smoothed_points);
+
+                    tether_agent
+                        .encode_and_publish(&outputs.movement_output, movement_vector)
+                        .expect("failed to publish movement vector");
+
+                    systems.movement_analysis.reset_timer();
+                }
+
+                // Use smoothed points for presence detection, if any zones are defined...
+                for changed_zone in systems
+                    .presence_detector
+                    .update_zones(&active_smoothed_points)
+                    .iter()
+                {
+                    publish_presence_change(changed_zone, &tether_agent);
+                }
+            } else {
+                // No smoothed points, but update presence detection with zero-points...
+                for changed_zone in systems.presence_detector.update_zones(&[]).iter() {
+                    publish_presence_change(changed_zone, &tether_agent);
+                }
+                // No smoothed points, but update movement analysis with zero-points...
+                if !cli.movement_disable
+                    && systems.movement_analysis.get_elapsed()
+                        >= Duration::from_millis(cli.movement_interval as u64)
+                {
+                    let movement_vector = get_total_movement(&[]);
+
+                    tether_agent
+                        .encode_and_publish(&outputs.movement_output, movement_vector)
+                        .expect("failed to publish movement vector");
+
+                    systems.movement_analysis.reset_timer();
                 }
             }
         }

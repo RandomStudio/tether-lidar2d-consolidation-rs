@@ -64,7 +64,8 @@ pub struct Cli {
     pub clustering_max_cluster_size: f32,
 
     // -------- SMOOTHING SETTINGS
-    /// Flag to disable integrated time-based "smoothed tracking" output
+    /// Flag to disable integrated time-based "smoothed tracking" output. Note that this will
+    /// also disable presence detection + movement analysis.
     #[arg(long = "smoothing.disable")]
     pub smoothing_disable: bool,
 
@@ -110,4 +111,13 @@ pub struct Cli {
 
     #[arg(long = "autoMask.minThresholdMargin", default_value_t = AUTOMASK_MIN_THRESHOLD_MARGIN)]
     pub automask_threshold_margin: f32,
+
+    // -------- MOVEMENT ANALYSIS SETTINGS
+    /// Disable movement analysis calculation and output, even if available
+    #[arg(long = "movement.disable")]
+    pub movement_disable: bool,
+
+    /// How often (ms) to send movement messages
+    #[arg(long = "movement.updateInterval", default_value_t = 250)]
+    pub movement_interval: u128,
 }
