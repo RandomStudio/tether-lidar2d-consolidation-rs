@@ -11,6 +11,7 @@ use tether_agent::TetherAgentOptionsBuilder;
 mod automasking;
 mod clustering;
 mod consolidator_system;
+mod movement;
 mod perspective;
 mod presence;
 mod settings;
@@ -21,6 +22,7 @@ mod tracking_config;
 use crate::automasking::handle_automask_message;
 use crate::clustering::handle_scans_message;
 use crate::consolidator_system::Inputs;
+use crate::movement::get_total_movement;
 use crate::presence::publish_presence_change;
 use crate::settings::Cli;
 use crate::tracking_config::handle_save_message;
@@ -137,6 +139,21 @@ fn main() {
                                 &active_smoothed_points,
                             )
                             .expect("failed to publish smoothed tracking points");
+
+                        if systems.movement_analysis.get_elapsed()
+                            >= Duration::from_millis(cli.movement_interval as u64)
+                        {
+                            // Use smoothed points for movement analysis...
+                            let movement_vector = get_total_movement(&active_smoothed_points);
+
+                            tether_agent
+                                .encode_and_publish(&outputs.movement_output, &movement_vector)
+                                .expect("failed to publish movement vector");
+
+                            systems.movement_analysis.reset_timer();
+                        }
+
+                        // Use smoothed points for presence detection, if any zones are defined...
                         for changed_zone in systems
                             .presence_detector
                             .update_zones(&active_smoothed_points)

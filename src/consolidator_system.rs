@@ -5,6 +5,7 @@ use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
 use crate::{
     automasking::AutoMaskSamplerMap,
     clustering::ClusteringSystem,
+    movement::MovementAnalysis,
     perspective::PerspectiveTransformer,
     presence::PresenceDetectionZones,
     settings::Cli,
@@ -17,6 +18,7 @@ pub struct Outputs {
     pub clusters_output: PlugDefinition,
     pub tracking_output: PlugDefinition,
     pub smoothed_tracking_output: PlugDefinition,
+    pub movement_output: PlugDefinition,
 }
 
 impl Outputs {
@@ -37,10 +39,15 @@ impl Outputs {
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
-        // Smoothed traacked points output
+        // Smoothed tracked points output
         let smoothed_tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
             .qos(Some(1))
             .role(Some("trackingSmooth"))
+            .build(tether_agent)
+            .expect("failed to create Output Plug");
+
+        // Movement vector output
+        let movement_output = PlugOptionsBuilder::create_output("movement")
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
@@ -49,6 +56,7 @@ impl Outputs {
             tracking_output,
             clusters_output,
             smoothed_tracking_output,
+            movement_output,
         }
     }
 }
@@ -89,6 +97,7 @@ pub struct Systems {
     pub smoothing_system: TrackingSmoother,
     pub automask_samplers: AutoMaskSamplerMap,
     pub presence_detector: PresenceDetectionZones,
+    pub movement_analysis: MovementAnalysis,
 }
 
 impl Systems {
@@ -136,6 +145,7 @@ impl Systems {
             automask_samplers: HashMap::new(),
             perspective_transformer,
             presence_detector,
+            movement_analysis: MovementAnalysis::new(),
         }
     }
 }

@@ -110,4 +110,13 @@ pub struct Cli {
 
     #[arg(long = "autoMask.minThresholdMargin", default_value_t = AUTOMASK_MIN_THRESHOLD_MARGIN)]
     pub automask_threshold_margin: f32,
+
+    // -------- MOVEMENT ANALYSIS SETTINGS
+    /// Enable movement analysis
+    #[arg(long = "movement.enable")]
+    pub movement_disable: bool,
+
+    /// How often (ms) to send movement messages
+    #[arg(long = "movement.updateInterval", default_value_t = 250)]
+    pub movement_interval: u128,
 }
