@@ -160,8 +160,22 @@ fn main() {
                     publish_presence_change(changed_zone, &tether_agent);
                 }
             } else {
+                // No smoothed points, but update presence detection with zero-points...
                 for changed_zone in systems.presence_detector.update_zones(&[]).iter() {
                     publish_presence_change(changed_zone, &tether_agent);
+                }
+                // No smoothed points, but update movement analysis with zero-points...
+                if !cli.movement_disable
+                    && systems.movement_analysis.get_elapsed()
+                        >= Duration::from_millis(cli.movement_interval as u64)
+                {
+                    let movement_vector = get_total_movement(&[]);
+
+                    tether_agent
+                        .encode_and_publish(&outputs.movement_output, movement_vector)
+                        .expect("failed to publish movement vector");
+
+                    systems.movement_analysis.reset_timer();
                 }
             }
         }
