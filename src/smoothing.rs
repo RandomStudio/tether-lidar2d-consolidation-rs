@@ -48,12 +48,12 @@ impl TrackingSmoother {
         }
     }
 
-    pub fn update_tracked_points(&mut self, points: &[TrackedPoint2D]) {
+    pub fn update_tracked_points(&mut self, points: &[Point2D]) {
         points.iter().for_each(|new_point| {
             // Fist, check if this "is" actually an existing point that wasn't (yet)
             // marked active
             if let Some(existing) = self.known_points.iter_mut().find(|known_point| {
-                let TrackedPoint2D { x, y, .. } = new_point;
+                let (x, y) = new_point;
                 distance(&(*x, *y), &known_point.current_position) <= self.settings.merge_radius
             }) {
                 // ---- CASE A: This "is" a point we already know
@@ -76,15 +76,14 @@ impl TrackingSmoother {
                 // If this "is" actually the same point, and only if it's "ready",
                 // update its target position
                 if existing.ready {
-                    let TrackedPoint2D { x, y, .. } = new_point;
+                    let (x, y) = new_point;
                     existing.target_position = (*x, *y);
                 }
             } else {
                 // ---- CASE B: This is not (close to) a point we already know
 
                 // Append to list
-
-                let TrackedPoint2D { x, y, .. } = new_point;
+                let (x, y) = new_point;
 
                 debug!("Added new, unknown point {:?}", &new_point);
 

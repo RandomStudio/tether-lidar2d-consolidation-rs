@@ -12,7 +12,6 @@ mod automasking;
 mod clustering;
 mod consolidator_system;
 mod movement;
-mod perspective;
 mod presence;
 mod settings;
 mod smoothing;

@@ -853,6 +853,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "quad-to-quad-transformer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "nalgebra",
+ "ndarray",
+]
+
+[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1095,6 +1105,7 @@ dependencies = [
  "ndarray",
  "petal-clustering",
  "petal-neighbors",
+ "quad-to-quad-transformer",
  "rmp-serde",
  "serde",
  "serde_json",

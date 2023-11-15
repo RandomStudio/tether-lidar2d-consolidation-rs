@@ -25,3 +25,4 @@ clap = { version = "4.1.1", features = ["derive"] }
 env_logger = "0.7"
 log = "0.4.17"
 tether-agent = "0.12"
+quad-to-quad-transformer = { path = "../../quad-to-quad-transformer"}
