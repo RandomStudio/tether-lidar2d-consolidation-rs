@@ -1,7 +1,7 @@
 [package]
 name = "tether-lidar2d-consolidation"
 description = "Tether Lidar2D Consolidator Agent, Rust edition"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/RandomStudio/tether-lidar2d-consolidation-rs"
@@ -25,4 +25,5 @@ clap = { version = "4.1.1", features = ["derive"] }
 env_logger = "0.7"
 log = "0.4.17"
 tether-agent = "0.12"
-quad-to-quad-transformer = { path = "../../quad-to-quad-transformer"}
+# quad-to-quad-transformer = { path = "../../quad-to-quad-transformer"}
+quad-to-quad-transformer = "0.1"
