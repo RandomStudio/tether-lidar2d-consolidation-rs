@@ -33,3 +33,4 @@ tether-agent = "0.12"
 # The dependencies below should be tied to options/feature set for gui
 egui = "0.21.0"
 eframe = "0.21.3"
+egui_plot = "0.24.0"
