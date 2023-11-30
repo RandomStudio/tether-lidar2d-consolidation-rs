@@ -1,14 +1,14 @@
 use std::{thread, time::Duration};
 
 use egui::{
-    plot::{self, MarkerShape, Plot, PlotPoints, Points},
-    Color32,
+    plot::{MarkerShape, Plot, PlotPoints, Points},
+    Color32, Slider,
 };
 use log::{error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
-use tether_lidar2d_consolidation::{settings::Cli, tracking_config::TrackingConfig, Point2D};
+use tether_lidar2d_consolidation::{tracking_config::TrackingConfig, Point2D};
 
-use clap::Parser;
+// use clap::Parser;
 
 struct Inputs {
     config: PlugDefinition,
@@ -30,7 +30,7 @@ pub struct Model {
 
 impl Default for Model {
     fn default() -> Self {
-        let cli = Cli::parse();
+        // let cli = Cli::parse();
 
         let tether_agent = TetherAgentOptionsBuilder::new("lidar2dFrontend")
             .build()
@@ -102,7 +102,22 @@ impl eframe::App for Model {
                         } else {
                             ui.heading(&device.name);
                         }
-                        ui.label(format!("Serial# {}", &device.serial));
+                        ui.end_row();
+                        ui.horizontal(|ui| {
+                            ui.label("Serial #");
+                            ui.label(&device.serial);
+                        });
+                        ui.end_row();
+                        ui.horizontal(|ui| {
+                            ui.label("Rotation");
+                            ui.add(Slider::new(&mut device.rotation, 0. ..=360.));
+                        });
+
+                        // ui.columns(2, |columns| {
+                        //     columns[0].label("Serial #");
+                        //     columns[1].label(&device.serial);
+                        // });
+                        // ui.label(format!("Serial# {}", &device.serial));
                     });
                 }
                 if self.is_editing {
@@ -124,9 +139,17 @@ impl eframe::App for Model {
             ui.heading("Graph Area");
             let markers_plot = Plot::new("scans").data_aspect(1.0);
 
-            let points = scans_to_plot_points(&self.scans, 5.0, Color32::RED);
+            let all_points = Vec::new();
 
-            markers_plot.show(ui, |plot_ui| plot_ui.points(points));
+            if let Some(tracking_config) = &self.tracking_config {
+                for device in tracking_config.devices() {
+                    let points =
+                        scans_to_plot_points(&self.scans, 5.0, Color32::RED, device.rotation);
+                    all_points.push(points);
+                }
+            }
+
+            markers_plot.show(ui, |plot_ui| plot_ui.points(Points::from(all_points)));
             // egui::Window::new("Graph Area").show(ctx, |ui| {
             //     ui.heading("Graph");
             // });
@@ -138,13 +161,18 @@ impl eframe::App for Model {
     }
 }
 
-fn scans_to_plot_points(measurements: &[Point2D], size: f32, color: Color32) -> Points {
+fn scans_to_plot_points(
+    measurements: &[Point2D],
+    size: f32,
+    color: Color32,
+    rotate: f32,
+) -> Points {
     let plot_points = PlotPoints::new(
         measurements
             .iter()
             .map(|(angle, distance)| {
-                let x = angle.to_radians().cos() * distance;
-                let y = angle.to_radians().sin() * distance;
+                let x = (angle + rotate).to_radians().cos() * distance;
+                let y = (angle + rotate).to_radians().sin() * distance;
                 [x as f64, y as f64]
             })
             .collect(),
