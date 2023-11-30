@@ -10,11 +10,11 @@ use crate::{automasking::MaskThresholdMap, perspective::PerspectiveTransformer, 
 #[serde(rename_all = "camelCase")]
 pub struct LidarDevice {
     pub serial: String,
-    name: String,
+    pub name: String,
     pub rotation: f32,
     pub x: f32,
     pub y: f32,
-    color: String,
+    pub color: String,
     pub min_distance_threshold: f32,
     pub scan_mask_thresholds: Option<MaskThresholdMap>,
     pub flip_coords: Option<(i8, i8)>,
