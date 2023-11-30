@@ -35,7 +35,7 @@ fn main() -> Result<(), eframe::Error> {
         ..Default::default()
     };
     eframe::run_native(
-        "Tether egui UI Builder",
+        "Tether LIDAR2D Consolidation",
         options,
         Box::new(|_cc| Box::<Model>::default()),
     )
