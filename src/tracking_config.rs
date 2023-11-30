@@ -205,6 +205,10 @@ impl TrackingConfig {
         &self.devices
     }
 
+    pub fn devices_mut(&mut self) -> &mut Vec<LidarDevice> {
+        &mut self.devices
+    }
+
     pub fn region_of_interest(&self) -> Option<&CornerPoints> {
         self.region_of_interest.as_ref()
     }

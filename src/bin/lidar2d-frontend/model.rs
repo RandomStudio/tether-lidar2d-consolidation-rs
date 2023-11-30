@@ -9,7 +9,9 @@ use clap::Parser;
 pub struct Model {
     pub tether_agent: TetherAgent,
     config_input: PlugDefinition,
+    config_output: PlugDefinition,
     tracking_config: Option<TrackingConfig>,
+    is_editing: bool,
 }
 
 impl Default for Model {
@@ -26,10 +28,16 @@ impl Default for Model {
             .build(&tether_agent)
             .expect("failed to create Input Plug");
 
+        let config_output = PlugOptionsBuilder::create_output("saveLidarConfig")
+            .build(&tether_agent)
+            .expect("failed to create Output Plug");
+
         Model {
             tether_agent,
             config_input,
+            config_output,
             tracking_config: None,
+            is_editing: false,
         }
     }
 }
@@ -50,16 +58,32 @@ impl eframe::App for Model {
             }
         }
 
-        egui::CentralPanel::default().show(ctx, |ui| match &self.tracking_config {
+        egui::CentralPanel::default().show(ctx, |ui| match &mut self.tracking_config {
             None => {
                 ui.label("No config received (yet)");
             }
             Some(tracking_config) => {
-                for device in tracking_config.devices().iter() {
+                for device in tracking_config.devices_mut().iter_mut() {
                     ui.group(|ui| {
-                        ui.heading(&device.name);
+                        if self.is_editing {
+                            ui.text_edit_singleline(&mut device.name);
+                        } else {
+                            ui.heading(&device.name);
+                        }
                         ui.label(format!("Serial# {}", &device.serial));
                     });
+                }
+                if self.is_editing {
+                    if ui.button("Save 🖴").clicked() {
+                        self.tether_agent
+                            .encode_and_publish(&self.config_output, &self.tracking_config)
+                            .expect("failed to publish config");
+                        self.is_editing = false;
+                    }
+                } else {
+                    if ui.button("Edit ✏").clicked() {
+                        self.is_editing = true;
+                    }
                 }
             }
         });
