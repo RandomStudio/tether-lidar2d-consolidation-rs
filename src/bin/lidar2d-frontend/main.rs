@@ -16,6 +16,7 @@ use model::Model;
 use tether_lidar2d_consolidation::settings::Cli;
 
 mod model;
+mod ui;
 
 fn main() -> Result<(), eframe::Error> {
     let cli = Cli::parse();
