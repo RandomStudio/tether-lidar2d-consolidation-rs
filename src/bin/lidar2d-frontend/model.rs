@@ -1,11 +1,16 @@
 use std::{thread, time::Duration};
 
+use colors_transform::{Color, Rgb};
 use egui::{
+    epaint::ahash::HashMap,
     plot::{MarkerShape, Plot, PlotPoints, Points},
     Color32, Slider,
 };
 use log::{error, info};
-use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
+use tether_agent::{
+    three_part_topic::parse_agent_id, PlugDefinition, PlugOptionsBuilder, TetherAgent,
+    TetherAgentOptionsBuilder,
+};
 use tether_lidar2d_consolidation::{tracking_config::TrackingConfig, Point2D};
 
 // use clap::Parser;
@@ -24,7 +29,7 @@ pub struct Model {
     inputs: Inputs,
     outputs: Outputs,
     tracking_config: Option<TrackingConfig>,
-    scans: Vec<(f32, f32)>,
+    scans: HashMap<String, Vec<(f32, f32)>>,
     is_editing: bool,
 }
 
@@ -61,7 +66,7 @@ impl Default for Model {
             },
             tracking_config: None,
             is_editing: false,
-            scans: Vec::new(),
+            scans: HashMap::default(),
         }
     }
 }
@@ -84,8 +89,16 @@ impl eframe::App for Model {
             }
 
             if self.inputs.scans.matches(topic) {
-                if let Ok(scans) = rmp_serde::from_slice(msg.payload()) {
-                    self.scans = scans;
+                if let Ok(scans) = rmp_serde::from_slice::<Vec<(f32, f32)>>(msg.payload()) {
+                    // self.scans = scans;
+                    let serial_number = match topic {
+                        tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
+                        tether_agent::TetherOrCustomTopic::Custom(t) => {
+                            error!("Could not retrieve serial number from topic {}", t);
+                            "unknown"
+                        }
+                    };
+                    self.scans.insert(serial_number.into(), scans);
                 }
             }
         }
@@ -139,20 +152,33 @@ impl eframe::App for Model {
             ui.heading("Graph Area");
             let markers_plot = Plot::new("scans").data_aspect(1.0);
 
-            let all_points = Vec::new();
+            let mut all_points = Vec::new();
 
             if let Some(tracking_config) = &self.tracking_config {
                 for device in tracking_config.devices() {
-                    let points =
-                        scans_to_plot_points(&self.scans, 5.0, Color32::RED, device.rotation);
-                    all_points.push(points);
+                    let rgb: Rgb = Rgb::from_hex_str(&device.color).unwrap();
+                    let (r, g, b) = (
+                        rgb.get_red() as u8,
+                        rgb.get_blue() as u8,
+                        rgb.get_green() as u8,
+                    );
+                    if let Some(scans_this_device) = self.scans.get(&device.serial) {
+                        let points = scans_to_plot_points(
+                            scans_this_device,
+                            5.0,
+                            Color32::from_rgb(r, g, b),
+                            device.rotation,
+                        );
+                        all_points.push(points);
+                    }
                 }
             }
 
-            markers_plot.show(ui, |plot_ui| plot_ui.points(Points::from(all_points)));
-            // egui::Window::new("Graph Area").show(ctx, |ui| {
-            //     ui.heading("Graph");
-            // });
+            markers_plot.show(ui, |plot_ui| {
+                for points_group in all_points {
+                    plot_ui.points(Points::from(points_group));
+                }
+            });
         });
 
         if !work_done {
