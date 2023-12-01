@@ -103,7 +103,14 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
 
     egui::CentralPanel::default().show(ctx, |ui| {
         ui.heading("Graph Area");
-        let markers_plot = Plot::new("scans").data_aspect(1.0);
+        let markers_plot = Plot::new("scans")
+            .data_aspect(1.0)
+            // .center_x_axis(true)
+            // .center_y_axis(true)
+            .include_y(10000.)
+            .include_y(-10000.)
+            .include_x(10000.)
+            .include_x(-10000.);
 
         markers_plot.show(ui, |plot_ui| {
             let mut all_points = Vec::new();
@@ -128,13 +135,19 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                         all_points.push(points);
                     }
                 }
+                for points_group in all_points {
+                    plot_ui.points(Points::from(points_group));
+                }
+
                 for cluster in model.clusters.iter() {
-                    plot_ui.line(circle(cluster.x, cluster.y, cluster.size))
+                    plot_ui.line(circle(
+                        cluster.x,
+                        cluster.y,
+                        cluster.size,
+                        Color32::LIGHT_GRAY,
+                    ))
                     // all_points.push(cluster_to_plot_points(cluster, radius_px.max(4.0)));
                 }
-            }
-            for points_group in all_points {
-                plot_ui.points(Points::from(points_group));
             }
         });
     });
@@ -176,7 +189,7 @@ fn cluster_to_plot_points(cluster: &Cluster2D, radius: f32) -> Points {
         .color(Color32::WHITE)
 }
 
-fn circle(x: f32, y: f32, radius: f32) -> Line {
+fn circle(x: f32, y: f32, radius: f32, colour: Color32) -> Line {
     let n = 512;
     let circle_points: PlotPoints = (0..=n)
         .map(|i| {
@@ -185,8 +198,5 @@ fn circle(x: f32, y: f32, radius: f32) -> Line {
             [r * t.cos() + x as f64, r * t.sin() + y as f64]
         })
         .collect();
-    Line::new(circle_points)
-        .color(Color32::from_rgb(100, 200, 100))
-        // .style(self.line_style)
-        .name("circle")
+    Line::new(circle_points).color(colour).name("circle")
 }

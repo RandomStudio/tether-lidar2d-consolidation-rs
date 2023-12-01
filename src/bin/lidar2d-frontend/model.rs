@@ -69,7 +69,7 @@ impl Default for Model {
             is_editing: false,
             scans: HashMap::new(),
             clusters: Vec::new(),
-            point_size: 5.0,
+            point_size: 2.5,
         }
     }
 }
