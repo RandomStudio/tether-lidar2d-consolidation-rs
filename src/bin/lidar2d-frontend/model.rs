@@ -23,6 +23,7 @@ pub struct Model {
     pub outputs: Outputs,
     pub tracking_config: Option<TrackingConfig>,
     pub scans: HashMap<String, Vec<(f32, f32)>>,
+    pub point_size: f32,
     pub is_editing: bool,
 }
 
@@ -60,6 +61,7 @@ impl Default for Model {
             tracking_config: None,
             is_editing: false,
             scans: HashMap::new(),
+            point_size: 5.0,
         }
     }
 }
