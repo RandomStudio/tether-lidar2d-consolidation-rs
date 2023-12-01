@@ -91,8 +91,8 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 let rgb: Rgb = Rgb::from_hex_str(&device.color).unwrap();
                 let (r, g, b) = (
                     rgb.get_red() as u8,
-                    rgb.get_blue() as u8,
                     rgb.get_green() as u8,
+                    rgb.get_blue() as u8,
                 );
                 if let Some(scans_this_device) = model.scans.get(&device.serial) {
                     let points = scans_to_plot_points(
