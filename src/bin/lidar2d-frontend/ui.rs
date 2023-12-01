@@ -1,10 +1,12 @@
+use std::f64::consts::TAU;
+
 use colors_transform::{Color, Rgb};
 use egui::{
-    plot::{MarkerShape, Plot, PlotPoints, Points},
-    Checkbox, Color32, Slider,
+    plot::{Line, MarkerShape, Plot, PlotPoint, PlotPoints, Points},
+    remap, Checkbox, Color32, Slider,
 };
 
-use tether_lidar2d_consolidation::Point2D;
+use tether_lidar2d_consolidation::{clustering::Cluster2D, Point2D};
 
 use crate::model::Model;
 
@@ -92,35 +94,45 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
         }
     });
 
+    egui::SidePanel::right("stats").show(ctx, |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Clusters count: ");
+            ui.label(format!("{}", model.clusters.len()));
+        })
+    });
+
     egui::CentralPanel::default().show(ctx, |ui| {
         ui.heading("Graph Area");
         let markers_plot = Plot::new("scans").data_aspect(1.0);
 
-        let mut all_points = Vec::new();
+        markers_plot.show(ui, |plot_ui| {
+            let mut all_points = Vec::new();
 
-        if let Some(tracking_config) = &model.tracking_config {
-            for device in tracking_config.devices() {
-                let rgb: Rgb = Rgb::from_hex_str(&device.color).unwrap();
-                let (r, g, b) = (
-                    rgb.get_red() as u8,
-                    rgb.get_green() as u8,
-                    rgb.get_blue() as u8,
-                );
-                if let Some(scans_this_device) = model.scans.get(&device.serial) {
-                    let points = scans_to_plot_points(
-                        scans_this_device,
-                        model.point_size,
-                        Color32::from_rgb(r, g, b),
-                        device.rotation,
-                        (device.x, device.y),
-                        device.flip_coords.unwrap_or((1, 1)),
+            if let Some(tracking_config) = &model.tracking_config {
+                for device in tracking_config.devices() {
+                    let rgb: Rgb = Rgb::from_hex_str(&device.color).unwrap();
+                    let (r, g, b) = (
+                        rgb.get_red() as u8,
+                        rgb.get_green() as u8,
+                        rgb.get_blue() as u8,
                     );
-                    all_points.push(points);
+                    if let Some(scans_this_device) = model.scans.get(&device.serial) {
+                        let points = scans_to_plot_points(
+                            scans_this_device,
+                            model.point_size,
+                            Color32::from_rgb(r, g, b),
+                            device.rotation,
+                            (device.x, device.y),
+                            device.flip_coords.unwrap_or((1, 1)),
+                        );
+                        all_points.push(points);
+                    }
+                }
+                for cluster in model.clusters.iter() {
+                    plot_ui.line(circle(cluster.x, cluster.y, cluster.size))
+                    // all_points.push(cluster_to_plot_points(cluster, radius_px.max(4.0)));
                 }
             }
-        }
-
-        markers_plot.show(ui, |plot_ui| {
             for points_group in all_points {
                 plot_ui.points(Points::from(points_group));
             }
@@ -153,4 +165,28 @@ fn scans_to_plot_points(
         .radius(size)
         .shape(MarkerShape::Circle)
         .color(color)
+}
+
+fn cluster_to_plot_points(cluster: &Cluster2D, radius: f32) -> Points {
+    // let plot_points = PlotPoints::new([cluster.x as f64, cluster.y as f64]);
+    Points::new([cluster.x as f64, cluster.y as f64])
+        .filled(false)
+        .radius(radius)
+        .shape(MarkerShape::Circle)
+        .color(Color32::WHITE)
+}
+
+fn circle(x: f32, y: f32, radius: f32) -> Line {
+    let n = 512;
+    let circle_points: PlotPoints = (0..=n)
+        .map(|i| {
+            let t = remap(i as f64, 0.0..=(n as f64), 0.0..=TAU);
+            let r = radius as f64;
+            [r * t.cos() + x as f64, r * t.sin() + y as f64]
+        })
+        .collect();
+    Line::new(circle_points)
+        .color(Color32::from_rgb(100, 200, 100))
+        // .style(self.line_style)
+        .name("circle")
 }
