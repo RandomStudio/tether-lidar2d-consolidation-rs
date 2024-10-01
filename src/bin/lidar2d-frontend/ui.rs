@@ -56,14 +56,20 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                         ui.end_row();
                         ui.horizontal(|ui| {
                             ui.label("Offset X");
-                            if ui.add(Slider::new(&mut device.x, 0. ..=10000.)).clicked() {
+                            if ui
+                                .add(Slider::new(&mut device.x, -10000. ..=10000.))
+                                .changed()
+                            {
                                 model.is_editing = true;
                             };
                         });
                         ui.end_row();
                         ui.horizontal(|ui| {
                             ui.label("Offset Y");
-                            if ui.add(Slider::new(&mut device.y, 0. ..=10000.)).clicked() {
+                            if ui
+                                .add(Slider::new(&mut device.y, -10000. ..=10000.))
+                                .changed()
+                            {
                                 model.is_editing = true;
                             };
                         });
@@ -75,6 +81,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                                 .add(Checkbox::new(&mut flip_x_checked, "Flip X"))
                                 .clicked()
                             {
+                                model.is_editing = true;
                                 let new_flip_x: i8 = if flip_x_checked { -1 } else { 1 };
                                 device.flip_coords = Some((new_flip_x, current_flip_y));
                             };
@@ -84,6 +91,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                                 .add(Checkbox::new(&mut flip_y_checked, "Flip Y"))
                                 .clicked()
                             {
+                                model.is_editing = true;
                                 let new_flip_y: i8 = if flip_y_checked { -1 } else { 1 };
                                 device.flip_coords = Some((current_flip_x, new_flip_y));
                             };
@@ -184,18 +192,23 @@ fn scans_to_plot_points(
 ) -> Points {
     let (offset_x, offset_y) = offset;
     let (flip_x, flip_y) = flip_coords;
+    let graph_flip_factor = {
+        if graph_flip_y {
+            -1.0
+        } else {
+            1.0
+        }
+    };
     let plot_points = PlotPoints::new(
         measurements
             .iter()
             .map(|(angle, distance)| {
                 let x = (angle + rotate).to_radians().cos() * distance * flip_x as f32 + offset_x;
-                let y = (angle + rotate).to_radians().sin() * distance * flip_y as f32 * {
-                    if graph_flip_y {
-                        -1.0
-                    } else {
-                        1.0
-                    }
-                } + offset_y;
+                let y = (angle + rotate).to_radians().sin()
+                    * distance
+                    * flip_y as f32
+                    * graph_flip_factor
+                    + offset_y * graph_flip_factor;
                 [x as f64, y as f64]
             })
             .collect(),
