@@ -26,6 +26,7 @@ pub struct Model {
     pub scans: HashMap<String, Vec<(f32, f32)>>,
     pub clusters: Vec<Cluster2D>,
     pub point_size: f32,
+    pub graph_y_flip: bool,
     pub is_editing: bool,
 }
 
@@ -70,6 +71,7 @@ impl Default for Model {
             scans: HashMap::new(),
             clusters: Vec::new(),
             point_size: 2.5,
+            graph_y_flip: true,
         }
     }
 }

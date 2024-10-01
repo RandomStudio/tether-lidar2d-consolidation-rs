@@ -17,6 +17,10 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             ui.label("Point radius");
             ui.add(Slider::new(&mut model.point_size, 1.0..=20.0));
         });
+        ui.horizontal(|ui| {
+            ui.label("Graph Y-flip");
+            ui.checkbox(&mut model.graph_y_flip, "flip");
+        });
 
         ui.separator();
 
@@ -42,17 +46,26 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                         ui.end_row();
                         ui.horizontal(|ui| {
                             ui.label("Rotation");
-                            ui.add(Slider::new(&mut device.rotation, 0. ..=360.));
+                            if ui
+                                .add(Slider::new(&mut device.rotation, 0. ..=360.))
+                                .changed()
+                            {
+                                model.is_editing = true;
+                            };
                         });
                         ui.end_row();
                         ui.horizontal(|ui| {
                             ui.label("Offset X");
-                            ui.add(Slider::new(&mut device.x, 0. ..=10000.));
+                            if ui.add(Slider::new(&mut device.x, 0. ..=10000.)).clicked() {
+                                model.is_editing = true;
+                            };
                         });
                         ui.end_row();
                         ui.horizontal(|ui| {
                             ui.label("Offset Y");
-                            ui.add(Slider::new(&mut device.y, 0. ..=10000.));
+                            if ui.add(Slider::new(&mut device.y, 0. ..=10000.)).clicked() {
+                                model.is_editing = true;
+                            };
                         });
                         ui.end_row();
                         let (current_flip_x, current_flip_y) = device.flip_coords.unwrap_or((1, 1));
@@ -102,7 +115,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {
-        ui.heading("Graph Area");
+        ui.heading("Scan Area");
         let markers_plot = Plot::new("scans")
             .data_aspect(1.0)
             // .center_x_axis(true)
@@ -131,19 +144,26 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                             device.rotation,
                             (device.x, device.y),
                             device.flip_coords.unwrap_or((1, 1)),
+                            model.graph_y_flip,
                         );
                         all_points.push(points);
                     }
                 }
                 for points_group in all_points {
-                    plot_ui.points(Points::from(points_group));
+                    plot_ui.points(points_group);
                 }
 
                 for cluster in model.clusters.iter() {
                     plot_ui.line(circle(
                         cluster.x,
-                        cluster.y,
-                        cluster.size,
+                        cluster.y * {
+                            if model.graph_y_flip {
+                                -1.0
+                            } else {
+                                1.0
+                            }
+                        },
+                        cluster.size / 2.0,
                         Color32::LIGHT_GRAY,
                     ))
                     // all_points.push(cluster_to_plot_points(cluster, radius_px.max(4.0)));
@@ -160,6 +180,7 @@ fn scans_to_plot_points(
     rotate: f32,
     offset: (f32, f32),
     flip_coords: (i8, i8),
+    graph_flip_y: bool,
 ) -> Points {
     let (offset_x, offset_y) = offset;
     let (flip_x, flip_y) = flip_coords;
@@ -168,7 +189,13 @@ fn scans_to_plot_points(
             .iter()
             .map(|(angle, distance)| {
                 let x = (angle + rotate).to_radians().cos() * distance * flip_x as f32 + offset_x;
-                let y = (angle + rotate).to_radians().sin() * distance * flip_y as f32 + offset_y;
+                let y = (angle + rotate).to_radians().sin() * distance * flip_y as f32 * {
+                    if graph_flip_y {
+                        -1.0
+                    } else {
+                        1.0
+                    }
+                } + offset_y;
                 [x as f64, y as f64]
             })
             .collect(),
@@ -178,15 +205,6 @@ fn scans_to_plot_points(
         .radius(size)
         .shape(MarkerShape::Circle)
         .color(color)
-}
-
-fn cluster_to_plot_points(cluster: &Cluster2D, radius: f32) -> Points {
-    // let plot_points = PlotPoints::new([cluster.x as f64, cluster.y as f64]);
-    Points::new([cluster.x as f64, cluster.y as f64])
-        .filled(false)
-        .radius(radius)
-        .shape(MarkerShape::Circle)
-        .color(Color32::WHITE)
 }
 
 fn circle(x: f32, y: f32, radius: f32, colour: Color32) -> Line {
