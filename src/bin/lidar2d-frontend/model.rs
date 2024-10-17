@@ -2,7 +2,9 @@ use std::{collections::HashMap, thread, time::Duration};
 
 use log::{debug, error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
-use tether_lidar2d_consolidation::{clustering::Cluster2D, tracking_config::TrackingConfig};
+use tether_lidar2d_consolidation::{
+    clustering::Cluster2D, tracking::TrackedPoint2D, tracking_config::TrackingConfig,
+};
 
 use crate::ui::render_ui;
 
@@ -12,6 +14,7 @@ pub struct Inputs {
     pub config: PlugDefinition,
     pub scans: PlugDefinition,
     pub clusters: PlugDefinition,
+    pub tracked_points: PlugDefinition,
 }
 
 pub struct Outputs {
@@ -25,6 +28,7 @@ pub struct Model {
     pub tracking_config: Option<TrackingConfig>,
     pub scans: HashMap<String, Vec<(f32, f32)>>,
     pub clusters: Vec<Cluster2D>,
+    pub tracked_points: Vec<TrackedPoint2D>,
     pub point_size: f32,
     pub graph_y_flip: bool,
     pub is_editing: bool,
@@ -56,12 +60,17 @@ impl Default for Model {
             .build(&tether_agent)
             .expect("failed to create Input Plug");
 
+        let tracked_points = PlugOptionsBuilder::create_input("trackedPoints")
+            .build(&tether_agent)
+            .expect("failed to create Input Plug");
+
         Model {
             tether_agent,
             inputs: Inputs {
                 config: config_input,
                 scans,
                 clusters,
+                tracked_points,
             },
             outputs: Outputs {
                 config: config_output,
@@ -70,6 +79,7 @@ impl Default for Model {
             is_editing: false,
             scans: HashMap::new(),
             clusters: Vec::new(),
+            tracked_points: Vec::new(),
             point_size: 2.5,
             graph_y_flip: true,
         }
@@ -110,6 +120,14 @@ impl eframe::App for Model {
             if self.inputs.clusters.matches(topic) {
                 if let Ok(clusters) = rmp_serde::from_slice::<Vec<Cluster2D>>(msg.payload()) {
                     self.clusters = clusters;
+                }
+            }
+
+            if self.inputs.tracked_points.matches(topic) {
+                if let Ok(tracked_points) =
+                    rmp_serde::from_slice::<Vec<TrackedPoint2D>>(msg.payload())
+                {
+                    self.tracked_points = tracked_points;
                 }
             }
         }

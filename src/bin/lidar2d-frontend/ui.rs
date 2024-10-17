@@ -3,10 +3,10 @@ use std::f64::consts::TAU;
 use colors_transform::{Color, Rgb};
 use egui::{
     plot::{Line, MarkerShape, Plot, PlotPoint, PlotPoints, Points},
-    remap, Checkbox, Color32, Slider,
+    remap, Checkbox, Color32, Pos2, Slider,
 };
 
-use tether_lidar2d_consolidation::{clustering::Cluster2D, Point2D};
+use tether_lidar2d_consolidation::{clustering::Cluster2D, tracking::TrackedPoint2D, Point2D};
 
 use crate::model::Model;
 
@@ -128,6 +128,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             .data_aspect(1.0)
             // .center_x_axis(true)
             // .center_y_axis(true)
+            .height(500.)
             .include_y(10000.)
             .include_y(-10000.)
             .include_x(10000.)
@@ -178,6 +179,44 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 }
             }
         });
+
+        ui.heading("Tracking");
+
+        let dummy_plot = Plot::new("lines_demo").data_aspect(1.0);
+
+        dummy_plot.show(ui, |plot_ui| {
+            let mut all_points = Vec::new();
+
+            let points = tracked_points_to_plot_points(
+                &model.tracked_points,
+                model.point_size,
+                Color32::WHITE,
+            );
+            all_points.push(points);
+
+            for points_group in all_points {
+                plot_ui.points(points_group);
+            }
+
+            // model.
+            // plot_ui.line({
+            //     let n = 512;
+            //     let circle_center = Pos2::new(0.0, 0.0);
+            //     let circle_points: PlotPoints = (0..=n)
+            //         .map(|i| {
+            //             let t = remap(i as f64, 0.0..=(n as f64), 0.0..=TAU);
+            //             let r = 100.0;
+            //             [
+            //                 r * t.cos() + circle_center.x as f64,
+            //                 r * t.sin() + circle_center.y as f64,
+            //             ]
+            //         })
+            //         .collect();
+            //     Line::new(circle_points)
+            //         .color(Color32::from_rgb(100, 200, 100))
+            //         .name("circle")
+            // })
+        })
     });
 }
 
@@ -209,6 +248,41 @@ fn scans_to_plot_points(
                     * flip_y as f32
                     * graph_flip_factor
                     + offset_y * graph_flip_factor;
+                [x as f64, y as f64]
+            })
+            .collect(),
+    );
+    Points::new(plot_points)
+        .filled(true)
+        .radius(size)
+        .shape(MarkerShape::Circle)
+        .color(color)
+}
+
+fn tracked_points_to_plot_points(
+    tracked_points: &[TrackedPoint2D],
+    size: f32,
+    color: Color32,
+    // rotate: f32,
+    // offset: (f32, f32),
+    // flip_coords: (i8, i8),
+    // graph_flip_y: bool,
+) -> Points {
+    // let (offset_x, offset_y) = offset;
+    // let (flip_x, flip_y) = flip_coords;
+    // let graph_flip_factor = {
+    //     if graph_flip_y {
+    //         -1.0
+    //     } else {
+    //         1.0
+    //     }
+    // };
+    let plot_points = PlotPoints::new(
+        tracked_points
+            .iter()
+            .map(|tp| {
+                let x = tp.x;
+                let y = tp.y;
                 [x as f64, y as f64]
             })
             .collect(),
