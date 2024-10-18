@@ -187,8 +187,8 @@ fn measurement_to_point(angle: &f32, distance: &f32, device: &LidarDevice) -> Op
     {
         match flip_coords {
             None => Some((
-                *x + (angle + *rotation).to_radians().cos() * distance,
-                *y + (angle + *rotation).to_radians().sin() * distance,
+                *x + (angle + *rotation).to_radians().sin() * distance,
+                *y + (angle + *rotation).to_radians().cos() * distance,
             )),
             Some((flip_x, flip_y)) => {
                 let altered_angle = {
@@ -199,8 +199,8 @@ fn measurement_to_point(angle: &f32, distance: &f32, device: &LidarDevice) -> Op
                     }
                 };
                 Some((
-                    *x + altered_angle.to_radians().cos() * *distance * (*flip_x as f32),
-                    *y + altered_angle.to_radians().sin() * *distance * (*flip_y as f32),
+                    *x + altered_angle.to_radians().sin() * *distance * (*flip_x as f32),
+                    *y + altered_angle.to_radians().cos() * *distance * (*flip_y as f32),
                 ))
             }
         }

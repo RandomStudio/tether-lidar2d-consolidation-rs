@@ -17,11 +17,6 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             ui.label("Point radius");
             ui.add(Slider::new(&mut model.point_size, 1.0..=20.0));
         });
-        ui.horizontal(|ui| {
-            ui.label("Graph Y-flip");
-            ui.checkbox(&mut model.graph_y_flip, "flip");
-        });
-
         ui.separator();
 
         ui.heading("Tracking Configuration");
@@ -153,7 +148,6 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                             device.rotation,
                             (device.x, device.y),
                             device.flip_coords.unwrap_or((1, 1)),
-                            model.graph_y_flip,
                         );
                         all_points.push(points);
                     }
@@ -165,13 +159,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 for cluster in model.clusters.iter() {
                     plot_ui.line(circle(
                         cluster.x,
-                        cluster.y * {
-                            if model.graph_y_flip {
-                                -1.0
-                            } else {
-                                1.0
-                            }
-                        },
+                        cluster.y,
                         cluster.size / 2.0,
                         Color32::LIGHT_GRAY,
                     ))
@@ -193,25 +181,6 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             for points_group in all_points {
                 plot_ui.points(points_group);
             }
-
-            // model.
-            // plot_ui.line({
-            //     let n = 512;
-            //     let circle_center = Pos2::new(0.0, 0.0);
-            //     let circle_points: PlotPoints = (0..=n)
-            //         .map(|i| {
-            //             let t = remap(i as f64, 0.0..=(n as f64), 0.0..=TAU);
-            //             let r = 100.0;
-            //             [
-            //                 r * t.cos() + circle_center.x as f64,
-            //                 r * t.sin() + circle_center.y as f64,
-            //             ]
-            //         })
-            //         .collect();
-            //     Line::new(circle_points)
-            //         .color(Color32::from_rgb(100, 200, 100))
-            //         .name("circle")
-            // })
         })
     });
 }
@@ -223,27 +192,16 @@ fn scans_to_plot_points(
     rotate: f32,
     offset: (f32, f32),
     flip_coords: (i8, i8),
-    graph_flip_y: bool,
 ) -> Points {
     let (offset_x, offset_y) = offset;
     let (flip_x, flip_y) = flip_coords;
-    let graph_flip_factor = {
-        if graph_flip_y {
-            -1.0
-        } else {
-            1.0
-        }
-    };
+
     let plot_points = PlotPoints::new(
         measurements
             .iter()
             .map(|(angle, distance)| {
-                let x = (angle + rotate).to_radians().cos() * distance * flip_x as f32 + offset_x;
-                let y = (angle + rotate).to_radians().sin()
-                    * distance
-                    * flip_y as f32
-                    * graph_flip_factor
-                    + offset_y * graph_flip_factor;
+                let x = (angle + rotate).to_radians().sin() * distance * flip_x as f32 + offset_x;
+                let y = (angle + rotate).to_radians().cos() * distance * flip_y as f32 + offset_y;
                 [x as f64, y as f64]
             })
             .collect(),
@@ -296,7 +254,7 @@ fn circle(x: f32, y: f32, radius: f32, colour: Color32) -> Line {
         .map(|i| {
             let t = remap(i as f64, 0.0..=(n as f64), 0.0..=TAU);
             let r = radius as f64;
-            [r * t.cos() + x as f64, r * t.sin() + y as f64]
+            [r * t.sin() + x as f64, r * t.cos() + y as f64]
         })
         .collect();
     Line::new(circle_points).color(colour).name("circle")

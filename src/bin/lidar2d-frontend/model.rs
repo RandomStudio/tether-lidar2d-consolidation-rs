@@ -30,7 +30,6 @@ pub struct Model {
     pub clusters: Vec<Cluster2D>,
     pub tracked_points: Vec<TrackedPoint2D>,
     pub point_size: f32,
-    pub graph_y_flip: bool,
     pub is_editing: bool,
 }
 
@@ -81,7 +80,6 @@ impl Default for Model {
             clusters: Vec::new(),
             tracked_points: Vec::new(),
             point_size: 2.5,
-            graph_y_flip: true,
         }
     }
 }
