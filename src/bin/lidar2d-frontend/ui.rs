@@ -3,13 +3,10 @@ use std::f64::consts::TAU;
 use colors_transform::{Color, Rgb};
 use egui::{
     plot::{Line, MarkerShape, Plot, PlotPoints, Points},
-    remap, Checkbox, Color32, InnerResponse, Pos2, Slider,
+    remap, Checkbox, Color32, InnerResponse, Slider,
 };
 
-use egui_plot::PlotResponse;
-use tether_lidar2d_consolidation::{
-    tracking::TrackedPoint2D, tracking_config::ConfigRectCornerPoint, Point2D,
-};
+use tether_lidar2d_consolidation::{tracking::TrackedPoint2D, Point2D};
 
 use crate::model::{EditingCorner, Model};
 
@@ -29,6 +26,17 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 ui.label("No config received (yet)");
             }
             Some(tracking_config) => {
+                ui.heading("Automasking");
+                ui.horizontal(|ui| {
+                    if ui.button("New auto-calibration").clicked() {
+                        todo!();
+                    }
+                    if ui.button("Clear calibration").clicked() {
+                        todo!();
+                    }
+                });
+                ui.separator();
+
                 ui.heading("Tracking region (ROI)");
                 ui.horizontal(|ui| {
                     if ui
@@ -42,44 +50,32 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                         model.is_editing = true;
                     };
                     if ui
-                        .selectable_label(
-                            matches!(model.editing_corners, EditingCorner::TopLeft),
-                            "TopLeft",
-                        )
+                        .selectable_label(matches!(model.editing_corners, EditingCorner::A), "A")
                         .clicked()
                     {
                         model.is_editing = true;
-                        model.editing_corners = EditingCorner::TopLeft
+                        model.editing_corners = EditingCorner::A
                     };
                     if ui
-                        .selectable_label(
-                            matches!(model.editing_corners, EditingCorner::TopRight),
-                            "TopRight",
-                        )
+                        .selectable_label(matches!(model.editing_corners, EditingCorner::B), "B")
                         .clicked()
                     {
                         model.is_editing = true;
-                        model.editing_corners = EditingCorner::TopRight
+                        model.editing_corners = EditingCorner::B
                     };
                     if ui
-                        .selectable_label(
-                            matches!(model.editing_corners, EditingCorner::BottomRight),
-                            "BottomRight",
-                        )
+                        .selectable_label(matches!(model.editing_corners, EditingCorner::C), "C")
                         .clicked()
                     {
                         model.is_editing = true;
-                        model.editing_corners = EditingCorner::BottomRight
+                        model.editing_corners = EditingCorner::C
                     };
                     if ui
-                        .selectable_label(
-                            matches!(model.editing_corners, EditingCorner::BottomLeft),
-                            "BottomLeft",
-                        )
+                        .selectable_label(matches!(model.editing_corners, EditingCorner::D), "D")
                         .clicked()
                     {
                         model.is_editing = true;
-                        model.editing_corners = EditingCorner::BottomLeft
+                        model.editing_corners = EditingCorner::D
                     };
                 });
 
@@ -180,8 +176,6 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
         ui.heading("Scan Area");
         let markers_plot = Plot::new("scans")
             .data_aspect(1.0)
-            // .center_x_axis(true)
-            // .center_y_axis(true)
             .height(500.)
             .include_y(10000.)
             .include_y(-10000.)
@@ -234,16 +228,16 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 }
 
                 if let Some((a, b, c, d)) = tracking_config.region_of_interest() {
-                    let corner_points: Vec<(f32, f32, &str)> = [a, b, c, d]
+                    let corner_points: Vec<(f32, f32, &str)> = [d, c, b, a]
                         .iter()
                         .enumerate()
                         .map(|(index, cp)| {
                             (cp.x, cp.y, {
                                 match index {
-                                    0 => "topLeft",
-                                    1 => "topRight",
-                                    2 => "bottomRight",
-                                    3 => "bottomLeft",
+                                    0 => "A",
+                                    1 => "B",
+                                    2 => "C",
+                                    3 => "D",
                                     _ => "unknown",
                                 }
                             })
@@ -269,7 +263,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
         if response.clicked() {
             match &mut model.editing_corners {
                 EditingCorner::None => {
-                    model.editing_corners = EditingCorner::TopLeft;
+                    model.editing_corners = EditingCorner::A;
                 }
                 _ => {
                     model.editing_corners = EditingCorner::None;
@@ -281,23 +275,23 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             let x = x as f32;
             let y = y as f32;
             if let Some(config) = &mut model.tracking_config {
-                if let Some((a, b, c, d)) = &mut config.region_of_interest_mut() {
+                if let Some((d, c, b, a)) = &mut config.region_of_interest_mut() {
                     // println!("{}, {}", x, y);
                     match model.editing_corners {
                         EditingCorner::None => {}
-                        EditingCorner::TopLeft => {
+                        EditingCorner::A => {
                             a.x = x;
                             a.y = y;
                         }
-                        EditingCorner::TopRight => {
+                        EditingCorner::B => {
                             b.x = x;
                             b.y = y;
                         }
-                        EditingCorner::BottomRight => {
+                        EditingCorner::C => {
                             c.x = x;
                             c.y = y;
                         }
-                        EditingCorner::BottomLeft => {
+                        EditingCorner::D => {
                             d.x = x;
                             d.y = y;
                         }
@@ -310,10 +304,12 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
 
         let tracker_plot = Plot::new("tracker_plot")
             .data_aspect(1.0)
-            .include_x(-1.5)
-            .include_x(1.5)
-            .include_y(-1.5)
-            .include_y(1.5);
+            .include_x(-1.)
+            .include_x(3.0)
+            .include_y(-1.)
+            .include_y(2.0)
+            .auto_bounds_x()
+            .auto_bounds_y();
 
         tracker_plot.show(ui, |plot_ui| {
             let mut all_points = Vec::new();
@@ -360,20 +356,7 @@ fn tracked_points_to_plot_points(
     tracked_points: &[TrackedPoint2D],
     size: f32,
     color: Color32,
-    // rotate: f32,
-    // offset: (f32, f32),
-    // flip_coords: (i8, i8),
-    // graph_flip_y: bool,
 ) -> Points {
-    // let (offset_x, offset_y) = offset;
-    // let (flip_x, flip_y) = flip_coords;
-    // let graph_flip_factor = {
-    //     if graph_flip_y {
-    //         -1.0
-    //     } else {
-    //         1.0
-    //     }
-    // };
     let plot_points = PlotPoints::new(
         tracked_points
             .iter()

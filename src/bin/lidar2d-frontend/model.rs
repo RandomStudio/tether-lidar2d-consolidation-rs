@@ -23,10 +23,10 @@ pub struct Outputs {
 
 pub enum EditingCorner {
     None,
-    TopLeft,
-    TopRight,
-    BottomRight,
-    BottomLeft,
+    A,
+    B,
+    C,
+    D,
 }
 
 pub struct Model {
