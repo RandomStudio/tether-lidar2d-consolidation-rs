@@ -3,7 +3,7 @@ use std::{collections::HashMap, thread, time::Duration};
 use log::{debug, error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 use tether_lidar2d_consolidation::{
-    clustering::Cluster2D, tracking::TrackedPoint2D, tracking_config::TrackingConfig,
+    clustering::Cluster2D, tracking::TrackedPoint2D, tracking_config::TrackingConfig, Point2D,
 };
 
 use crate::ui::render_ui;
@@ -21,6 +21,14 @@ pub struct Outputs {
     pub config: PlugDefinition,
 }
 
+pub enum EditingCorner {
+    None,
+    TopLeft,
+    TopRight,
+    BottomRight,
+    BottomLeft,
+}
+
 pub struct Model {
     pub tether_agent: TetherAgent,
     pub inputs: Inputs,
@@ -29,6 +37,7 @@ pub struct Model {
     pub scans: HashMap<String, Vec<(f32, f32)>>,
     pub clusters: Vec<Cluster2D>,
     pub tracked_points: Vec<TrackedPoint2D>,
+    pub editing_corners: EditingCorner,
     pub point_size: f32,
     pub is_editing: bool,
 }
@@ -79,6 +88,7 @@ impl Default for Model {
             scans: HashMap::new(),
             clusters: Vec::new(),
             tracked_points: Vec::new(),
+            editing_corners: EditingCorner::None,
             point_size: 2.5,
         }
     }

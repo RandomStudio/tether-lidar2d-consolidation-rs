@@ -214,6 +214,10 @@ impl TrackingConfig {
         self.region_of_interest.as_ref()
     }
 
+    pub fn region_of_interest_mut(&mut self) -> Option<&mut CornerPoints> {
+        self.region_of_interest.as_mut()
+    }
+
     pub fn zones(&self) -> Option<&[Zone]> {
         self.zones.as_deref()
     }

@@ -2,13 +2,16 @@ use std::f64::consts::TAU;
 
 use colors_transform::{Color, Rgb};
 use egui::{
-    plot::{Line, MarkerShape, Plot, PlotPoint, PlotPoints, Points},
-    remap, Checkbox, Color32, Pos2, Slider,
+    plot::{Line, MarkerShape, Plot, PlotPoints, Points},
+    remap, Checkbox, Color32, InnerResponse, Pos2, Slider,
 };
 
-use tether_lidar2d_consolidation::{clustering::Cluster2D, tracking::TrackedPoint2D, Point2D};
+use egui_plot::PlotResponse;
+use tether_lidar2d_consolidation::{
+    tracking::TrackedPoint2D, tracking_config::ConfigRectCornerPoint, Point2D,
+};
 
-use crate::model::Model;
+use crate::model::{EditingCorner, Model};
 
 pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
     egui::SidePanel::left("config").show(ctx, |ui| {
@@ -26,6 +29,62 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 ui.label("No config received (yet)");
             }
             Some(tracking_config) => {
+                ui.heading("Tracking region (ROI)");
+                ui.horizontal(|ui| {
+                    if ui
+                        .selectable_label(
+                            matches!(model.editing_corners, EditingCorner::None),
+                            "None",
+                        )
+                        .clicked()
+                    {
+                        model.editing_corners = EditingCorner::None;
+                        model.is_editing = true;
+                    };
+                    if ui
+                        .selectable_label(
+                            matches!(model.editing_corners, EditingCorner::TopLeft),
+                            "TopLeft",
+                        )
+                        .clicked()
+                    {
+                        model.is_editing = true;
+                        model.editing_corners = EditingCorner::TopLeft
+                    };
+                    if ui
+                        .selectable_label(
+                            matches!(model.editing_corners, EditingCorner::TopRight),
+                            "TopRight",
+                        )
+                        .clicked()
+                    {
+                        model.is_editing = true;
+                        model.editing_corners = EditingCorner::TopRight
+                    };
+                    if ui
+                        .selectable_label(
+                            matches!(model.editing_corners, EditingCorner::BottomRight),
+                            "BottomRight",
+                        )
+                        .clicked()
+                    {
+                        model.is_editing = true;
+                        model.editing_corners = EditingCorner::BottomRight
+                    };
+                    if ui
+                        .selectable_label(
+                            matches!(model.editing_corners, EditingCorner::BottomLeft),
+                            "BottomLeft",
+                        )
+                        .clicked()
+                    {
+                        model.is_editing = true;
+                        model.editing_corners = EditingCorner::BottomLeft
+                    };
+                });
+
+                ui.separator();
+                ui.heading("Devices");
                 for device in tracking_config.devices_mut().iter_mut() {
                     ui.group(|ui| {
                         if model.is_editing {
@@ -129,10 +188,18 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             .include_x(10000.)
             .include_x(-10000.);
 
-        markers_plot.show(ui, |plot_ui| {
-            let mut all_points = Vec::new();
-
+        // let PlotResponse {
+        //     inner: pointer_coordinates,
+        //     ...
+        // } =
+        let InnerResponse {
+            response,
+            inner: (pointer_coordinate, bounds),
+            ..
+        } = markers_plot.show(ui, |plot_ui| {
             if let Some(tracking_config) = &model.tracking_config {
+                let mut all_points = Vec::new();
+
                 for device in tracking_config.devices() {
                     let rgb: Rgb = Rgb::from_hex_str(&device.color).unwrap();
                     let (r, g, b) = (
@@ -165,17 +232,93 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                     ))
                     // all_points.push(cluster_to_plot_points(cluster, radius_px.max(4.0)));
                 }
+
+                if let Some((a, b, c, d)) = tracking_config.region_of_interest() {
+                    let corner_points: Vec<(f32, f32, &str)> = [a, b, c, d]
+                        .iter()
+                        .enumerate()
+                        .map(|(index, cp)| {
+                            (cp.x, cp.y, {
+                                match index {
+                                    0 => "topLeft",
+                                    1 => "topRight",
+                                    2 => "bottomRight",
+                                    3 => "bottomLeft",
+                                    _ => "unknown",
+                                }
+                            })
+                        })
+                        .collect();
+
+                    for (x, y, name) in corner_points {
+                        let plot_points = PlotPoints::new(vec![[x as f64, y as f64]]);
+                        plot_ui.points(
+                            Points::new(plot_points)
+                                .filled(true)
+                                .radius(10.)
+                                .shape(MarkerShape::Circle)
+                                .name(name)
+                                .color(Color32::RED),
+                        );
+                    }
+                }
             }
+            (plot_ui.pointer_coordinate(), plot_ui.plot_bounds())
         });
+
+        if response.clicked() {
+            match &mut model.editing_corners {
+                EditingCorner::None => {
+                    model.editing_corners = EditingCorner::TopLeft;
+                }
+                _ => {
+                    model.editing_corners = EditingCorner::None;
+                }
+            }
+        }
+
+        if let Some(egui::plot::PlotPoint { x, y }) = pointer_coordinate {
+            let x = x as f32;
+            let y = y as f32;
+            if let Some(config) = &mut model.tracking_config {
+                if let Some((a, b, c, d)) = &mut config.region_of_interest_mut() {
+                    // println!("{}, {}", x, y);
+                    match model.editing_corners {
+                        EditingCorner::None => {}
+                        EditingCorner::TopLeft => {
+                            a.x = x;
+                            a.y = y;
+                        }
+                        EditingCorner::TopRight => {
+                            b.x = x;
+                            b.y = y;
+                        }
+                        EditingCorner::BottomRight => {
+                            c.x = x;
+                            c.y = y;
+                        }
+                        EditingCorner::BottomLeft => {
+                            d.x = x;
+                            d.y = y;
+                        }
+                    }
+                }
+            }
+        }
 
         ui.heading("Tracking");
 
-        let dummy_plot = Plot::new("lines_demo").data_aspect(1.0);
+        let tracker_plot = Plot::new("tracker_plot")
+            .data_aspect(1.0)
+            .include_x(-1.5)
+            .include_x(1.5)
+            .include_y(-1.5)
+            .include_y(1.5);
 
-        dummy_plot.show(ui, |plot_ui| {
+        tracker_plot.show(ui, |plot_ui| {
             let mut all_points = Vec::new();
 
-            let points = tracked_points_to_plot_points(&model.tracked_points, 20.0, Color32::WHITE);
+            let points = tracked_points_to_plot_points(&model.tracked_points, 10.0, Color32::WHITE);
             all_points.push(points);
 
             for points_group in all_points {
