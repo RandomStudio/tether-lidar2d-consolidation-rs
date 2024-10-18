@@ -286,13 +286,9 @@ pub fn handle_scans_message(
                         match tracking_config.update_device_masking(new_mask, serial) {
                             Ok(()) => {
                                 info!("Updated masking for device {}", serial);
-                                // Automasking was updated, so re-publish Device Config
-                                tether_agent
-                                    .encode_and_publish(config_output, &tracking_config)
-                                    .expect("failed to publish config");
                                 tracking_config
-                                    .write_config_to_file()
-                                    .expect("failed to save config");
+                                    .save_and_republish(tether_agent, config_output)
+                                    .expect("failed save and republish config");
                                 sampler.angles_with_thresholds.clear();
                             }
                             Err(()) => {

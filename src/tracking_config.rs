@@ -124,6 +124,7 @@ impl TrackingConfig {
     }
 
     pub fn write_config_to_file(&self) -> Result<(), Error> {
+        info!("Current state of config: {:?}", self);
         let text = serde_json::to_string_pretty(self).unwrap();
         match fs::write(&self.config_file_path, text) {
             Ok(()) => {
@@ -216,6 +217,44 @@ impl TrackingConfig {
     pub fn zones(&self) -> Option<&[Zone]> {
         self.zones.as_deref()
     }
+
+    pub fn handle_save_message(
+        &mut self,
+        tether_agent: &TetherAgent,
+        config_output: &PlugDefinition,
+        incoming_message: &Message,
+        perspective_transformer: &mut PerspectiveTransformer,
+    ) -> Result<(), Error> {
+        match self.parse_remote_config(incoming_message) {
+            Ok(()) => {
+                if let Some(region_of_interest) = self.region_of_interest() {
+                    info!("New Region of Interest was provided remotely; update the Perspective Transformer");
+                    let (c1, c2, c3, c4) = region_of_interest;
+                    let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
+                    perspective_transformer.set_new_quad(&corners);
+                }
+
+                info!("Remote-provided config parsed OK; now save to disk and (re) publish");
+                self.save_and_republish(tether_agent, config_output)
+                // Ok(())
+            }
+            Err(()) => Err(Error),
+        }
+    }
+
+    pub fn save_and_republish(
+        &self,
+        tether_agent: &TetherAgent,
+        config_output: &PlugDefinition,
+    ) -> Result<(), Error> {
+        info!("Saving config to disk and re-publishing via Tether...");
+        self.write_config_to_file().expect("failed to save to disk");
+
+        tether_agent
+            .encode_and_publish(config_output, self)
+            .expect("failed to publish config");
+        Ok(())
+    }
 }
 
 const PALETTE: &[&str] = &["#ffff00", "#00ffff", "#ff00ff"];
@@ -223,36 +262,4 @@ const PALETTE: &[&str] = &["#ffff00", "#00ffff", "#ff00ff"];
 fn pick_from_palette(index: usize) -> String {
     let c = PALETTE[index % PALETTE.len()];
     String::from(c)
-}
-
-pub fn handle_save_message(
-    tether_agent: &TetherAgent,
-    config_output: &PlugDefinition,
-    incoming_message: &Message,
-    config: &mut TrackingConfig,
-    perspective_transformer: &mut PerspectiveTransformer,
-) -> Result<(), Error> {
-    match config.parse_remote_config(incoming_message) {
-        Ok(()) => {
-            info!("Remote-provided config parsed OK; now save to disk and (re) publish");
-            config
-                .write_config_to_file()
-                .expect("failed to save to disk");
-
-            tether_agent
-                .encode_and_publish(config_output, &config)
-                .expect("failed to publish config");
-
-            if let Some(region_of_interest) = config.region_of_interest() {
-                info!("New Region of Interest was provided remotely; update the Perspective Transformer");
-                let (c1, c2, c3, c4) = region_of_interest;
-                let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                perspective_transformer.set_new_quad(&corners);
-                Ok(())
-            } else {
-                Ok(())
-            }
-        }
-        Err(()) => Err(Error),
-    }
 }

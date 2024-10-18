@@ -187,11 +187,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
         dummy_plot.show(ui, |plot_ui| {
             let mut all_points = Vec::new();
 
-            let points = tracked_points_to_plot_points(
-                &model.tracked_points,
-                model.point_size,
-                Color32::WHITE,
-            );
+            let points = tracked_points_to_plot_points(&model.tracked_points, 20.0, Color32::WHITE);
             all_points.push(points);
 
             for points_group in all_points {
