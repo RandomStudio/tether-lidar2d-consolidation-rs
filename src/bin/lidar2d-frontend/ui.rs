@@ -3,10 +3,12 @@ use std::f64::consts::TAU;
 use colors_transform::{Color, Rgb};
 use egui::{
     plot::{Line, MarkerShape, Plot, PlotPoints, Points},
-    remap, Checkbox, Color32, InnerResponse, Slider,
+    remap, Checkbox, Color32, InnerResponse, RichText, Slider,
 };
 
-use tether_lidar2d_consolidation::{tracking::TrackedPoint2D, Point2D};
+use tether_lidar2d_consolidation::{
+    automasking::AutoMaskMessage, tracking::TrackedPoint2D, Point2D,
+};
 
 use crate::model::{EditingCorner, Model};
 
@@ -29,10 +31,26 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 ui.heading("Automasking");
                 ui.horizontal(|ui| {
                     if ui.button("New auto-calibration").clicked() {
-                        todo!();
+                        model
+                            .tether_agent
+                            .encode_and_publish(
+                                &model.outputs.request_automask,
+                                AutoMaskMessage {
+                                    r#type: "new".into(),
+                                },
+                            )
+                            .expect("failed to publish automask command");
                     }
                     if ui.button("Clear calibration").clicked() {
-                        todo!();
+                        model
+                            .tether_agent
+                            .encode_and_publish(
+                                &model.outputs.request_automask,
+                                AutoMaskMessage {
+                                    r#type: "clear".into(),
+                                },
+                            )
+                            .expect("failed to publish automask command");
                     }
                 });
                 ui.separator();
@@ -149,7 +167,14 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                     });
                 }
                 if model.is_editing {
-                    if ui.button("Save 🖴").clicked() {
+                    if ui
+                        .button(
+                            RichText::new("Save 🖴")
+                                .color(Color32::LIGHT_GREEN)
+                                .size(16.0),
+                        )
+                        .clicked()
+                    {
                         model
                             .tether_agent
                             .encode_and_publish(&model.outputs.config, &model.tracking_config)

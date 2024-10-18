@@ -19,6 +19,7 @@ pub struct Inputs {
 
 pub struct Outputs {
     pub config: PlugDefinition,
+    pub request_automask: PlugDefinition,
 }
 
 pub enum EditingCorner {
@@ -60,10 +61,6 @@ impl Default for Model {
             .build(&tether_agent)
             .expect("failed to create Input Plug");
 
-        let config_output = PlugOptionsBuilder::create_output("saveLidarConfig")
-            .build(&tether_agent)
-            .expect("failed to create Output Plug");
-
         let clusters = PlugOptionsBuilder::create_input("clusters")
             .build(&tether_agent)
             .expect("failed to create Input Plug");
@@ -71,6 +68,14 @@ impl Default for Model {
         let tracked_points = PlugOptionsBuilder::create_input("trackedPoints")
             .build(&tether_agent)
             .expect("failed to create Input Plug");
+
+        let config_output = PlugOptionsBuilder::create_output("saveLidarConfig")
+            .build(&tether_agent)
+            .expect("failed to create Output Plug");
+
+        let request_automask = PlugOptionsBuilder::create_output("requestAutoMask")
+            .build(&tether_agent)
+            .expect("failed to create Output Plug");
 
         Model {
             tether_agent,
@@ -82,6 +87,7 @@ impl Default for Model {
             },
             outputs: Outputs {
                 config: config_output,
+                request_automask,
             },
             tracking_config: None,
             is_editing: false,
