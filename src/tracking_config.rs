@@ -1,10 +1,11 @@
 use log::{debug, error, info, warn};
+use quad_to_quad_transformer::QuadTransformer;
 use std::{collections::HashMap, fmt::Error, fs};
 use tether_agent::{mqtt::Message, PlugDefinition, TetherAgent};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{automasking::MaskThresholdMap, perspective::PerspectiveTransformer, presence::Zone};
+use crate::{automasking::MaskThresholdMap, presence::Zone};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]

@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
+use quad_to_quad_transformer::QuadTransformer;
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
 
 use crate::{
     automasking::AutoMaskSamplerMap,
     clustering::ClusteringSystem,
     movement::MovementAnalysis,
-    perspective::PerspectiveTransformer,
     presence::PresenceDetectionZones,
     settings::Cli,
     smoothing::{self, get_mode, SmoothSettings, TrackingSmoother},
@@ -92,7 +92,7 @@ impl Inputs {
 
 pub struct Systems {
     pub clustering_system: ClusteringSystem,
-    pub perspective_transformer: PerspectiveTransformer,
+    pub perspective_transformer: QuadTransformer,
     pub smoothing_system: TrackingSmoother,
     pub automask_samplers: AutoMaskSamplerMap,
     pub presence_detector: PresenceDetectionZones,
@@ -107,7 +107,7 @@ impl Systems {
             cli.clustering_max_cluster_size,
         );
 
-        let perspective_transformer = PerspectiveTransformer::new(
+        let perspective_transformer = QuadTransformer::new(
             match tracking_config.region_of_interest() {
                 Some(region_of_interest) => {
                     let (c1, c2, c3, c4) = region_of_interest;
