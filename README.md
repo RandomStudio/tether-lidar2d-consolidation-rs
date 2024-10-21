@@ -14,11 +14,12 @@ cargo install tether-lidar2d-consolidation
 
 ...and then run:
 ```
-tether-lidar2d-consolidation
+lidar2d-backend
+lidar2d-frontend
 ```
 
 ## Command-line configuration
-You can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `tether-lidar2d-consolidation --help` (installed) or `cargo run -- --help` (development)
+For the backend executable, you can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `lidar2d-backend --help` (installed) or `cargo run --bin lidar2d-backend -- --help` (development)
 
 Options are deliberately made to be almost identical to those used in the OG Agent, with a few notable exceptions:
 
@@ -54,7 +55,7 @@ In the beginning we tried [msgpack-simple](https://crates.io/crates/msgpack_simp
 ### Clustering
 We tried the library [kddbscan](https://crates.io/crates/kddbscan), but although this may well be more "accurate" it seems to run far too slowly. In any case, this is a very different algorithm from the DBSCAN used in the OG Agent.
 
-We then settled for the more humble (but apparently much more performant) [petal-clustering](https://crates.io/crates/petal-clustering). This in turn requires something called [ndarray](https://docs.rs/crate/ndarray/0.15.6) which seems very similar (and likely based on) [numpy](https://numpy.org/) for Python. 
+We then settled for the more humble (but apparently much more performant) [petal-clustering](https://crates.io/crates/petal-clustering). This in turn requires something called [ndarray](https://docs.rs/crate/ndarray/0.15.6) which seems very similar (and likely based on) [numpy](https://numpy.org/) for Python.
 
 For now, we use the DBSCAN method as per the OG Agent, but in future it might be worth tested the other supported mode in this library, [HDbscan](https://docs.rs/petal-clustering/0.5.1/petal_clustering/struct.HDbscan.html) which may be faster still (see [the paper](https://dl.acm.org/doi/abs/10.1145/3448016.3457296)).
 
@@ -80,7 +81,7 @@ So far
 Finally, used a combination of `ndarray` (which was already installed, to support the clustering calculations) and `nalgebra`.
 
 ### Logging
-We are using [log](https://crates.io/crates/log) and [env-logger](https://crates.io/crates/env_logger). Log level has been set to INFO by default, but can be overridden, for example by prefixing with an environment variable, e.g. 
+We are using [log](https://crates.io/crates/log) and [env-logger](https://crates.io/crates/env_logger). Log level has been set to INFO by default, but can be overridden, for example by prefixing with an environment variable, e.g.
 ```
 RUST_LOG=debug cargo run
 ```
@@ -88,7 +89,7 @@ RUST_LOG=debug cargo run
 ### Command-line configuration
 We are using [clap](https://crates.io/crates/clap) which does command-line argument parsing only (no use of files, environment variables, etc.)
 
-Something like [more-config](https://crates.io/crates/more-config) could be useful, since it includes functionality similar to the [rc](https://www.npmjs.com/package/rc) package for NodeJS. 
+Something like [more-config](https://crates.io/crates/more-config) could be useful, since it includes functionality similar to the [rc](https://www.npmjs.com/package/rc) package for NodeJS.
 
 ## Some differences from OG version
 - There is no `requestLlidarConfig` Plug any more; the `retain` feature of MQTT is used to provide a persistent and up-to-date config for all clients
