@@ -2832,7 +2832,7 @@ dependencies = [
 
 [[package]]
 name = "tether-lidar2d-consolidation"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-std",
  "clap",
