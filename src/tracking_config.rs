@@ -228,7 +228,7 @@ impl TrackingConfig {
         tether_agent: &TetherAgent,
         config_output: &PlugDefinition,
         incoming_message: &Message,
-        perspective_transformer: &mut PerspectiveTransformer,
+        perspective_transformer: &mut QuadTransformer,
     ) -> Result<(), Error> {
         match self.parse_remote_config(incoming_message) {
             Ok(()) => {

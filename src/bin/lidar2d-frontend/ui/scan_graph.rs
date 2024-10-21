@@ -19,7 +19,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
 
     let InnerResponse {
         response,
-        inner: (pointer_coordinate, bounds),
+        inner: (pointer_coordinate, _bounds),
         ..
     } = markers_plot.show(ui, |plot_ui| {
         if let Some(tracking_config) = &model.tracking_config {

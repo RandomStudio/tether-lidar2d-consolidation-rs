@@ -2,7 +2,6 @@ pub mod automasking;
 pub mod clustering;
 pub mod consolidator_system;
 pub mod movement;
-pub mod perspective;
 pub mod presence;
 pub mod settings;
 pub mod smoothing;

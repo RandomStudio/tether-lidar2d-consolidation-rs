@@ -3,10 +3,9 @@ mod tracking_graph;
 
 use std::f64::consts::TAU;
 
-use colors_transform::{Color, Rgb};
 use egui::{
-    plot::{Line, MarkerShape, Plot, PlotPoints, Points, Polygon},
-    remap, Checkbox, Color32, InnerResponse, RichText, Slider,
+    plot::{Line, MarkerShape, PlotPoints, Points},
+    remap, Checkbox, Color32, RichText, Slider,
 };
 
 use scan_graph::render_scan_graph;
@@ -277,7 +276,7 @@ pub fn draw_line(x1: f32, y1: f32, x2: f32, y2: f32) -> Line {
     let slope = (y2 - y1) / (x2 - x1);
     let intercept = y1 - slope * x1;
 
-    let range_x = if (x1 < x2) {
+    let range_x = if x1 < x2 {
         (x1 as f64)..(x2 as f64)
     } else {
         (x2 as f64)..(x1 as f64)
