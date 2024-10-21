@@ -58,13 +58,16 @@ impl AutoMaskSampler {
     }
 }
 
+/// Process a command relating to "automasking", returns true in the
+/// Result if the action requires re-saving and re-publishing the
+/// updated Tracking Config.
 pub fn handle_automask_message(
     incoming_message: &Message,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
     config: &mut TrackingConfig,
     scans_required: usize,
     threshold_margin: f32,
-) -> Result<(), ()> {
+) -> Result<bool, ()> {
     let payload = incoming_message.payload().to_vec();
 
     if let Ok(automask_command) = rmp_serde::from_slice::<AutoMaskMessage>(&payload) {
@@ -80,13 +83,13 @@ pub fn handle_automask_message(
                         AutoMaskSampler::new(scans_required, threshold_margin),
                     );
                 }
-                Ok(())
+                Ok(false)
             }
             "clear" => {
                 info!("request CLEAR all device masking thresholds");
                 automask_samplers.clear();
                 config.clear_device_masking();
-                Ok(())
+                Ok(true)
             }
             _ => {
                 error!("Unrecognised command type for RequestAutoMask message");

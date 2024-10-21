@@ -187,8 +187,8 @@ fn measurement_to_point(angle: &f32, distance: &f32, device: &LidarDevice) -> Op
     {
         match flip_coords {
             None => Some((
-                *x + (angle + *rotation).to_radians().cos() * distance,
-                *y + (angle + *rotation).to_radians().sin() * distance,
+                *x + (angle + *rotation).to_radians().sin() * distance,
+                *y + (angle + *rotation).to_radians().cos() * distance,
             )),
             Some((flip_x, flip_y)) => {
                 let altered_angle = {
@@ -199,8 +199,8 @@ fn measurement_to_point(angle: &f32, distance: &f32, device: &LidarDevice) -> Op
                     }
                 };
                 Some((
-                    *x + altered_angle.to_radians().cos() * *distance * (*flip_x as f32),
-                    *y + altered_angle.to_radians().sin() * *distance * (*flip_y as f32),
+                    *x + altered_angle.to_radians().sin() * *distance * (*flip_x as f32),
+                    *y + altered_angle.to_radians().cos() * *distance * (*flip_y as f32),
                 ))
             }
         }
@@ -286,13 +286,9 @@ pub fn handle_scans_message(
                         match tracking_config.update_device_masking(new_mask, serial) {
                             Ok(()) => {
                                 info!("Updated masking for device {}", serial);
-                                // Automasking was updated, so re-publish Device Config
-                                tether_agent
-                                    .encode_and_publish(config_output, &tracking_config)
-                                    .expect("failed to publish config");
                                 tracking_config
-                                    .write_config_to_file()
-                                    .expect("failed to save config");
+                                    .save_and_republish(tether_agent, config_output)
+                                    .expect("failed save and republish config");
                                 sampler.angles_with_thresholds.clear();
                             }
                             Err(()) => {

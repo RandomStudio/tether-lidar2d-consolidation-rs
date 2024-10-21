@@ -1,0 +1,150 @@
+use colors_transform::{Color, Rgb};
+use egui::{
+    plot::{MarkerShape, Plot, PlotPoints, Points},
+    Color32, InnerResponse, Ui,
+};
+
+use crate::model::{EditingCorner, Model};
+
+use super::{draw_circle, draw_line, scans_to_plot_points};
+
+pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
+    let markers_plot = Plot::new("scans")
+        .data_aspect(1.0)
+        .height(500.)
+        .include_y(10000.)
+        .include_y(-10000.)
+        .include_x(10000.)
+        .include_x(-10000.);
+
+    let InnerResponse {
+        response,
+        inner: (pointer_coordinate, _bounds),
+        ..
+    } = markers_plot.show(ui, |plot_ui| {
+        if let Some(tracking_config) = &model.tracking_config {
+            let mut all_points = Vec::new();
+
+            for device in tracking_config.devices() {
+                let rgb: Rgb = Rgb::from_hex_str(&device.color).unwrap();
+                let (r, g, b) = (
+                    rgb.get_red() as u8,
+                    rgb.get_green() as u8,
+                    rgb.get_blue() as u8,
+                );
+                if let Some(scans_this_device) = model.scans.get(&device.serial) {
+                    let points = scans_to_plot_points(
+                        scans_this_device,
+                        model.point_size,
+                        Color32::from_rgb(r, g, b),
+                        device.rotation,
+                        (device.x, device.y),
+                        device.flip_coords.unwrap_or((1, 1)),
+                    );
+                    all_points.push(points);
+                }
+            }
+            for points_group in all_points {
+                plot_ui.points(points_group);
+            }
+
+            for cluster in model.clusters.iter() {
+                plot_ui.line(draw_circle(
+                    cluster.x,
+                    cluster.y,
+                    cluster.size / 2.0,
+                    Color32::LIGHT_GRAY,
+                ))
+                // all_points.push(cluster_to_plot_points(cluster, radius_px.max(4.0)));
+            }
+
+            if let Some((a, b, c, d)) = tracking_config.region_of_interest() {
+                let corner_points: Vec<(f32, f32, &str)> = [d, c, b, a]
+                    .iter()
+                    .enumerate()
+                    .map(|(index, cp)| {
+                        (cp.x, cp.y, {
+                            match index {
+                                0 => "A",
+                                1 => "B",
+                                2 => "C",
+                                3 => "D",
+                                _ => "unknown",
+                            }
+                        })
+                    })
+                    .collect();
+
+                for (x, y, name) in corner_points {
+                    let plot_points = PlotPoints::new(vec![[x as f64, y as f64]]);
+                    plot_ui.points(
+                        Points::new(plot_points)
+                            .filled(true)
+                            .radius(10.)
+                            .shape(MarkerShape::Circle)
+                            .name(name)
+                            .color(Color32::from_rgba_unmultiplied(255, 0, 0, 128)),
+                    );
+                }
+
+                let line1 = draw_line(a.x, a.y, d.x, d.y);
+                plot_ui.line(line1.color(Color32::RED));
+                let line2 = draw_line(d.x, d.y, c.x, c.y);
+                plot_ui.line(line2.color(Color32::RED));
+                let line3 = draw_line(c.x, c.y, b.x, b.y);
+                plot_ui.line(line3.color(Color32::RED));
+                let line4 = draw_line(b.x, b.y, a.x, a.y);
+                plot_ui.line(line4.color(Color32::RED));
+            }
+        }
+        (plot_ui.pointer_coordinate(), plot_ui.plot_bounds())
+    });
+
+    if response.clicked() {
+        model.is_editing = true;
+        match &mut model.editing_corners {
+            EditingCorner::None => {
+                model.editing_corners = EditingCorner::A;
+            }
+            EditingCorner::A => {
+                model.editing_corners = EditingCorner::B;
+            }
+            EditingCorner::B => {
+                model.editing_corners = EditingCorner::C;
+            }
+            EditingCorner::C => {
+                model.editing_corners = EditingCorner::D;
+            }
+            EditingCorner::D => model.editing_corners = EditingCorner::None,
+        }
+    }
+
+    if let Some(egui::plot::PlotPoint { x, y }) = pointer_coordinate {
+        let x = x as f32;
+        let y = y as f32;
+        if let Some(config) = &mut model.tracking_config {
+            if let Some((d, c, b, a)) = &mut config.region_of_interest_mut() {
+                // println!("{}, {}", x, y);
+                match model.editing_corners {
+                    EditingCorner::None => {}
+                    EditingCorner::A => {
+                        a.x = x;
+                        a.y = y;
+                    }
+                    EditingCorner::B => {
+                        b.x = x;
+                        b.y = y;
+                    }
+                    EditingCorner::C => {
+                        c.x = x;
+                        c.y = y;
+                    }
+                    EditingCorner::D => {
+                        d.x = x;
+                        d.y = y;
+                    }
+                }
+            }
+        }
+    }
+}

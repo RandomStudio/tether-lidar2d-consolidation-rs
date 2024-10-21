@@ -9,8 +9,13 @@ repository = "https://github.com/RandomStudio/tether-lidar2d-consolidation-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+
 [[bin]]
-name = "tether-lidar2d-consolidation"
+name = "lidar2d-backend"
+
+[[bin]]
+name = "lidar2d-frontend"
 
 [dependencies]
 async-std = "1"
@@ -25,5 +30,9 @@ clap = { version = "4.1.1", features = ["derive"] }
 env_logger = "0.7"
 log = "0.4.17"
 tether-agent = "0.12"
-# quad-to-quad-transformer = { path = "../../quad-to-quad-transformer"}
+# The dependencies below should be tied to options/feature set for gui
+egui = "0.21.0"
+eframe = "0.21.3"
+egui_plot = "0.24.0"
+colors-transform = "0.2.11"
 quad-to-quad-transformer = "0.1"

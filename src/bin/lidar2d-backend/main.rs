@@ -1,6 +1,6 @@
 use clap::Parser;
-use consolidator_system::{Outputs, Systems};
-use tracking_config::TrackingConfig;
+use tether_lidar2d_consolidation::consolidator_system::{Outputs, Systems};
+use tether_lidar2d_consolidation::tracking_config::TrackingConfig;
 
 use env_logger::Env;
 use log::{debug, info};
@@ -8,25 +8,12 @@ use std::thread;
 use std::time::Duration;
 use tether_agent::TetherAgentOptionsBuilder;
 
-mod automasking;
-mod clustering;
-mod consolidator_system;
-mod movement;
-mod presence;
-mod settings;
-mod smoothing;
-mod tracking;
-mod tracking_config;
-
-use crate::automasking::handle_automask_message;
-use crate::clustering::handle_scans_message;
-use crate::consolidator_system::Inputs;
-use crate::movement::get_total_movement;
-use crate::presence::publish_presence_change;
-use crate::settings::Cli;
-use crate::tracking_config::handle_save_message;
-
-pub type Point2D = (f32, f32);
+use tether_lidar2d_consolidation::automasking::handle_automask_message;
+use tether_lidar2d_consolidation::clustering::handle_scans_message;
+use tether_lidar2d_consolidation::consolidator_system::Inputs;
+use tether_lidar2d_consolidation::movement::get_total_movement;
+use tether_lidar2d_consolidation::presence::publish_presence_change;
+use tether_lidar2d_consolidation::settings::Cli;
 
 fn main() {
     let cli = Cli::parse();
@@ -100,26 +87,31 @@ fn main() {
             }
 
             if inputs.save_config_input.matches(&topic) {
-                handle_save_message(
-                    &tether_agent,
-                    &outputs.config_output,
-                    &message,
-                    &mut tracking_config,
-                    &mut systems.perspective_transformer,
-                )
-                .expect("config should save");
+                tracking_config
+                    .handle_save_message(
+                        &tether_agent,
+                        &outputs.config_output,
+                        &message,
+                        &mut systems.perspective_transformer,
+                    )
+                    .expect("config failed to update and save");
             }
 
             if inputs.request_automask_input.matches(&topic) {
                 info!("requestAutoMask message");
-                handle_automask_message(
+                if let Ok(should_update_config) = handle_automask_message(
                     &message,
                     &mut systems.automask_samplers,
                     &mut tracking_config,
                     cli.automask_scans_required,
                     cli.automask_threshold_margin,
-                )
-                .expect("failed to publish automask config");
+                ) {
+                    if should_update_config {
+                        tracking_config
+                            .save_and_republish(&tether_agent, &outputs.config_output)
+                            .expect("failed to save and republish config");
+                    }
+                }
             }
         }
 
