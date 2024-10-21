@@ -20,4 +20,8 @@ impl TrackedPoint2D {
     pub fn set_velocity(&mut self, velocity: Option<[f32; 2]>) {
         self.velocity = velocity;
     }
+
+    pub fn id(&self) -> usize {
+        self.id
+    }
 }

@@ -1,5 +1,8 @@
 use crate::model::Model;
-use egui::{plot::Plot, Color32, Ui};
+use egui::{
+    plot::{Plot, PlotPoint, Text},
+    Color32, Ui,
+};
 
 use super::tracked_points_to_plot_points;
 
@@ -30,6 +33,13 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
             Color32::LIGHT_GREEN,
         );
         all_points.push(smoothed_points);
+
+        for p in &model.smoothed_tracked_points {
+            plot_ui.text(
+                Text::new(PlotPoint::new(p.x + 0.1, p.y), format!("#{}", p.id()))
+                    .color(Color32::WHITE),
+            );
+        }
 
         for points_group in all_points {
             plot_ui.points(points_group);
