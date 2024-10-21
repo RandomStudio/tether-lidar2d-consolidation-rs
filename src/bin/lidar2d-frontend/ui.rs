@@ -339,8 +339,19 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
         tracker_plot.show(ui, |plot_ui| {
             let mut all_points = Vec::new();
 
-            let points = tracked_points_to_plot_points(&model.tracked_points, 10.0, Color32::WHITE);
-            all_points.push(points);
+            let raw_points = tracked_points_to_plot_points(
+                &model.raw_tracked_points,
+                12.0,
+                Color32::from_rgba_unmultiplied(200, 200, 200, 8),
+            );
+            all_points.push(raw_points);
+
+            let smoothed_points = tracked_points_to_plot_points(
+                &model.smoothed_tracked_points,
+                5.0,
+                Color32::LIGHT_GREEN,
+            );
+            all_points.push(smoothed_points);
 
             for points_group in all_points {
                 plot_ui.points(points_group);

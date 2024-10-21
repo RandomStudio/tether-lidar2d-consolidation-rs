@@ -31,7 +31,7 @@ impl Outputs {
 
         // Clusters, tracking outputs
         let tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
-            .qos(Some(1))
+            .qos(Some(0))
             .build(tether_agent)
             .expect("failed to create Output Plug");
         let clusters_output = PlugOptionsBuilder::create_output("clusters")
@@ -40,9 +40,8 @@ impl Outputs {
             .expect("failed to create Output Plug");
 
         // Smoothed tracked points output
-        let smoothed_tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
+        let smoothed_tracking_output = PlugOptionsBuilder::create_output("smoothedTrackedPoints")
             .qos(Some(1))
-            .role(Some("trackingSmooth"))
             .build(tether_agent)
             .expect("failed to create Output Plug");
 

@@ -3,7 +3,7 @@ use std::{collections::HashMap, thread, time::Duration};
 use log::{debug, error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 use tether_lidar2d_consolidation::{
-    clustering::Cluster2D, tracking::TrackedPoint2D, tracking_config::TrackingConfig, Point2D,
+    clustering::Cluster2D, tracking::TrackedPoint2D, tracking_config::TrackingConfig,
 };
 
 use crate::ui::render_ui;
@@ -14,7 +14,8 @@ pub struct Inputs {
     pub config: PlugDefinition,
     pub scans: PlugDefinition,
     pub clusters: PlugDefinition,
-    pub tracked_points: PlugDefinition,
+    pub raw_tracked_points: PlugDefinition,
+    pub smoothed_tracked_points: PlugDefinition,
 }
 
 pub struct Outputs {
@@ -37,7 +38,8 @@ pub struct Model {
     pub tracking_config: Option<TrackingConfig>,
     pub scans: HashMap<String, Vec<(f32, f32)>>,
     pub clusters: Vec<Cluster2D>,
-    pub tracked_points: Vec<TrackedPoint2D>,
+    pub raw_tracked_points: Vec<TrackedPoint2D>,
+    pub smoothed_tracked_points: Vec<TrackedPoint2D>,
     pub editing_corners: EditingCorner,
     pub point_size: f32,
     pub is_editing: bool,
@@ -65,7 +67,11 @@ impl Default for Model {
             .build(&tether_agent)
             .expect("failed to create Input Plug");
 
-        let tracked_points = PlugOptionsBuilder::create_input("trackedPoints")
+        let raw_tracked_points = PlugOptionsBuilder::create_input("trackedPoints")
+            .build(&tether_agent)
+            .expect("failed to create Input Plug");
+
+        let smoothed_tracked_points = PlugOptionsBuilder::create_input("smoothedTrackedPoints")
             .build(&tether_agent)
             .expect("failed to create Input Plug");
 
@@ -83,7 +89,8 @@ impl Default for Model {
                 config: config_input,
                 scans,
                 clusters,
-                tracked_points,
+                raw_tracked_points,
+                smoothed_tracked_points,
             },
             outputs: Outputs {
                 config: config_output,
@@ -93,7 +100,8 @@ impl Default for Model {
             is_editing: false,
             scans: HashMap::new(),
             clusters: Vec::new(),
-            tracked_points: Vec::new(),
+            raw_tracked_points: Vec::new(),
+            smoothed_tracked_points: Vec::new(),
             editing_corners: EditingCorner::None,
             point_size: 2.5,
         }
@@ -137,11 +145,19 @@ impl eframe::App for Model {
                 }
             }
 
-            if self.inputs.tracked_points.matches(topic) {
+            if self.inputs.raw_tracked_points.matches(topic) {
                 if let Ok(tracked_points) =
                     rmp_serde::from_slice::<Vec<TrackedPoint2D>>(msg.payload())
                 {
-                    self.tracked_points = tracked_points;
+                    self.raw_tracked_points = tracked_points;
+                }
+            }
+
+            if self.inputs.smoothed_tracked_points.matches(topic) {
+                if let Ok(tracked_points) =
+                    rmp_serde::from_slice::<Vec<TrackedPoint2D>>(msg.payload())
+                {
+                    self.smoothed_tracked_points = tracked_points;
                 }
             }
         }
