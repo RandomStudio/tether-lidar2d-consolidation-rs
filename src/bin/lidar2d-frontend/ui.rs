@@ -2,7 +2,7 @@ use std::f64::consts::TAU;
 
 use colors_transform::{Color, Rgb};
 use egui::{
-    plot::{Line, MarkerShape, Plot, PlotPoints, Points},
+    plot::{Line, MarkerShape, Plot, PlotPoints, Points, Polygon},
     remap, Checkbox, Color32, InnerResponse, RichText, Slider,
 };
 
@@ -277,22 +277,39 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                                 .radius(10.)
                                 .shape(MarkerShape::Circle)
                                 .name(name)
-                                .color(Color32::RED),
+                                .color(Color32::from_rgba_unmultiplied(255, 0, 0, 128)),
                         );
                     }
+
+                    let line1 = line(a.x, a.y, d.x, d.y);
+                    plot_ui.line(line1.color(Color32::RED));
+                    let line2 = line(d.x, d.y, c.x, c.y);
+                    plot_ui.line(line2.color(Color32::RED));
+                    let line3 = line(c.x, c.y, b.x, b.y);
+                    plot_ui.line(line3.color(Color32::RED));
+                    let line4 = line(b.x, b.y, a.x, a.y);
+                    plot_ui.line(line4.color(Color32::RED));
                 }
             }
             (plot_ui.pointer_coordinate(), plot_ui.plot_bounds())
         });
 
         if response.clicked() {
+            model.is_editing = true;
             match &mut model.editing_corners {
                 EditingCorner::None => {
                     model.editing_corners = EditingCorner::A;
                 }
-                _ => {
-                    model.editing_corners = EditingCorner::None;
+                EditingCorner::A => {
+                    model.editing_corners = EditingCorner::B;
                 }
+                EditingCorner::B => {
+                    model.editing_corners = EditingCorner::C;
+                }
+                EditingCorner::C => {
+                    model.editing_corners = EditingCorner::D;
+                }
+                EditingCorner::D => model.editing_corners = EditingCorner::None,
             }
         }
 
@@ -420,4 +437,21 @@ fn circle(x: f32, y: f32, radius: f32, colour: Color32) -> Line {
         })
         .collect();
     Line::new(circle_points).color(colour).name("circle")
+}
+
+fn line(x1: f32, y1: f32, x2: f32, y2: f32) -> Line {
+    let slope = (y2 - y1) / (x2 - x1);
+    let intercept = y1 - slope * x1;
+
+    let range_x = if (x1 < x2) {
+        (x1 as f64)..(x2 as f64)
+    } else {
+        (x2 as f64)..(x1 as f64)
+    };
+
+    Line::new(PlotPoints::from_explicit_callback(
+        move |x| (slope as f64) * x + (intercept as f64),
+        range_x,
+        256,
+    ))
 }
