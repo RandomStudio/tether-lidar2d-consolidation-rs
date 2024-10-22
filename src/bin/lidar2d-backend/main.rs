@@ -1,5 +1,6 @@
 use clap::Parser;
 use tether_lidar2d_consolidation::consolidator_system::{Outputs, Systems};
+use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D};
 use tether_lidar2d_consolidation::tracking_config::TrackingConfig;
 
 use env_logger::Env;
@@ -9,7 +10,9 @@ use std::time::Duration;
 use tether_agent::TetherAgentOptionsBuilder;
 
 use tether_lidar2d_consolidation::automasking::handle_automask_message;
-use tether_lidar2d_consolidation::clustering::handle_scans_message;
+use tether_lidar2d_consolidation::clustering::{
+    handle_external_tracking_message, handle_scans_message,
+};
 use tether_lidar2d_consolidation::consolidator_system::Inputs;
 use tether_lidar2d_consolidation::movement::get_total_movement;
 use tether_lidar2d_consolidation::presence::publish_presence_change;
@@ -22,6 +25,7 @@ fn main() {
 
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
         .filter_module("paho_mqtt", log::LevelFilter::Warn)
+        .filter_module("tether_agent", log::LevelFilter::Warn)
         .init();
 
     debug!("Started; args: {:?}", cli);
@@ -84,6 +88,39 @@ fn main() {
                     &outputs,
                     cli.default_min_distance_threshold,
                 )
+            }
+
+            if inputs.external_tracking_input.matches(&topic) {
+                let serial_number = match &topic {
+                    tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
+                    tether_agent::TetherOrCustomTopic::Custom(s) => {
+                        panic!(
+                            "The topic \"{}\" is not expected for Lidar scan messages",
+                            &s
+                        );
+                    }
+                };
+
+                let position_data: BodyFrame3D =
+                    rmp_serde::from_slice(message.payload()).expect("failed to decode bodyFrames");
+
+                for body in position_data.iter() {
+                    let Body3D { body_xyz, .. } = body;
+                    let (x, y, z) = *body_xyz;
+                    debug!(
+                        "External body tracking position received: {},{},{}",
+                        x, y, z
+                    );
+                    let points = vec![(x, z)];
+                    handle_external_tracking_message(
+                        serial_number,
+                        &points,
+                        &mut tracking_config,
+                        &tether_agent,
+                        &mut systems,
+                        &outputs,
+                    );
+                }
             }
 
             if inputs.save_config_input.matches(&topic) {

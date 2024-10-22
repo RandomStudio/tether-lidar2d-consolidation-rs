@@ -48,6 +48,7 @@ impl TrackingSmoother {
         }
     }
 
+    /// Add some raw points (clusters, position data, etc.) to the tracking-smoothing system
     pub fn update_tracked_points(&mut self, points: &[Point2D]) {
         points.iter().for_each(|new_point| {
             // Fist, check if this "is" actually an existing point that wasn't (yet)

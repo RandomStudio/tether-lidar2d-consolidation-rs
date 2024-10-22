@@ -1,6 +1,6 @@
 use crate::{
     consolidator_system::{Outputs, Systems},
-    tracking_config::{LidarDevice, TrackingConfig},
+    tracking_config::{ExternalTracker, LidarDevice, TrackingConfig},
     Point2D,
 };
 
@@ -82,7 +82,6 @@ impl ClusteringSystem {
 
         let (clusters, outliers) = self.clustering_engine.fit(&combined_points);
 
-        debug!("Clustering done");
         debug!(
             "Found {} clusters, {} outliers",
             clusters.len(),
@@ -113,6 +112,47 @@ impl ClusteringSystem {
 
         // let payload: Vec<u8> = to_vec_named(&clusters).unwrap();
         // let message = mqtt::Message::new(&self.output_topic, payload, mqtt::QOS_0);
+
+        Ok(clusters)
+    }
+
+    pub fn update_from_external_tracker(
+        &mut self,
+        points: &[Point2D],
+        tracker: &ExternalTracker,
+    ) -> Result<Vec<Cluster2D>, ()> {
+        self.scan_points.insert(
+            String::from(&tracker.serial),
+            points.iter().map(|p| *p).collect(),
+        );
+
+        // TODO: from this point, a lot of repetition of body of
+        // function update_from_scan
+        let combined_points = self.combine_all_points();
+
+        let (clusters, _outliers) = self.clustering_engine.fit(&combined_points);
+
+        // Shadowed "clusters" - now as Cluster2D ("points")
+        let clusters: Vec<Cluster2D> = clusters
+            .iter()
+            .map(|c| {
+                let (cluster_index, point_indexes) = c;
+                let matched_points = point_indexes
+                    .iter()
+                    .map(|i| {
+                        let point = combined_points.row(*i);
+                        (point[0], point[1])
+                        // Point2D {
+                        //     x: point[0],
+                        //     y: point[1],
+                        // }
+                    })
+                    .collect();
+
+                consolidate_cluster_points(matched_points, *cluster_index)
+            })
+            .filter(|cluster| cluster.size <= self.max_cluster_size)
+            .collect();
 
         Ok(clusters)
     }
@@ -253,9 +293,9 @@ pub fn handle_scans_message(
 
     // If an unknown device was found (and added), re-publish the Device config
     if let Some(()) = tracking_config.check_or_create_device(serial, default_min_distance) {
-        tether_agent
-            .encode_and_publish(config_output, &tracking_config)
-            .expect("failed to publish config");
+        tracking_config
+            .save_and_republish(tether_agent, config_output)
+            .expect("failed to save and republish config");
     }
 
     if let Some(device) = tracking_config.get_device(serial) {
@@ -300,6 +340,61 @@ pub fn handle_scans_message(
             }
         }
     } else {
-        error!("Failed to find device; it should have been added if it was unknown");
+        panic!("Failed to find device; it should have been added if it was unknown");
+    }
+}
+
+pub fn handle_external_tracking_message(
+    serial: &str,
+    points: &[Point2D],
+    tracking_config: &mut TrackingConfig,
+    tether_agent: &TetherAgent,
+    systems: &mut Systems,
+    outputs: &Outputs,
+) {
+    let Systems {
+        clustering_system,
+        perspective_transformer,
+        smoothing_system,
+        ..
+    } = systems;
+
+    let Outputs {
+        config_output,
+        clusters_output,
+        tracking_output,
+        ..
+    } = outputs;
+
+    // If an unknown device was found (and added), re-publish the Device config
+    if let Some(()) = tracking_config.check_or_create_external_tracker(serial) {
+        tracking_config
+            .save_and_republish(tether_agent, config_output)
+            .expect("failed to save and republish config");
+    }
+
+    if let Some(tracker) = tracking_config.get_external_tracker(serial) {
+        if let Ok(clusters) = clustering_system.update_from_external_tracker(points, tracker) {
+            tether_agent
+                .encode_and_publish(clusters_output, &clusters)
+                .expect("failed to publish clusters");
+
+            if perspective_transformer.is_ready() {
+                let points: Vec<Point2D> = clusters
+                    .into_iter()
+                    .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
+                    .collect();
+
+                if let Ok(tracked_points) = perspective_transformer.get_tracked_points(&points) {
+                    // Normal (unsmoothed) tracked points...
+                    tether_agent
+                        .encode_and_publish(tracking_output, &tracked_points)
+                        .expect("failed to publish tracked points");
+                    smoothing_system.update_tracked_points(&tracked_points);
+                }
+            }
+        }
+    } else {
+        panic!("Failed to find external tracker; it should have been added if it was unknown");
     }
 }

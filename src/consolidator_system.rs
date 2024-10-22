@@ -64,6 +64,7 @@ pub struct Inputs {
     pub scans_input: PlugDefinition,
     pub save_config_input: PlugDefinition,
     pub request_automask_input: PlugDefinition,
+    pub external_tracking_input: PlugDefinition,
 }
 
 impl Inputs {
@@ -81,11 +82,17 @@ impl Inputs {
             .qos(Some(2))
             .build(tether_agent)
             .expect("failed to create Output Plug");
+        // TODO: the name of this input plug should be customisable
+        let external_tracking_input = PlugOptionsBuilder::create_input("bodyFrames")
+            .qos(Some(2))
+            .build(tether_agent)
+            .expect("failed to create Output Plug");
 
         Inputs {
             scans_input,
             save_config_input,
             request_automask_input,
+            external_tracking_input,
         }
     }
 }
