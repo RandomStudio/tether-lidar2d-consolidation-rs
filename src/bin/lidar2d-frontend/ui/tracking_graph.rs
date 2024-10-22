@@ -4,7 +4,7 @@ use egui::{
     Color32, Ui,
 };
 
-use super::tracked_points_to_plot_points;
+use super::{raw_tracked_points_to_plot_points, smoothed_tracked_points_to_plot_points};
 
 pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
     ui.heading("boo");
@@ -20,14 +20,14 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
     tracker_plot.show(ui, |plot_ui| {
         let mut all_points = Vec::new();
 
-        let raw_points = tracked_points_to_plot_points(
+        let raw_points = raw_tracked_points_to_plot_points(
             &model.raw_tracked_points,
             12.0,
-            Color32::from_rgba_unmultiplied(200, 200, 200, 8),
+            Color32::from_rgba_unmultiplied(200, 200, 200, 128),
         );
         all_points.push(raw_points);
 
-        let smoothed_points = tracked_points_to_plot_points(
+        let smoothed_points = smoothed_tracked_points_to_plot_points(
             &model.smoothed_tracked_points,
             5.0,
             Color32::LIGHT_GREEN,

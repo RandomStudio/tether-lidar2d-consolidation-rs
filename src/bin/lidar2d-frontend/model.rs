@@ -3,7 +3,7 @@ use std::{collections::HashMap, thread, time::Duration};
 use log::{debug, error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 use tether_lidar2d_consolidation::{
-    clustering::Cluster2D, tracking::TrackedPoint2D, tracking_config::TrackingConfig,
+    clustering::Cluster2D, tracking::TrackedPoint2D, tracking_config::TrackingConfig, Point2D,
 };
 
 use crate::ui::render_ui;
@@ -38,7 +38,7 @@ pub struct Model {
     pub tracking_config: Option<TrackingConfig>,
     pub scans: HashMap<String, Vec<(f32, f32)>>,
     pub clusters: Vec<Cluster2D>,
-    pub raw_tracked_points: Vec<TrackedPoint2D>,
+    pub raw_tracked_points: Vec<Point2D>,
     pub smoothed_tracked_points: Vec<TrackedPoint2D>,
     pub editing_corners: EditingCorner,
     pub point_size: f32,
@@ -146,9 +146,11 @@ impl eframe::App for Model {
             }
 
             if self.inputs.raw_tracked_points.matches(topic) {
-                if let Ok(tracked_points) =
-                    rmp_serde::from_slice::<Vec<TrackedPoint2D>>(msg.payload())
-                {
+                if let Ok(tracked_points) = rmp_serde::from_slice::<Vec<Point2D>>(msg.payload()) {
+                    // println!("tracked points! {:?}", tracked_points);
+                    // if !tracked_points.is_empty() {
+                    //     panic!("yes they exist");
+                    // }
                     self.raw_tracked_points = tracked_points;
                 }
             }

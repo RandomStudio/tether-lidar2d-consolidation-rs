@@ -198,7 +198,15 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
         ui.horizontal(|ui| {
             ui.label("Clusters count: ");
             ui.label(format!("{}", model.clusters.len()));
-        })
+        });
+        ui.horizontal(|ui| {
+            ui.label("(Raw) tracked points count: ");
+            ui.label(format!("{}", model.raw_tracked_points.len()));
+        });
+        ui.horizontal(|ui| {
+            ui.label("Smoothed tracked points count: ");
+            ui.label(format!("{}", model.smoothed_tracked_points.len()));
+        });
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {
@@ -238,7 +246,7 @@ pub fn scans_to_plot_points(
         .color(color)
 }
 
-pub fn tracked_points_to_plot_points(
+pub fn smoothed_tracked_points_to_plot_points(
     tracked_points: &[TrackedPoint2D],
     size: f32,
     color: Color32,
@@ -249,6 +257,27 @@ pub fn tracked_points_to_plot_points(
             .map(|tp| {
                 let x = tp.x;
                 let y = tp.y;
+                [x as f64, y as f64]
+            })
+            .collect(),
+    );
+    Points::new(plot_points)
+        .filled(true)
+        .radius(size)
+        .shape(MarkerShape::Circle)
+        .color(color)
+}
+
+pub fn raw_tracked_points_to_plot_points(
+    tracked_points: &[Point2D],
+    size: f32,
+    color: Color32,
+) -> Points {
+    let plot_points = PlotPoints::new(
+        tracked_points
+            .iter()
+            .map(|tp| {
+                let (x, y) = *tp;
                 [x as f64, y as f64]
             })
             .collect(),
