@@ -113,6 +113,7 @@ impl TrackingConfig {
                 debug!("Config parsed data from file: {:?}", data);
 
                 self.devices = data.devices;
+                self.external_trackers = data.external_trackers;
                 self.region_of_interest = data.region_of_interest;
                 self.zones = data.zones;
 
