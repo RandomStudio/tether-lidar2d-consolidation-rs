@@ -1,4 +1,5 @@
-use log::{error, info};
+use anyhow::{anyhow, Result};
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tether_agent::mqtt::Message;
@@ -67,7 +68,7 @@ pub fn handle_automask_message(
     config: &mut TrackingConfig,
     scans_required: usize,
     threshold_margin: f32,
-) -> Result<bool, ()> {
+) -> Result<bool> {
     let payload = incoming_message.payload().to_vec();
 
     if let Ok(automask_command) = rmp_serde::from_slice::<AutoMaskMessage>(&payload) {
@@ -91,13 +92,11 @@ pub fn handle_automask_message(
                 config.clear_device_masking();
                 Ok(true)
             }
-            _ => {
-                error!("Unrecognised command type for RequestAutoMask message");
-                Err(())
-            }
+            _ => Err(anyhow!(
+                "Unrecognised command type for RequestAutoMask message"
+            )),
         }
     } else {
-        error!("Failed to parse auto mask command");
-        Err(())
+        Err(anyhow!("Failed to parse auto mask command"))
     }
 }

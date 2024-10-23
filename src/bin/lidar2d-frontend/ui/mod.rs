@@ -185,10 +185,8 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                             .expect("failed to publish config");
                         model.is_editing = false;
                     }
-                } else {
-                    if ui.button("Edit ✏").clicked() {
-                        model.is_editing = true;
-                    }
+                } else if ui.button("Edit ✏").clicked() {
+                    model.is_editing = true;
                 }
             }
         }

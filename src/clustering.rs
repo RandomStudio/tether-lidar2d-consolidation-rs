@@ -7,6 +7,7 @@ use crate::{
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
+use anyhow::Result;
 use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
@@ -55,10 +56,9 @@ impl ClusteringSystem {
         &mut self,
         scans: &[Point2D],
         device: &LidarDevice,
-    ) -> Result<Vec<Cluster2D>, ()> {
+    ) -> Result<Vec<Cluster2D>> {
         debug!("Decoded {} scans", scans.len());
-
-        let mut points_this_scan: Vec<Point2D> = Vec::new();
+        let mut points_this_scan: Vec<Point2D> = Vec::with_capacity(scans.len());
 
         for sample in scans {
             let (angle, distance) = sample;
@@ -120,12 +120,9 @@ impl ClusteringSystem {
         &mut self,
         points: &[Point2D],
         tracker: &ExternalTracker,
-    ) -> Result<Vec<Cluster2D>, ()> {
-        self.scan_points.insert(
-            String::from(&tracker.serial),
-            // points.iter().map(|p| *p).collect(),
-            points.iter().cloned().collect(),
-        );
+    ) -> anyhow::Result<Vec<Cluster2D>> {
+        self.scan_points
+            .insert(String::from(&tracker.serial), points.to_vec());
 
         // Shadowed "clusters" - now as Cluster2D ("points")
         let clusters: Vec<Cluster2D> = points
@@ -316,8 +313,8 @@ pub fn handle_scans_message(
                                     .expect("failed save and republish config");
                                 sampler.angles_with_thresholds.clear();
                             }
-                            Err(()) => {
-                                error!("Error updating masking for device {}", serial);
+                            Err(e) => {
+                                error!("Error updating masking for device {}: {}", serial, e);
                             }
                         }
                     }

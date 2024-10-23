@@ -52,8 +52,8 @@ fn main() {
                 .encode_and_publish(&outputs.config_output, &tracking_config)
                 .expect("failed to publish config");
         }
-        Err(()) => {
-            panic!("Error loading devices into config manager!")
+        Err(e) => {
+            panic!("Error loading devices into config manager: {}", e)
         }
     };
 

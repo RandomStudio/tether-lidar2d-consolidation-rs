@@ -3,6 +3,7 @@ use std::time::{Duration, SystemTime};
 use log::debug;
 
 use crate::{tracking::TrackedPoint2D, Point2D};
+use anyhow::{anyhow, Result};
 
 pub enum EmptyListSendMode {
     Never,
@@ -214,11 +215,11 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a * (1. - t) + (b * t)
 }
 
-pub fn get_mode(string_mode: &str) -> Result<EmptyListSendMode, ()> {
+pub fn get_mode(string_mode: &str) -> Result<EmptyListSendMode> {
     match string_mode {
         "once" => Ok(EmptyListSendMode::Once),
         "never" => Ok(EmptyListSendMode::Never),
         "always" => Ok(EmptyListSendMode::Always),
-        _ => Err(()),
+        _ => Err(anyhow!("invalid mode")),
     }
 }

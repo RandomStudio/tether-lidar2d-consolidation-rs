@@ -3,6 +3,7 @@ use quad_to_quad_transformer::QuadTransformer;
 use std::{collections::HashMap, fmt::Error, fs};
 use tether_agent::{mqtt::Message, PlugDefinition, TetherAgent};
 
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::{automasking::MaskThresholdMap, presence::Zone};
@@ -69,18 +70,7 @@ impl TrackingConfig {
         }
     }
 
-    // pub async fn publish_config(&self, also_save: bool) -> Result<mqtt::Message, Error> {
-    //     let payload: Vec<u8> = to_vec_named(&self).unwrap();
-    //     let message = mqtt::Message::new(&self.output_topic, payload, 2);
-    //     if also_save {
-    //         self.write_config_to_file().await?;
-    //         Ok(message)
-    //     } else {
-    //         Ok(message)
-    //     }
-    // }
-
-    pub fn parse_remote_config(&mut self, incoming_message: &Message) -> Result<(), ()> {
+    pub fn parse_remote_config(&mut self, incoming_message: &Message) -> Result<()> {
         let payload = incoming_message.payload().to_vec();
 
         match rmp_serde::from_slice::<TrackingConfig>(&payload) {
@@ -94,14 +84,11 @@ impl TrackingConfig {
                 self.region_of_interest = region_of_interest;
                 Ok(())
             }
-            Err(e) => {
-                error!("Failed to parse Config from message: {}", e);
-                Err(())
-            }
+            Err(e) => Err(anyhow!("Failed to parse Config from message: {}", e)),
         }
     }
 
-    pub fn load_config_from_file(&mut self) -> Result<usize, ()> {
+    pub fn load_config_from_file(&mut self) -> Result<usize> {
         let text = match std::fs::read_to_string(&self.config_file_path) {
             Err(e) => {
                 if e.kind().to_string() == "entity not found" {
@@ -131,10 +118,7 @@ impl TrackingConfig {
 
                 Ok(self.devices.len())
             }
-            Err(e) => {
-                error!("Failed to parse config data: {}", e);
-                Err(())
-            }
+            Err(e) => Err(anyhow!("Failed to parse config data: {}", e)),
         }
     }
 
@@ -225,7 +209,7 @@ impl TrackingConfig {
         &mut self,
         masking: &MaskThresholdMap,
         serial: &str,
-    ) -> Result<(), ()> {
+    ) -> Result<()> {
         let device = self.get_device_mut(serial);
         match device {
             Some(d) => {
@@ -236,7 +220,7 @@ impl TrackingConfig {
                 d.scan_mask_thresholds = Some(m);
                 Ok(())
             }
-            None => Err(()),
+            None => Err(anyhow!("could not find device with serial {}", serial)),
         }
     }
 
@@ -292,7 +276,7 @@ impl TrackingConfig {
         config_output: &PlugDefinition,
         incoming_message: &Message,
         perspective_transformer: &mut QuadTransformer,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         match self.parse_remote_config(incoming_message) {
             Ok(()) => {
                 if let Some(region_of_interest) = self.region_of_interest() {
@@ -306,7 +290,7 @@ impl TrackingConfig {
                 self.save_and_republish(tether_agent, config_output)
                 // Ok(())
             }
-            Err(()) => Err(Error),
+            Err(e) => Err(anyhow!(e)),
         }
     }
 
@@ -314,7 +298,7 @@ impl TrackingConfig {
         &self,
         tether_agent: &TetherAgent,
         config_output: &PlugDefinition,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         info!("Saving config to disk and re-publishing via Tether...");
         self.write_config_to_file().expect("failed to save to disk");
 

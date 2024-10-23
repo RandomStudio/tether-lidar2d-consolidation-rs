@@ -32,3 +32,9 @@ pub fn get_total_movement(points: &[TrackedPoint2D]) -> Point2D {
         }
     })
 }
+
+impl Default for MovementAnalysis {
+    fn default() -> Self {
+        MovementAnalysis::new()
+    }
+}
