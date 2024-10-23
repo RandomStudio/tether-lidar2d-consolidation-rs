@@ -11,7 +11,7 @@ use anyhow::Result;
 use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
-use std::collections::HashMap;
+use std::{collections::HashMap, f32::consts::TAU};
 use tether_agent::TetherAgent;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -85,6 +85,7 @@ impl ClusteringSystem {
             clusters.len(),
             outliers.len()
         );
+
         self.cached_clusters = clusters
             .iter()
             .map(|c| {
@@ -110,17 +111,54 @@ impl ClusteringSystem {
             .map(|p| external_point_transformed(p, tracker))
             .collect();
 
-        for (x, y) in points {
-            self.cached_clusters.push(Cluster2D {
-                id: self.cached_clusters.len(),
-                x: *x,
-                y: *y,
-                size: 500.0,
-            })
+        let mut fake_points = Vec::new();
+        for (x, y) in transformed_points {
+            for i in 0..32 {
+                let t = (i as f32) / 32. * TAU;
+                let r = 500.;
+                fake_points.push((r * t.sin() + x, r * t.cos() + y));
+            }
+        }
+
+        if points.is_empty() {
+            println!("Zero points!");
         }
 
         self.scan_points
-            .insert(String::from(&tracker.serial), transformed_points.to_vec());
+            .insert(String::from(&tracker.serial), fake_points);
+
+        let combined_points = self.combine_all_points();
+
+        let (clusters, _outliers) = self.clustering_engine.fit(&combined_points);
+
+        self.cached_clusters = clusters
+            .iter()
+            .map(|c| {
+                let (cluster_index, point_indexes) = c;
+                let matched_points = point_indexes
+                    .iter()
+                    .map(|i| {
+                        let point = combined_points.row(*i);
+                        (point[0], point[1])
+                    })
+                    .collect();
+
+                circle_of_cluster_points(matched_points, *cluster_index)
+            })
+            .filter(|cluster| cluster.size <= self.max_cluster_size)
+            .collect()
+
+        // for (x, y) in points {
+        //     self.cached_clusters.push(Cluster2D {
+        //         id: self.cached_clusters.len(),
+        //         x: *x,
+        //         y: *y,
+        //         size: 500.0,
+        //     })
+        // }
+
+        // self.scan_points
+        //     .insert(String::from(&tracker.serial), transformed_points.to_vec());
     }
 
     pub fn combine_all_points(&self) -> ndarray::Array2<f32> {

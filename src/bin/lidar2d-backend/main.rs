@@ -121,6 +121,17 @@ fn main() {
                         &outputs,
                     );
                 }
+
+                if position_data.is_empty() {
+                    handle_external_tracking_message(
+                        serial_number,
+                        &[],
+                        &mut tracking_config,
+                        &tether_agent,
+                        &mut systems,
+                        &outputs,
+                    );
+                }
             }
 
             if inputs.save_config_input.matches(&topic) {
