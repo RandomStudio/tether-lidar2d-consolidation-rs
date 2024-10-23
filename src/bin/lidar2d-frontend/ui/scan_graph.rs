@@ -102,21 +102,14 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
     });
 
     if response.clicked() {
-        model.is_editing = true;
         match &mut model.editing_corners {
             EditingCorner::None => {
-                model.editing_corners = EditingCorner::A;
+                // Do nothing
             }
-            EditingCorner::A => {
-                model.editing_corners = EditingCorner::B;
+            _ => {
+                model.is_editing = true;
+                model.editing_corners = EditingCorner::None;
             }
-            EditingCorner::B => {
-                model.editing_corners = EditingCorner::C;
-            }
-            EditingCorner::C => {
-                model.editing_corners = EditingCorner::D;
-            }
-            EditingCorner::D => model.editing_corners = EditingCorner::None,
         }
     }
 
