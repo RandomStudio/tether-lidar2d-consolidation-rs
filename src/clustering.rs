@@ -123,35 +123,20 @@ impl ClusteringSystem {
     ) -> Result<Vec<Cluster2D>, ()> {
         self.scan_points.insert(
             String::from(&tracker.serial),
-            points.iter().map(|p| *p).collect(),
+            // points.iter().map(|p| *p).collect(),
+            points.iter().cloned().collect(),
         );
 
-        // TODO: from this point, a lot of repetition of body of
-        // function update_from_scan
-        let combined_points = self.combine_all_points();
-
-        let (clusters, _outliers) = self.clustering_engine.fit(&combined_points);
-
         // Shadowed "clusters" - now as Cluster2D ("points")
-        let clusters: Vec<Cluster2D> = clusters
+        let clusters: Vec<Cluster2D> = points
             .iter()
-            .map(|c| {
-                let (cluster_index, point_indexes) = c;
-                let matched_points = point_indexes
-                    .iter()
-                    .map(|i| {
-                        let point = combined_points.row(*i);
-                        (point[0], point[1])
-                        // Point2D {
-                        //     x: point[0],
-                        //     y: point[1],
-                        // }
-                    })
-                    .collect();
-
-                consolidate_cluster_points(matched_points, *cluster_index)
+            .enumerate()
+            .map(|(i, (x, y))| Cluster2D {
+                id: i,
+                x: *x,
+                y: *y,
+                size: 500.0, // TODO: standardise for "human"?
             })
-            .filter(|cluster| cluster.size <= self.max_cluster_size)
             .collect();
 
         Ok(clusters)
@@ -375,6 +360,10 @@ pub fn handle_external_tracking_message(
 
     if let Some(tracker) = tracking_config.get_external_tracker(serial) {
         if let Ok(clusters) = clustering_system.update_from_external_tracker(points, tracker) {
+            debug!(
+                "Updated cluster system with points, {:?} -> clusters {:?}",
+                points, clusters
+            );
             tether_agent
                 .encode_and_publish(clusters_output, &clusters)
                 .expect("failed to publish clusters");
