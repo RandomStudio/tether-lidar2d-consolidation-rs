@@ -77,10 +77,12 @@ impl TrackingConfig {
             Ok(config) => {
                 let TrackingConfig {
                     devices,
+                    external_trackers,
                     region_of_interest,
                     ..
                 } = config;
                 self.devices = devices;
+                self.external_trackers = external_trackers;
                 self.region_of_interest = region_of_interest;
                 Ok(())
             }

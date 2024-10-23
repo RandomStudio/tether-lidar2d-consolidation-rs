@@ -36,6 +36,7 @@ pub struct Model {
     pub inputs: Inputs,
     pub outputs: Outputs,
     pub tracking_config: Option<TrackingConfig>,
+    /// Warning: these scan values are (angle,distance) for LIDAR devices, and (x,y) for External Trackers!
     pub scans: HashMap<String, Vec<(f32, f32)>>,
     pub clusters: Vec<Cluster2D>,
     pub raw_tracked_points: Vec<Point2D>,
@@ -147,10 +148,6 @@ impl eframe::App for Model {
 
             if self.inputs.raw_tracked_points.matches(topic) {
                 if let Ok(tracked_points) = rmp_serde::from_slice::<Vec<Point2D>>(msg.payload()) {
-                    // println!("tracked points! {:?}", tracked_points);
-                    // if !tracked_points.is_empty() {
-                    //     panic!("yes they exist");
-                    // }
                     self.raw_tracked_points = tracked_points;
                 }
             }

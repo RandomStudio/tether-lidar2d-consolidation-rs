@@ -8,6 +8,7 @@ use egui::{
     remap, Checkbox, Color32, RichText, Slider,
 };
 
+use log::debug;
 use scan_graph::render_scan_graph;
 use tether_lidar2d_consolidation::{
     automasking::AutoMaskMessage, tracking::TrackedPoint2D, Point2D,
@@ -171,6 +172,8 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                     });
                 }
 
+                let mut should_publish_update = false;
+
                 ui.separator();
                 ui.heading("External Trackers");
                 for t in tracking_config.external_trackers_mut().iter_mut() {
@@ -190,6 +193,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                             ui.label("Rotation");
                             if ui.add(Slider::new(&mut t.rotation, 0. ..=360.)).changed() {
                                 model.is_editing = true;
+                                should_publish_update = true;
                             };
                         });
                         ui.end_row();
@@ -197,6 +201,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                             ui.label("Offset X");
                             if ui.add(Slider::new(&mut t.x, -10000. ..=10000.)).changed() {
                                 model.is_editing = true;
+                                should_publish_update = true;
                             };
                         });
                         ui.end_row();
@@ -204,6 +209,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                             ui.label("Offset Y");
                             if ui.add(Slider::new(&mut t.y, -10000. ..=10000.)).changed() {
                                 model.is_editing = true;
+                                should_publish_update = true;
                             };
                         });
                         ui.end_row();
@@ -241,14 +247,18 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                         )
                         .clicked()
                     {
-                        model
-                            .tether_agent
-                            .encode_and_publish(&model.outputs.config, &model.tracking_config)
-                            .expect("failed to publish config");
+                        should_publish_update = true;
                         model.is_editing = false;
                     }
                 } else if ui.button("Edit ✏").clicked() {
                     model.is_editing = true;
+                }
+
+                if should_publish_update {
+                    model
+                        .tether_agent
+                        .encode_and_publish(&model.outputs.config, &model.tracking_config)
+                        .expect("failed to publish config");
                 }
             }
         }
@@ -278,7 +288,8 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
     });
 }
 
-pub fn scans_to_plot_points(
+/// NB: measurements Point2D are (angle,distance) not (x,y)
+pub fn angle_samples_to_plot_points(
     measurements: &[Point2D],
     size: f32,
     color: Color32,

@@ -6,7 +6,7 @@ use egui::{
 
 use crate::model::{EditingCorner, Model};
 
-use super::{draw_circle, draw_line, scans_to_plot_points};
+use super::{angle_samples_to_plot_points, draw_circle, draw_line};
 
 pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
     let markers_plot = Plot::new("scans")
@@ -33,7 +33,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
                     rgb.get_blue() as u8,
                 );
                 if let Some(scans_this_device) = model.scans.get(&device.serial) {
-                    let points = scans_to_plot_points(
+                    let points = angle_samples_to_plot_points(
                         scans_this_device,
                         model.point_size,
                         Color32::from_rgb(r, g, b),
@@ -44,6 +44,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
                     all_points.push(points);
                 }
             }
+
             for points_group in all_points {
                 plot_ui.points(points_group);
             }
