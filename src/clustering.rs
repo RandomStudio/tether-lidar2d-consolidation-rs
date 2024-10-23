@@ -120,10 +120,6 @@ impl ClusteringSystem {
             }
         }
 
-        if points.is_empty() {
-            println!("Zero points!");
-        }
-
         self.scan_points
             .insert(String::from(&tracker.serial), fake_points);
 
