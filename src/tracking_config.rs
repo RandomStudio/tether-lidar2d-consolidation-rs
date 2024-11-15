@@ -95,7 +95,8 @@ impl TrackingConfig {
             Err(e) => {
                 if e.kind().to_string() == "entity not found" {
                     warn!("Tracking Config file not found, will create a blank one");
-                    String::from("{\"devices\": [] }")
+                    // TODO: this might need to be a bit more sophisticated!
+                    String::from("{\"devices\": [], \"externalTrackers\": [] }")
                 } else {
                     println!("kind: {}", e.kind());
                     panic!("Failed to load Tracking Config from disk; error: {:?}", e);
