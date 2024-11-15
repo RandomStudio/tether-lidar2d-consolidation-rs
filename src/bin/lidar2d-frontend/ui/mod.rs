@@ -8,7 +8,6 @@ use egui::{
     remap, Checkbox, Color32, RichText, Slider,
 };
 
-use log::debug;
 use scan_graph::render_scan_graph;
 use tether_lidar2d_consolidation::{
     automasking::AutoMaskMessage, tracking::TrackedPoint2D, Point2D,

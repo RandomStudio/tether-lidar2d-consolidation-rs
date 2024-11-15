@@ -7,7 +7,6 @@ use crate::{
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
-use anyhow::Result;
 use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
@@ -334,7 +333,7 @@ pub fn handle_scans_message(
                 .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
                 .collect();
 
-            if let Ok(tracked_points) = perspective_transformer.get_tracked_points(&points) {
+            if let Ok(tracked_points) = perspective_transformer.filter_points_inside(&points) {
                 // Normal (unsmoothed) tracked points...
                 tether_agent
                     .encode_and_publish(tracking_output, &tracked_points)
@@ -407,7 +406,7 @@ pub fn handle_external_tracking_message(
                 .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
                 .collect();
 
-            if let Ok(tracked_points) = perspective_transformer.get_tracked_points(&points) {
+            if let Ok(tracked_points) = perspective_transformer.filter_points_inside(&points) {
                 // Normal (unsmoothed) tracked points...
                 tether_agent
                     .encode_and_publish(tracking_output, &tracked_points)

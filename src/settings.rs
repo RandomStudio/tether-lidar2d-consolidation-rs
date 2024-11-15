@@ -97,12 +97,14 @@ pub struct Cli {
     pub smoothing_update_interval: u128,
 
     // -------- PERSPECTIVE TRANSFORM SETTINGS
-    /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad;
-    /// enable (use) this flag to include them
+    /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad
+    /// **(with a little margin for error; see perspectiveTransform.ignoreOutsideMargin)**;
+    /// enable (use) this flag to include them all (no filtering)
     #[arg(long = "perspectiveTransform.includeOutside")]
     pub transform_include_outside: bool,
 
-    /// Unless perspectiveTransform.includeOutside is enabled, drop tracking points outside range [0-margin,1+margin]
+    /// **Unless perspectiveTransform.includeOutside is enabled**, drop tracking points beyond this
+    /// distance from the edges of the destination quad, i.e. tge range [0-margin,1+margin]
     #[arg(long = "perspectiveTransform.ignoreOutsideMargin", default_value_t=IGNORE_OUTSIDE_MARGIN)]
     pub transform_ignore_outside_margin: f32,
 
