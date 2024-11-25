@@ -173,7 +173,7 @@ pub fn calculate_dst_quad(roi: &CornerPoints) -> RectCorners {
     [(0., 0.), (w, 0.), (w, h), (0., h)]
 }
 
-fn distance(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
+pub fn distance(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
     ((x2 - x1).powf(2.0) + (y2 - y1).powf(2.0)).sqrt()
 }
 

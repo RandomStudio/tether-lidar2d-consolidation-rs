@@ -69,7 +69,7 @@ pub struct Cli {
     #[arg(long = "smoothing.disable")]
     pub smoothing_disable: bool,
 
-    /// How close (in normalised `[0;1]` units) to count two points as the same Tracked Point
+    /// How close to count two points as the same Tracked Point
     #[arg(long = "smoothing.mergeRadius", default_value_t = 0.25)]
     pub smoothing_merge_radius: f32,
 

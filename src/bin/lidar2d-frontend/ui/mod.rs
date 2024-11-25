@@ -10,7 +10,7 @@ use egui::{
 
 use scan_graph::render_scan_graph;
 use tether_lidar2d_consolidation::{
-    automasking::AutoMaskMessage, tracking::TrackedPoint2D, Point2D,
+    automasking::AutoMaskMessage, consolidator_system::distance, tracking::TrackedPoint2D, Point2D,
 };
 use tracking_graph::render_tracking_graph;
 
@@ -276,6 +276,25 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             ui.label("Smoothed tracked points count: ");
             ui.label(format!("{}", model.smoothed_tracked_points.len()));
         });
+        if let Some(tracking_config) = &model.tracking_config {
+            ui.heading("Tracking Config");
+            if tracking_config.use_real_units() {
+                if let Some(roi) = tracking_config.region_of_interest() {
+                    ui.horizontal(|ui| {
+                        ui.label("Output width:");
+                        let (a, b, c, d) = roi;
+                        ui.label(format!("{:.1}mm", distance(a.x, a.y, b.x, b.y)))
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Output height:");
+                        let (a, b, c, d) = roi;
+                        ui.label(format!("{:.1}mm", distance(a.x, a.y, d.x, d.y)))
+                    });
+                }
+            } else {
+                ui.label("Normalised 1x1 output size");
+            }
+        }
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {

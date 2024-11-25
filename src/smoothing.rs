@@ -115,7 +115,8 @@ impl TrackingSmoother {
                 Ok(elapsed) => {
                     if elapsed.as_millis() > self.settings.wait_before_active_ms && !p.ready {
                         debug!(
-                            "Remove point waiting too long to become active; {}ms > {} ms",
+                            "Remove point {:?} waiting too long to become active; {}ms > {} ms",
+                            p,
                             elapsed.as_millis(),
                             self.settings.wait_before_active_ms
                         );
