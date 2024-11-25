@@ -7,7 +7,6 @@ use egui::{
 use super::{raw_tracked_points_to_plot_points, smoothed_tracked_points_to_plot_points};
 
 pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
-    ui.heading("boo");
     let tracker_plot = Plot::new("tracker_plot")
         .data_aspect(1.0)
         .include_x(-1.)

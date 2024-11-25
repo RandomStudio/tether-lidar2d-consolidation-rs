@@ -6,7 +6,9 @@ use tether_agent::{mqtt::Message, PlugDefinition, TetherAgent};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::{automasking::MaskThresholdMap, presence::Zone};
+use crate::{
+    automasking::MaskThresholdMap, consolidator_system::calculate_dst_quad, presence::Zone,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -41,7 +43,7 @@ pub struct ConfigRectCornerPoint {
     pub y: f32,
 }
 
-type CornerPoints = (
+pub type CornerPoints = (
     ConfigRectCornerPoint,
     ConfigRectCornerPoint,
     ConfigRectCornerPoint,
@@ -57,6 +59,7 @@ pub struct TrackingConfig {
     zones: Option<Vec<Zone>>,
     #[serde(skip)]
     config_file_path: String,
+    use_real_units: Option<bool>,
 }
 
 impl TrackingConfig {
@@ -67,6 +70,7 @@ impl TrackingConfig {
             region_of_interest: None,
             zones: None,
             config_file_path: String::from(config_file_path),
+            use_real_units: None,
         }
     }
 
@@ -79,11 +83,13 @@ impl TrackingConfig {
                     devices,
                     external_trackers,
                     region_of_interest,
+                    use_real_units,
                     ..
                 } = config;
                 self.devices = devices;
                 self.external_trackers = external_trackers;
                 self.region_of_interest = region_of_interest;
+                self.use_real_units = use_real_units;
                 Ok(())
             }
             Err(e) => Err(anyhow!("Failed to parse Config from message: {}", e)),
@@ -119,6 +125,7 @@ impl TrackingConfig {
                 self.external_trackers = data.external_trackers;
                 self.region_of_interest = data.region_of_interest;
                 self.zones = data.zones;
+                self.use_real_units = data.use_real_units;
 
                 Ok(self.devices.len())
             }
@@ -274,6 +281,10 @@ impl TrackingConfig {
         self.zones.as_deref()
     }
 
+    pub fn use_real_units(&self) -> bool {
+        self.use_real_units.unwrap_or(false)
+    }
+
     pub fn handle_save_message(
         &mut self,
         tether_agent: &TetherAgent,
@@ -287,7 +298,14 @@ impl TrackingConfig {
                     info!("New Region of Interest was provided remotely; update the Perspective Transformer");
                     let (c1, c2, c3, c4) = region_of_interest;
                     let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                    perspective_transformer.set_new_quad(&corners);
+                    perspective_transformer.set_new_quad(
+                        &corners,
+                        if self.use_real_units() {
+                            Some(calculate_dst_quad(region_of_interest))
+                        } else {
+                            None
+                        },
+                    );
                 }
 
                 info!("Remote-provided config parsed OK; now save to disk and (re) publish");

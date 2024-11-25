@@ -97,6 +97,11 @@ pub struct Cli {
     pub smoothing_update_interval: u128,
 
     // -------- PERSPECTIVE TRANSFORM SETTINGS
+    /// By default, we emit coordinates normalised in the range [0;1] for both axes;
+    /// enable "real units" to use the top edge (AB) of the quad as the scale factor
+    #[arg(long = "perspectiveTransform.use_real_units")]
+    pub transform_use_real_units: bool,
+
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad
     /// **(with a little margin for error; see perspectiveTransform.ignoreOutsideMargin)**;
     /// enable (use) this flag to include them all (no filtering)

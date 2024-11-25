@@ -2348,9 +2348,7 @@ dependencies = [
 
 [[package]]
 name = "quad-to-quad-transformer"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbb2a278f0e50b9460c04a22be243df37309d2f0fa72ddd9421eea80e64f216b"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "log",

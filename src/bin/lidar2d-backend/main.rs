@@ -10,10 +10,9 @@ use std::time::Duration;
 use tether_agent::TetherAgentOptionsBuilder;
 
 use tether_lidar2d_consolidation::automasking::handle_automask_message;
-use tether_lidar2d_consolidation::clustering::{
-    handle_external_tracking_message, handle_scans_message,
+use tether_lidar2d_consolidation::consolidator_system::{
+    handle_external_tracking_message, handle_scans_message, Inputs,
 };
-use tether_lidar2d_consolidation::consolidator_system::Inputs;
 use tether_lidar2d_consolidation::movement::get_total_movement;
 use tether_lidar2d_consolidation::presence::publish_presence_change;
 use tether_lidar2d_consolidation::settings::Cli;

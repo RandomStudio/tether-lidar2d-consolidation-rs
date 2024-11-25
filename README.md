@@ -39,6 +39,11 @@ And on Linux:
 sudo apt install libssl-dev build-essential cmake
 ```
 
+## Expected Output
+Plugs:
+- "trackedPoints": an array of 2D vectors (arrays with [x,y]) for transformed but not-smoothed points within the tracking region (ROI)
+- "smoothedTrackedPoints:" an array of objects with "id", "x", y" and "velocity" (2D vector) for each smoothed point
+
 ## Notes on Libraries
 
 ### MQTT Client
