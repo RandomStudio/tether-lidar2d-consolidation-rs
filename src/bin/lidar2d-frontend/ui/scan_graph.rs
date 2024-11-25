@@ -60,7 +60,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
             }
 
             if let Some((a, b, c, d)) = tracking_config.region_of_interest() {
-                let corner_points: Vec<(f32, f32, &str)> = [d, c, b, a]
+                let corner_points: Vec<(f32, f32, &str)> = [a, b, c, d]
                     .iter()
                     .enumerate()
                     .map(|(index, cp)| {
@@ -117,7 +117,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
         let x = x as f32;
         let y = y as f32;
         if let Some(config) = &mut model.tracking_config {
-            if let Some((d, c, b, a)) = &mut config.region_of_interest_mut() {
+            if let Some((a, b, c, d)) = &mut config.region_of_interest_mut() {
                 // println!("{}, {}", x, y);
                 match model.editing_corners {
                     EditingCorner::None => {}

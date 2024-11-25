@@ -35,6 +35,6 @@ egui = "0.21.0"
 eframe = "0.21.3"
 egui_plot = "0.24.0"
 colors-transform = "0.2.11"
-# quad-to-quad-transformer = "0.3"
-quad-to-quad-transformer = { path = "../../quad-to-quad-transformer" }
+quad-to-quad-transformer = "0.3"
+# quad-to-quad-transformer = { path = "../../quad-to-quad-transformer" }
 anyhow = "1.0.91"
