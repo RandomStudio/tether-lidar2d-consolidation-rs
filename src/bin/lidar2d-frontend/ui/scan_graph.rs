@@ -22,7 +22,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
         inner: (pointer_coordinate, _bounds),
         ..
     } = markers_plot.show(ui, |plot_ui| {
-        if let Some(tracking_config) = &model.tracking_config {
+        if let Some(tracking_config) = &model.backend_config {
             let mut all_points = Vec::new();
 
             for device in tracking_config.devices() {
@@ -116,7 +116,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
     if let Some(egui::plot::PlotPoint { x, y }) = pointer_coordinate {
         let x = x as f32;
         let y = y as f32;
-        if let Some(config) = &mut model.tracking_config {
+        if let Some(config) = &mut model.backend_config {
             if let Some((a, b, c, d)) = &mut config.region_of_interest_mut() {
                 // println!("{}, {}", x, y);
                 match model.editing_corners {

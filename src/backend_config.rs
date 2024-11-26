@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     automasking::MaskThresholdMap, consolidator_system::calculate_dst_quad, presence::Zone,
+    smoothing::EmptyListSendMode,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -52,34 +53,111 @@ pub type CornerPoints = (
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct TrackingConfig {
-    devices: Vec<LidarDevice>,
-    external_trackers: Vec<ExternalTracker>,
-    region_of_interest: Option<CornerPoints>,
-    zones: Option<Vec<Zone>>,
+pub struct BackendConfig {
+    pub devices: Vec<LidarDevice>,
+    pub external_trackers: Vec<ExternalTracker>,
+    pub region_of_interest: Option<CornerPoints>,
+    pub zones: Option<Vec<Zone>>,
+    pub use_real_units: Option<bool>,
+
+    /// Default min distance threshold (in mm) to use for unconfigured new devices
+    pub default_min_distance_threshold: f32,
+
+    // -------- CLUSTERING SETTINGS
+    /// Max distance in mm to a point which can be included in a cluster
+    pub clustering_neighbourhood_radius: f32,
+
+    /// Min points count that constitutes a valid cluster
+    pub clustering_min_neighbours: usize,
+
+    /// Exclude clusters above this size, in cluster count
+    pub clustering_max_cluster_size: f32,
+
+    // -------- SMOOTHING SETTINGS
+    /// Flag to disable integrated time-based "smoothed tracking" output. Note that this will
+    /// also disable presence detection + movement analysis.
+    pub smoothing_disable: bool,
+
+    /// How close to count two points as the same Tracked Point
+    pub smoothing_merge_radius: f32,
+
+    /// How long (ms) before deciding a new point is valid/active
+    pub smoothing_wait_before_active_ms: u128,
+
+    /// How long (ms) before removing a non-updated known tracking point
+    pub smoothing_expire_ms: u128,
+
+    /// How much to interpolate (smooth) current position towards target position
+    /// (1.0 is immediate, i.e. no smoothing, 0 is invalid)
+    pub smoothing_lerp_factor: f32,
+
+    /// How to treat empty smoothed tracking points lists - either send an empty
+    /// list "once", "never" or "always"
+    pub smoothing_empty_send_mode: EmptyListSendMode,
+
+    /// How often (ms) to update smoothed tracking points - regardless of scan
+    /// message rate
+    pub smoothing_update_interval: u128,
+
+    // -------- PERSPECTIVE TRANSFORM SETTINGS
+    /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad
+    /// **(with a little margin for error; see perspectiveTransform.ignoreOutsideMargin)**;
+    /// enable (use) this flag to include them all (no filtering)
+    pub transform_include_outside: bool,
+
+    /// **Unless perspectiveTransform.includeOutside is enabled**, drop tracking points beyond this
+    /// distance from the edges of the destination quad, i.e. tge range [0-margin,1+margin]
+    pub transform_ignore_outside_margin: f32,
+
+    pub automask_scans_required: usize,
+
+    pub automask_threshold_margin: f32,
+
+    // -------- MOVEMENT ANALYSIS SETTINGS
+    /// Disable movement analysis calculation and output, even if available
+    pub movement_disable: bool,
+
+    /// How often (ms) to send movement messages
+    pub movement_interval: u128,
     #[serde(skip)]
     config_file_path: String,
-    use_real_units: Option<bool>,
 }
 
-impl TrackingConfig {
-    pub fn new(config_file_path: &str) -> TrackingConfig {
-        TrackingConfig {
+impl BackendConfig {
+    pub fn new(config_file_path: &str) -> Self {
+        BackendConfig {
             devices: Vec::new(),
             external_trackers: Vec::new(),
             region_of_interest: None,
             zones: None,
             config_file_path: String::from(config_file_path),
             use_real_units: None,
+            default_min_distance_threshold: 20.,
+            clustering_neighbourhood_radius: 200.,
+            clustering_min_neighbours: 4,
+            clustering_max_cluster_size: 2500.,
+            smoothing_disable: false,
+            smoothing_merge_radius: 0.25,
+            smoothing_wait_before_active_ms: 100,
+            smoothing_expire_ms: 3000,
+            smoothing_lerp_factor: 0.1,
+            smoothing_empty_send_mode: EmptyListSendMode::Once,
+            smoothing_update_interval: 16,
+            transform_include_outside: false,
+            transform_ignore_outside_margin: 0.,
+            automask_scans_required: 60,
+            automask_threshold_margin: 50.,
+            movement_disable: false,
+            movement_interval: 250,
         }
     }
 
     pub fn parse_remote_config(&mut self, incoming_message: &Message) -> Result<()> {
         let payload = incoming_message.payload().to_vec();
 
-        match rmp_serde::from_slice::<TrackingConfig>(&payload) {
+        match rmp_serde::from_slice::<BackendConfig>(&payload) {
             Ok(config) => {
-                let TrackingConfig {
+                let BackendConfig {
                     devices,
                     external_trackers,
                     region_of_interest,
@@ -117,7 +195,7 @@ impl TrackingConfig {
             }
         };
 
-        match serde_json::from_str::<TrackingConfig>(&text) {
+        match serde_json::from_str::<BackendConfig>(&text) {
             Ok(data) => {
                 debug!("Config parsed data from file: {:?}", data);
 

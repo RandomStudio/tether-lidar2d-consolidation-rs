@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tether_agent::mqtt::Message;
 
-use crate::{tracking_config::TrackingConfig, Point2D};
+use crate::{backend_config::BackendConfig, Point2D};
 
 pub type MaskThresholdMap = HashMap<String, f32>;
 
@@ -65,9 +65,7 @@ impl AutoMaskSampler {
 pub fn handle_automask_message(
     incoming_message: &Message,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
-    config: &mut TrackingConfig,
-    scans_required: usize,
-    threshold_margin: f32,
+    config: &mut BackendConfig,
 ) -> Result<bool> {
     let payload = incoming_message.payload().to_vec();
 
@@ -81,7 +79,10 @@ pub fn handle_automask_message(
                 for device in config.devices().iter() {
                     automask_samplers.insert(
                         String::from(&device.serial),
-                        AutoMaskSampler::new(scans_required, threshold_margin),
+                        AutoMaskSampler::new(
+                            config.automask_scans_required,
+                            config.automask_threshold_margin,
+                        ),
                     );
                 }
                 Ok(false)

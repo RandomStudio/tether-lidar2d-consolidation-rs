@@ -27,7 +27,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
 
         ui.heading("Tracking Configuration");
 
-        match &mut model.tracking_config {
+        match &mut model.backend_config {
             None => {
                 ui.label("No config received (yet)");
             }
@@ -256,7 +256,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 if should_publish_update {
                     model
                         .tether_agent
-                        .encode_and_publish(&model.outputs.config, &model.tracking_config)
+                        .encode_and_publish(&model.outputs.config, &model.backend_config)
                         .expect("failed to publish config");
                 }
             }
@@ -276,18 +276,18 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             ui.label("Smoothed tracked points count: ");
             ui.label(format!("{}", model.smoothed_tracked_points.len()));
         });
-        if let Some(tracking_config) = &model.tracking_config {
+        if let Some(tracking_config) = &model.backend_config {
             ui.heading("Tracking Config");
             if tracking_config.use_real_units() {
                 if let Some(roi) = tracking_config.region_of_interest() {
                     ui.horizontal(|ui| {
                         ui.label("Output width:");
-                        let (a, b, c, d) = roi;
+                        let (a, b, _c, _d) = roi;
                         ui.label(format!("{:.1}mm", distance(a.x, a.y, b.x, b.y)))
                     });
                     ui.horizontal(|ui| {
                         ui.label("Output height:");
-                        let (a, b, c, d) = roi;
+                        let (a, _b, _c, d) = roi;
                         ui.label(format!("{:.1}mm", distance(a.x, a.y, d.x, d.y)))
                     });
                 }

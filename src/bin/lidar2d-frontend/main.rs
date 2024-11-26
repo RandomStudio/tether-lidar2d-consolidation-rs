@@ -10,11 +10,12 @@
 //!
 use clap::Parser;
 
+use cli::Cli;
 use env_logger::Env;
 use log::debug;
 use model::Model;
-use tether_lidar2d_consolidation::settings::Cli;
 
+mod cli;
 mod model;
 mod ui;
 

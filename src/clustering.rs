@@ -1,5 +1,5 @@
 use crate::{
-    tracking_config::{ExternalTracker, LidarDevice},
+    backend_config::{ExternalTracker, LidarDevice},
     Point2D,
 };
 

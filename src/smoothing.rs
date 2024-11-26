@@ -1,10 +1,11 @@
 use std::time::{Duration, SystemTime};
 
 use log::debug;
+use serde::{Deserialize, Serialize};
 
 use crate::{tracking::TrackedPoint2D, Point2D};
 use anyhow::{anyhow, Result};
-
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum EmptyListSendMode {
     Never,
     Once,

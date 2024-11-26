@@ -1,17 +1,16 @@
 use std::collections::HashMap;
 
 use log::{debug, error, info, warn};
-use quad_to_quad_transformer::{QuadTransformer, RectCorners, DEFAULT_DST_QUAD};
+use quad_to_quad_transformer::{QuadTransformer, RectCorners};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
 
 use crate::{
     automasking::AutoMaskSamplerMap,
+    backend_config::{BackendConfig, CornerPoints},
     clustering::ClusteringSystem,
     movement::MovementAnalysis,
     presence::PresenceDetectionZones,
-    settings::Cli,
-    smoothing::{self, get_mode, SmoothSettings, TrackingSmoother},
-    tracking_config::{self, CornerPoints, TrackingConfig},
+    smoothing::{SmoothSettings, TrackingSmoother},
     Point2D,
 };
 
@@ -109,15 +108,15 @@ pub struct Systems {
 }
 
 impl Systems {
-    pub fn new(cli: &Cli, tracking_config: &TrackingConfig) -> Systems {
+    pub fn new(config: &BackendConfig) -> Systems {
         let clustering_system = ClusteringSystem::new(
-            cli.clustering_neighbourhood_radius,
-            cli.clustering_min_neighbours,
-            cli.clustering_max_cluster_size,
+            config.clustering_neighbourhood_radius,
+            config.clustering_min_neighbours,
+            config.clustering_max_cluster_size,
         );
 
         let perspective_transformer = QuadTransformer::new(
-            match tracking_config.region_of_interest() {
+            match config.region_of_interest() {
                 Some(region_of_interest) => {
                     let (c1, c2, c3, c4) = region_of_interest;
                     let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
@@ -125,34 +124,32 @@ impl Systems {
                 }
                 None => None,
             },
-            if tracking_config.use_real_units() {
+            if config.use_real_units() {
                 info!("Using real units");
-                tracking_config.region_of_interest().map(calculate_dst_quad)
+                config.region_of_interest().map(calculate_dst_quad)
             } else {
                 warn!("Using normalised units");
                 None
             },
             {
-                if cli.transform_include_outside {
+                if config.transform_include_outside {
                     None
                 } else {
-                    Some(cli.transform_ignore_outside_margin)
+                    Some(config.transform_ignore_outside_margin)
                 }
             },
         );
 
         let smoothing_system = TrackingSmoother::new(SmoothSettings {
-            merge_radius: cli.smoothing_merge_radius,
-            wait_before_active_ms: cli.smoothing_wait_before_active_ms,
-            expire_ms: cli.smoothing_expire_ms,
-            lerp_factor: cli.smoothing_lerp_factor,
+            merge_radius: config.smoothing_merge_radius,
+            wait_before_active_ms: config.smoothing_wait_before_active_ms,
+            expire_ms: config.smoothing_expire_ms,
+            lerp_factor: config.smoothing_lerp_factor,
             // TODO: set this from CLI
-            empty_list_send_mode: get_mode(&cli.smoothing_empty_send_mode)
-                .unwrap_or(smoothing::EmptyListSendMode::Once),
+            empty_list_send_mode: config.smoothing_empty_send_mode.clone(),
         });
 
-        let presence_detector =
-            PresenceDetectionZones::new(tracking_config.zones().unwrap_or_default());
+        let presence_detector = PresenceDetectionZones::new(config.zones().unwrap_or_default());
 
         Systems {
             clustering_system,
@@ -167,7 +164,7 @@ impl Systems {
 
 pub fn calculate_dst_quad(roi: &CornerPoints) -> RectCorners {
     // DEFAULT_DST_QUAD
-    let (a, b, c, d) = roi;
+    let (a, b, _c, d) = roi;
     let w = distance(a.x, a.y, b.x, b.y);
     let h = distance(a.x, a.y, d.x, d.y);
     [(0., 0.), (w, 0.), (w, h), (0., h)]
@@ -180,11 +177,10 @@ pub fn distance(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
 pub fn handle_scans_message(
     serial: &str,
     scans: &[Point2D],
-    tracking_config: &mut TrackingConfig,
+    config: &mut BackendConfig,
     tether_agent: &TetherAgent,
     systems: &mut Systems,
     outputs: &Outputs,
-    default_min_distance: f32,
 ) {
     let Systems {
         clustering_system,
@@ -202,13 +198,13 @@ pub fn handle_scans_message(
     } = outputs;
 
     // If an unknown device was found (and added), re-publish the Device config
-    if let Some(()) = tracking_config.check_or_create_device(serial, default_min_distance) {
-        tracking_config
+    if let Some(()) = config.check_or_create_device(serial, config.default_min_distance_threshold) {
+        config
             .save_and_republish(tether_agent, config_output)
             .expect("failed to save and republish config");
     }
 
-    if let Some(device) = tracking_config.get_device(serial) {
+    if let Some(device) = config.get_device(serial) {
         clustering_system.update_from_scan(scans, device);
         let clusters = clustering_system.clusters();
         tether_agent
@@ -234,10 +230,10 @@ pub fn handle_scans_message(
             if !sampler.is_complete() {
                 if let Some(new_mask) = sampler.add_samples(scans) {
                     debug!("Sufficient samples for masking device {}", serial);
-                    match tracking_config.update_device_masking(new_mask, serial) {
+                    match config.update_device_masking(new_mask, serial) {
                         Ok(()) => {
                             info!("Updated masking for device {}", serial);
-                            tracking_config
+                            config
                                 .save_and_republish(tether_agent, config_output)
                                 .expect("failed save and republish config");
                             sampler.angles_with_thresholds.clear();
@@ -255,7 +251,7 @@ pub fn handle_scans_message(
 pub fn handle_external_tracking_message(
     serial: &str,
     points: &[Point2D],
-    tracking_config: &mut TrackingConfig,
+    config: &mut BackendConfig,
     tether_agent: &TetherAgent,
     systems: &mut Systems,
     outputs: &Outputs,
@@ -275,13 +271,13 @@ pub fn handle_external_tracking_message(
     } = outputs;
 
     // If an unknown device was found (and added), re-publish the Device config
-    if let Some(()) = tracking_config.check_or_create_external_tracker(serial) {
-        tracking_config
+    if let Some(()) = config.check_or_create_external_tracker(serial) {
+        config
             .save_and_republish(tether_agent, config_output)
             .expect("failed to save and republish config");
     }
 
-    if let Some(tracker) = tracking_config.get_external_tracker(serial) {
+    if let Some(tracker) = config.get_external_tracker(serial) {
         clustering_system.update_from_external_tracker(points, tracker);
         let clusters = clustering_system.clusters();
         tether_agent
