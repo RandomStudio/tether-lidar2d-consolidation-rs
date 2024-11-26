@@ -1,5 +1,5 @@
 use clap::Parser;
-use tether_lidar2d_consolidation::backend_config::{load_config_from_file, BackendConfig};
+use tether_lidar2d_consolidation::backend_config::load_config_from_file;
 use tether_lidar2d_consolidation::consolidator_system::{Outputs, Systems};
 use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D};
 
@@ -45,7 +45,7 @@ fn main() {
             info!("Loaded tracking config OK into Config; publish with retain=true",);
             // Always save and publish on first start/load...
             config
-                .save_and_republish(&tether_agent, &outputs.config_output)
+                .save_and_republish(&tether_agent, &outputs.config_output, &cli.config_path)
                 .expect("failed to save and publish config");
             config
         }
@@ -83,6 +83,7 @@ fn main() {
                     &tether_agent,
                     &mut systems,
                     &outputs,
+                    &cli.config_path,
                 )
             }
 
@@ -115,6 +116,7 @@ fn main() {
                         &tether_agent,
                         &mut systems,
                         &outputs,
+                        &cli.config_path,
                     );
                 }
 
@@ -126,6 +128,7 @@ fn main() {
                         &tether_agent,
                         &mut systems,
                         &outputs,
+                        &cli.config_path,
                     );
                 }
             }
@@ -137,6 +140,7 @@ fn main() {
                         &outputs.config_output,
                         &message,
                         &mut systems.perspective_transformer,
+                        &cli.config_path,
                     )
                     .expect("config failed to update and save");
             }
@@ -150,7 +154,11 @@ fn main() {
                 ) {
                     if should_update_config {
                         backend_config
-                            .save_and_republish(&tether_agent, &outputs.config_output)
+                            .save_and_republish(
+                                &tether_agent,
+                                &outputs.config_output,
+                                &cli.config_path,
+                            )
                             .expect("failed to save and republish config");
                     }
                 }

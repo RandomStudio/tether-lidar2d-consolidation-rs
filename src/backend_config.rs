@@ -44,6 +44,16 @@ pub struct ConfigRectCornerPoint {
     pub y: f32,
 }
 
+impl ConfigRectCornerPoint {
+    pub fn new(corner_id: u8, x: f32, y: f32) -> Self {
+        ConfigRectCornerPoint {
+            corner: corner_id,
+            x,
+            y,
+        }
+    }
+}
+
 pub type CornerPoints = (
     ConfigRectCornerPoint,
     ConfigRectCornerPoint,
@@ -119,18 +129,15 @@ pub struct BackendConfig {
 
     /// How often (ms) to send movement messages
     pub movement_interval: u128,
-    #[serde(skip)]
-    config_file_path: String,
 }
 
-impl BackendConfig {
-    pub fn new(config_file_path: &str) -> Self {
+impl Default for BackendConfig {
+    fn default() -> Self {
         BackendConfig {
             devices: Vec::new(),
             external_trackers: Vec::new(),
             region_of_interest: None,
             zones: None,
-            config_file_path: String::from(config_file_path),
             use_real_units: None,
             default_min_distance_threshold: 20.,
             clustering_neighbourhood_radius: 200.,
@@ -151,7 +158,9 @@ impl BackendConfig {
             movement_interval: 250,
         }
     }
+}
 
+impl BackendConfig {
     pub fn parse_remote_config(&mut self, incoming_message: &Message) -> Result<()> {
         let payload = incoming_message.payload().to_vec();
 
@@ -174,12 +183,12 @@ impl BackendConfig {
         }
     }
 
-    pub fn write_config_to_file(&self) -> Result<(), Error> {
+    pub fn write_config_to_file(&self, config_file_path: &str) -> Result<(), Error> {
         info!("Current state of config: {:?}", self);
         let text = serde_json::to_string_pretty(self).unwrap();
-        match fs::write(&self.config_file_path, text) {
+        match fs::write(config_file_path, text) {
             Ok(()) => {
-                info!("Wrote config to file: {:?}", self.config_file_path);
+                info!("Wrote config to file: {:?}", config_file_path);
                 Ok(())
             }
             Err(e) => {
@@ -332,6 +341,7 @@ impl BackendConfig {
         config_output: &PlugDefinition,
         incoming_message: &Message,
         perspective_transformer: &mut QuadTransformer,
+        config_file_path: &str,
     ) -> Result<()> {
         match self.parse_remote_config(incoming_message) {
             Ok(()) => {
@@ -350,7 +360,7 @@ impl BackendConfig {
                 }
 
                 info!("Remote-provided config parsed OK; now save to disk and (re) publish");
-                self.save_and_republish(tether_agent, config_output)
+                self.save_and_republish(tether_agent, config_output, config_file_path)
                 // Ok(())
             }
             Err(e) => Err(anyhow!(e)),
@@ -361,9 +371,11 @@ impl BackendConfig {
         &self,
         tether_agent: &TetherAgent,
         config_output: &PlugDefinition,
+        config_file_path: &str,
     ) -> Result<()> {
         info!("Saving config to disk and re-publishing via Tether...");
-        self.write_config_to_file().expect("failed to save to disk");
+        self.write_config_to_file(config_file_path)
+            .expect("failed to save to disk");
 
         tether_agent
             .encode_and_publish(config_output, self)
@@ -380,7 +392,8 @@ fn pick_from_palette(index: usize) -> String {
 }
 
 pub fn load_config_from_file(config_file_path: &str) -> Result<BackendConfig> {
-    let config = BackendConfig::new(config_file_path);
+    let config = BackendConfig::default();
+    debug!("Created init config object {:?}", config);
 
     match std::fs::read_to_string(config_file_path) {
         Err(e) => {
@@ -400,7 +413,6 @@ pub fn load_config_from_file(config_file_path: &str) -> Result<BackendConfig> {
             match serde_json::from_str::<BackendConfig>(&s) {
                 Ok(loaded_config) => {
                     debug!("Config parsed data from file: {:?}", &loaded_config);
-
                     Ok(loaded_config)
                 }
                 Err(e) => Err(anyhow!("Failed to parse config data: {}", e)),

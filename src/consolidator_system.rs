@@ -181,6 +181,7 @@ pub fn handle_scans_message(
     tether_agent: &TetherAgent,
     systems: &mut Systems,
     outputs: &Outputs,
+    config_file_path: &str,
 ) {
     let Systems {
         clustering_system,
@@ -200,7 +201,7 @@ pub fn handle_scans_message(
     // If an unknown device was found (and added), re-publish the Device config
     if let Some(()) = config.check_or_create_device(serial, config.default_min_distance_threshold) {
         config
-            .save_and_republish(tether_agent, config_output)
+            .save_and_republish(tether_agent, config_output, config_file_path)
             .expect("failed to save and republish config");
     }
 
@@ -234,7 +235,7 @@ pub fn handle_scans_message(
                         Ok(()) => {
                             info!("Updated masking for device {}", serial);
                             config
-                                .save_and_republish(tether_agent, config_output)
+                                .save_and_republish(tether_agent, config_output, config_file_path)
                                 .expect("failed save and republish config");
                             sampler.angles_with_thresholds.clear();
                         }
@@ -255,6 +256,7 @@ pub fn handle_external_tracking_message(
     tether_agent: &TetherAgent,
     systems: &mut Systems,
     outputs: &Outputs,
+    config_file_path: &str,
 ) {
     let Systems {
         clustering_system,
@@ -273,7 +275,7 @@ pub fn handle_external_tracking_message(
     // If an unknown device was found (and added), re-publish the Device config
     if let Some(()) = config.check_or_create_external_tracker(serial) {
         config
-            .save_and_republish(tether_agent, config_output)
+            .save_and_republish(tether_agent, config_output, config_file_path)
             .expect("failed to save and republish config");
     }
 

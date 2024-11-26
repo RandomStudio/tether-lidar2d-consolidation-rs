@@ -23,6 +23,7 @@ pub struct Outputs {
     pub request_automask: PlugDefinition,
 }
 
+#[derive(Debug)]
 pub enum EditingCorner {
     None,
     A,

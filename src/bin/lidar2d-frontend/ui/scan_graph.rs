@@ -3,6 +3,8 @@ use egui::{
     plot::{MarkerShape, Plot, PlotPoints, Points},
     Color32, InnerResponse, Ui,
 };
+use log::{debug, warn};
+use tether_lidar2d_consolidation::backend_config::ConfigRectCornerPoint;
 
 use crate::model::{EditingCorner, Model};
 
@@ -102,11 +104,14 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
     });
 
     if response.clicked() {
+        debug!("Clicked scan graph");
         match &mut model.editing_corners {
             EditingCorner::None => {
                 // Do nothing
+                debug!("No corners currently edited; do nothing")
             }
             _ => {
+                debug!("Was editing {:?}", model.editing_corners);
                 model.is_editing = true;
                 model.editing_corners = EditingCorner::None;
             }
@@ -114,6 +119,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
     }
 
     if let Some(egui::plot::PlotPoint { x, y }) = pointer_coordinate {
+        // debug!("Should edit using pointer at {},{}", x, y);
         let x = x as f32;
         let y = y as f32;
         if let Some(config) = &mut model.backend_config {
@@ -136,6 +142,21 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
                     EditingCorner::D => {
                         d.x = x;
                         d.y = y;
+                    }
+                }
+            } else {
+                match model.editing_corners {
+                    EditingCorner::None => {}
+                    _ => {
+                        warn!("No ROI, create a new one with some default points",);
+                        let (x, y) = (0.0, 0.);
+                        let distance = 1000.;
+                        config.region_of_interest = Some((
+                            ConfigRectCornerPoint::new(0, x, y),
+                            ConfigRectCornerPoint::new(1, x + distance, y),
+                            ConfigRectCornerPoint::new(2, x + distance, y + distance),
+                            ConfigRectCornerPoint::new(3, x, y + distance),
+                        ));
                     }
                 }
             }
