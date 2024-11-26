@@ -1,5 +1,5 @@
 use clap::Parser;
-use tether_lidar2d_consolidation::backend_config::BackendConfig;
+use tether_lidar2d_consolidation::backend_config::{load_config_from_file, BackendConfig};
 use tether_lidar2d_consolidation::consolidator_system::{Outputs, Systems};
 use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D};
 
@@ -40,18 +40,14 @@ fn main() {
     let inputs = Inputs::new(&tether_agent);
     let outputs = Outputs::new(&tether_agent);
 
-    let mut backend_config = BackendConfig::new(&cli.config_path);
-
-    match backend_config.load_config_from_file() {
-        Ok(count) => {
-            info!(
-                "Loaded {} devices OK into Config; publish with retain=true",
-                count
-            );
-            // Always publish on first start/load...
-            tether_agent
-                .encode_and_publish(&outputs.config_output, &backend_config)
-                .expect("failed to publish config");
+    let mut backend_config = match load_config_from_file(&cli.config_path) {
+        Ok(config) => {
+            info!("Loaded tracking config OK into Config; publish with retain=true",);
+            // Always save and publish on first start/load...
+            config
+                .save_and_republish(&tether_agent, &outputs.config_output)
+                .expect("failed to save and publish config");
+            config
         }
         Err(e) => {
             panic!("Error loading devices into config manager: {}", e)

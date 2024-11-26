@@ -174,43 +174,6 @@ impl BackendConfig {
         }
     }
 
-    pub fn load_config_from_file(&mut self) -> Result<usize> {
-        let text = match std::fs::read_to_string(&self.config_file_path) {
-            Err(e) => {
-                if e.kind().to_string() == "entity not found" {
-                    warn!("Tracking Config file not found, will create a blank one");
-                    // TODO: this might need to be a bit more sophisticated!
-                    String::from("{\"devices\": [], \"externalTrackers\": [] }")
-                } else {
-                    println!("kind: {}", e.kind());
-                    panic!("Failed to load Tracking Config from disk; error: {:?}", e);
-                }
-            }
-            Ok(s) => {
-                info!(
-                    "Loaded Tracking config OK from \"{}\"",
-                    &self.config_file_path
-                );
-                s
-            }
-        };
-
-        match serde_json::from_str::<BackendConfig>(&text) {
-            Ok(data) => {
-                debug!("Config parsed data from file: {:?}", data);
-
-                self.devices = data.devices;
-                self.external_trackers = data.external_trackers;
-                self.region_of_interest = data.region_of_interest;
-                self.zones = data.zones;
-                self.use_real_units = data.use_real_units;
-
-                Ok(self.devices.len())
-            }
-            Err(e) => Err(anyhow!("Failed to parse config data: {}", e)),
-        }
-    }
-
     pub fn write_config_to_file(&self) -> Result<(), Error> {
         info!("Current state of config: {:?}", self);
         let text = serde_json::to_string_pretty(self).unwrap();
@@ -414,4 +377,34 @@ const PALETTE: &[&str] = &["#ffff00", "#00ffff", "#ff00ff"];
 fn pick_from_palette(index: usize) -> String {
     let c = PALETTE[index % PALETTE.len()];
     String::from(c)
+}
+
+pub fn load_config_from_file(config_file_path: &str) -> Result<BackendConfig> {
+    let config = BackendConfig::new(config_file_path);
+
+    match std::fs::read_to_string(config_file_path) {
+        Err(e) => {
+            if e.kind().to_string() == "entity not found" {
+                warn!(
+                    "Tracking Config file not found, will create a blank one at {}",
+                    &config_file_path
+                );
+                Ok(config)
+            } else {
+                println!("kind: {}", e.kind());
+                panic!("Failed to load Tracking Config from disk; error: {:?}", e);
+            }
+        }
+        Ok(s) => {
+            info!("Loaded Tracking config OK from \"{}\"", config_file_path);
+            match serde_json::from_str::<BackendConfig>(&s) {
+                Ok(loaded_config) => {
+                    debug!("Config parsed data from file: {:?}", &loaded_config);
+
+                    Ok(loaded_config)
+                }
+                Err(e) => Err(anyhow!("Failed to parse config data: {}", e)),
+            }
+        }
+    }
 }
