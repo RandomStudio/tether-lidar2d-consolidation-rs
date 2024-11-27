@@ -46,7 +46,7 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         }
 
         if let Some(tracking_config) = &model.backend_config {
-            if tracking_config.use_real_units() {
+            if tracking_config.smoothing_use_real_units {
                 if let Some(roi) = tracking_config.region_of_interest() {
                     let dst_quad = calculate_dst_quad(roi);
 

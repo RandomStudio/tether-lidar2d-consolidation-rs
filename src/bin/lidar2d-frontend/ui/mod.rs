@@ -50,7 +50,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
         });
         if let Some(tracking_config) = &model.backend_config {
             ui.heading("Tracking Config");
-            if tracking_config.use_real_units() {
+            if tracking_config.smoothing_use_real_units {
                 if let Some(roi) = tracking_config.region_of_interest() {
                     ui.horizontal(|ui| {
                         ui.label("Output width:");

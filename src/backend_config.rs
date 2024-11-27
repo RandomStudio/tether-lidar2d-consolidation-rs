@@ -68,7 +68,6 @@ pub struct BackendConfig {
     pub external_trackers: Vec<ExternalTracker>,
     pub region_of_interest: Option<CornerPoints>,
     pub zones: Option<Vec<Zone>>,
-    pub use_real_units: Option<bool>,
 
     /// Default min distance threshold (in mm) to use for unconfigured new devices
     pub default_min_distance_threshold: f32,
@@ -109,6 +108,10 @@ pub struct BackendConfig {
     /// message rate
     pub smoothing_update_interval: u128,
 
+    /// If enabled, smoothing will use "real units" (i.e. mm); otherwise the
+    /// destination quad will be a normalised rect in the range [0;1] on both axes
+    pub smoothing_use_real_units: bool,
+
     // -------- PERSPECTIVE TRANSFORM SETTINGS
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad
     /// **(with a little margin for error; see perspectiveTransform.ignoreOutsideMargin)**;
@@ -138,7 +141,7 @@ impl Default for BackendConfig {
             external_trackers: Vec::new(),
             region_of_interest: None,
             zones: None,
-            use_real_units: None,
+            smoothing_use_real_units: true,
             default_min_distance_threshold: 20.,
             clustering_neighbourhood_radius: 200.,
             clustering_min_neighbours: 4,
@@ -170,13 +173,13 @@ impl BackendConfig {
                     devices,
                     external_trackers,
                     region_of_interest,
-                    use_real_units,
+                    smoothing_use_real_units: use_real_units,
                     ..
                 } = config;
                 self.devices = devices;
                 self.external_trackers = external_trackers;
                 self.region_of_interest = region_of_interest;
-                self.use_real_units = use_real_units;
+                self.smoothing_use_real_units = use_real_units;
                 Ok(())
             }
             Err(e) => Err(anyhow!("Failed to parse Config from message: {}", e)),
@@ -331,10 +334,6 @@ impl BackendConfig {
         self.zones.as_deref()
     }
 
-    pub fn use_real_units(&self) -> bool {
-        self.use_real_units.unwrap_or(false)
-    }
-
     pub fn handle_save_message(
         &mut self,
         tether_agent: &TetherAgent,
@@ -351,7 +350,7 @@ impl BackendConfig {
                     let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
                     perspective_transformer.set_new_quad(
                         &corners,
-                        if self.use_real_units() {
+                        if self.smoothing_use_real_units {
                             Some(calculate_dst_quad(region_of_interest))
                         } else {
                             None

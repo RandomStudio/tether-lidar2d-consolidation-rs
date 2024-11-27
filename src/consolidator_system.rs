@@ -124,7 +124,7 @@ impl Systems {
                 }
                 None => None,
             },
-            if config.use_real_units() {
+            if config.smoothing_use_real_units {
                 info!("Using real units");
                 config.region_of_interest().map(calculate_dst_quad)
             } else {
