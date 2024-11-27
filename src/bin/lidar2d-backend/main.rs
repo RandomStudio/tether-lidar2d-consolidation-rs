@@ -1,6 +1,8 @@
 use clap::Parser;
-use tether_lidar2d_consolidation::backend_config::load_config_from_file;
+use tether_lidar2d_consolidation::backend_config::{load_config_from_file, BackendConfig};
+use tether_lidar2d_consolidation::clustering::ClusteringSystem;
 use tether_lidar2d_consolidation::consolidator_system::{Outputs, Systems};
+use tether_lidar2d_consolidation::smoothing::{SmoothSettings, TrackingSmoother};
 use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D};
 
 use env_logger::Env;
@@ -143,6 +145,33 @@ fn main() {
                         &cli.config_path,
                     )
                     .expect("config failed to update and save");
+
+                info!("New config was received and saved; must update systems now...");
+
+                let BackendConfig {
+                    clustering_neighbourhood_radius,
+                    clustering_min_neighbours,
+                    clustering_max_cluster_size,
+                    smoothing_merge_radius,
+                    smoothing_wait_before_active_ms,
+                    smoothing_expire_ms,
+                    smoothing_lerp_factor,
+                    smoothing_empty_send_mode,
+                    ..
+                } = backend_config;
+
+                systems.clustering_system = ClusteringSystem::new(
+                    clustering_neighbourhood_radius,
+                    clustering_min_neighbours,
+                    clustering_max_cluster_size,
+                );
+                systems.smoothing_system = TrackingSmoother::new(SmoothSettings {
+                    merge_radius: smoothing_merge_radius,
+                    wait_before_active_ms: smoothing_wait_before_active_ms,
+                    expire_ms: smoothing_expire_ms,
+                    lerp_factor: smoothing_lerp_factor,
+                    empty_list_send_mode: smoothing_empty_send_mode,
+                });
             }
 
             if inputs.request_automask_input.matches(&topic) {

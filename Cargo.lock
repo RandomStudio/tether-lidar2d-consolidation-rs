@@ -733,10 +733,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
 
 [[package]]
-name = "colors-transform"
-version = "0.2.11"
+name = "colorsys"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9226dbc05df4fb986f48d730b001532580883c4c06c5d1c213f4b34c1c157178"
+checksum = "54261aba646433cb567ec89844be4c4825ca92a4f8afba52fc4dd88436e31bbd"
 
 [[package]]
 name = "combine"
@@ -2837,7 +2837,7 @@ dependencies = [
  "anyhow",
  "async-std",
  "clap",
- "colors-transform",
+ "colorsys",
  "eframe",
  "egui 0.21.0",
  "egui_plot",

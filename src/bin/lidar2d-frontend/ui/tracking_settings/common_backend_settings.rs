@@ -1,4 +1,5 @@
-use egui::Ui;
+use egui::{Slider, Ui};
+use log::debug;
 use tether_lidar2d_consolidation::automasking::AutoMaskMessage;
 
 use crate::model::{EditingCorner, Model};
@@ -76,7 +77,38 @@ pub fn render_common_backend_settings(
 
     if let Some(backend_config) = &mut model.backend_config {
         ui.separator();
-        ui.heading("Clustering");
+        ui.heading("Smoothing");
+
+        if ui
+            .checkbox(&mut backend_config.smoothing_disable, "Disable smoothing")
+            .clicked()
+        {
+            model.is_editing = true;
+        }
+
+        ui.horizontal(|ui| {
+            let (label_text, slider_range) = {
+                if backend_config.smoothing_use_real_units {
+                    (String::from("Merge radius (mm)"), 0. ..=10000.)
+                } else {
+                    (String::from("Merge radius (units)"), 0. ..=1.0)
+                }
+            };
+            ui.label(label_text);
+            if ui
+                .add(Slider::new(
+                    &mut backend_config.smoothing_merge_radius,
+                    slider_range,
+                ))
+                .changed()
+            {
+                debug!(
+                    "Set smoothing merge radius to {}",
+                    backend_config.smoothing_merge_radius
+                );
+                model.is_editing = true;
+            }
+        });
 
         if ui
             .checkbox(
@@ -85,7 +117,8 @@ pub fn render_common_backend_settings(
             )
             .clicked()
         {
-            *should_publish_update = true;
+            // *should_publish_update = true;
+            model.is_editing = true;
         };
     }
 }

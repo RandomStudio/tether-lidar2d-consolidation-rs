@@ -1,6 +1,7 @@
 use common_backend_settings::render_common_backend_settings;
 use device_settings::render_device_settings;
 use egui::{Color32, RichText, Ui};
+use log::debug;
 
 use crate::model::Model;
 
@@ -46,6 +47,7 @@ pub fn render_tracking_settings(model: &mut Model, ui: &mut Ui) {
             // We publish the updated config via Tether (on the plug "saveLidarConfig"). This is picked up by the backend which in turn re-saves the
             // config file (JSON) and republishes the updated Config (on the plug "provideLidarConfig").
             if should_publish_update {
+                debug!("Publish new backend config: {:?}", &model.backend_config);
                 model
                     .tether_agent
                     .encode_and_publish(&model.outputs.config, &model.backend_config)

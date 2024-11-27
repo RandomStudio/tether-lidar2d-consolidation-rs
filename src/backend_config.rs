@@ -169,17 +169,20 @@ impl BackendConfig {
 
         match rmp_serde::from_slice::<BackendConfig>(&payload) {
             Ok(config) => {
-                let BackendConfig {
-                    devices,
-                    external_trackers,
-                    region_of_interest,
-                    smoothing_use_real_units: use_real_units,
-                    ..
-                } = config;
-                self.devices = devices;
-                self.external_trackers = external_trackers;
-                self.region_of_interest = region_of_interest;
-                self.smoothing_use_real_units = use_real_units;
+                *self = config;
+                // let BackendConfig {
+                //     devices,
+                //     external_trackers,
+                //     region_of_interest,
+                //     smoothing_use_real_units: use_real_units,
+                //     smoothing_merge_radius,
+                //     ..
+                // } = config;
+                // self.devices = devices;
+                // self.external_trackers = external_trackers;
+                // self.region_of_interest = region_of_interest;
+                // self.smoothing_use_real_units = use_real_units;
+                // self.smoothing_merge_radius = smoothing_merge_radius;
                 Ok(())
             }
             Err(e) => Err(anyhow!("Failed to parse Config from message: {}", e)),

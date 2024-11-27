@@ -3,7 +3,7 @@ use crate::{
     Point2D,
 };
 
-use log::debug;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
 use ndarray::{Array, ArrayView};
@@ -36,14 +36,14 @@ pub struct ClusteringSystem {
 impl ClusteringSystem {
     pub fn new(
         neighbourhood_radius: f32,
-        min_neighbourss: usize,
+        min_neighbours: usize,
         max_cluster_size: f32,
     ) -> ClusteringSystem {
         ClusteringSystem {
             scan_points: HashMap::new(),
             clustering_engine: Dbscan {
                 eps: neighbourhood_radius,
-                min_samples: min_neighbourss,
+                min_samples: min_neighbours,
                 metric: Euclidean::default(),
             },
             cached_clusters: Vec::new(),

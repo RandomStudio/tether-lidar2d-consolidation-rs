@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{tracking::TrackedPoint2D, Point2D};
 use anyhow::{anyhow, Result};
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum EmptyListSendMode {
     Never,
     Once,
