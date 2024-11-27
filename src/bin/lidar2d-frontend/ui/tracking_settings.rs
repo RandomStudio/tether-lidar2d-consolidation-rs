@@ -1,5 +1,6 @@
+use colorsys::Rgb;
 use egui::{Checkbox, Color32, RichText, Slider, Ui};
-use log::warn;
+use log::{debug, warn};
 use tether_lidar2d_consolidation::automasking::AutoMaskMessage;
 
 use crate::model::{EditingCorner, Model};
@@ -130,6 +131,19 @@ pub fn render_tracking_settings(model: &mut Model, ui: &mut Ui) {
                             model.is_editing = true;
                         };
                     });
+                    ui.end_row();
+
+                    ui.horizontal(|ui| {
+                        let mut rgb: [u8; 3] = Rgb::from_hex_str(&device.colour).unwrap().into();
+
+                        if ui.color_edit_button_srgb(&mut rgb).changed() {
+                            debug!("Change device colour to {:?}", rgb);
+                            model.is_editing = true;
+                            let new_rgb = Rgb::from(rgb);
+                            device.colour = new_rgb.to_hex_string();
+                        }
+                    });
+
                     ui.end_row();
                     let (current_flip_x, current_flip_y) = device.flip_coords.unwrap_or((1, 1));
                     ui.horizontal(|ui| {

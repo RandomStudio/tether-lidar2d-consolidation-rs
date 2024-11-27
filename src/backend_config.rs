@@ -19,7 +19,7 @@ pub struct LidarDevice {
     pub rotation: f32,
     pub x: f32,
     pub y: f32,
-    pub color: String,
+    pub colour: String,
     pub min_distance_threshold: f32,
     pub scan_mask_thresholds: Option<MaskThresholdMap>,
     pub flip_coords: Option<(i8, i8)>,
@@ -217,7 +217,7 @@ impl BackendConfig {
                     rotation: 0.,
                     x: 0.,
                     y: 0.,
-                    color: pick_from_palette(self.devices.len()), // TODO: use random colour
+                    colour: pick_from_palette(self.devices.len()), // TODO: use random colour
                     min_distance_threshold: default_min_distance,
                     scan_mask_thresholds: None,
                     flip_coords: None,
@@ -384,6 +384,7 @@ impl BackendConfig {
     }
 }
 
+// TODO: some more imaginative colours, please?
 const PALETTE: &[&str] = &["#ffff00", "#00ffff", "#ff00ff"];
 
 fn pick_from_palette(index: usize) -> String {

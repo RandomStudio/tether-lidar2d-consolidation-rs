@@ -1,4 +1,4 @@
-use colors_transform::{Color, Rgb};
+use colorsys::Rgb;
 use egui::{
     plot::{MarkerShape, Plot, PlotPoints, Points},
     Color32, InnerResponse, Ui,
@@ -28,13 +28,9 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
             let mut all_points = Vec::new();
 
             for device in tracking_config.devices() {
-                let rgb: Rgb = Rgb::from_hex_str(&device.color).unwrap();
-                let (r, g, b) = (
-                    rgb.get_red() as u8,
-                    rgb.get_green() as u8,
-                    rgb.get_blue() as u8,
-                );
                 if let Some(scans_this_device) = model.scans.get(&device.serial) {
+                    let rgb: [u8; 3] = Rgb::from_hex_str(&device.colour).unwrap().into();
+                    let [r, g, b] = rgb;
                     let points = angle_samples_to_plot_points(
                         scans_this_device,
                         model.point_size,
