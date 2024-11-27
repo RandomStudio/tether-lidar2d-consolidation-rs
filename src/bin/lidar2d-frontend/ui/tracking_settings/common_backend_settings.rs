@@ -89,7 +89,7 @@ pub fn render_common_backend_settings(
         ui.horizontal(|ui| {
             let (label_text, slider_range) = {
                 if backend_config.smoothing_use_real_units {
-                    (String::from("Merge radius (mm)"), 0. ..=10000.)
+                    (String::from("Merge radius (mm)"), 0. ..=5000.)
                 } else {
                     (String::from("Merge radius (units)"), 0. ..=1.0)
                 }
@@ -106,6 +106,42 @@ pub fn render_common_backend_settings(
                     "Set smoothing merge radius to {}",
                     backend_config.smoothing_merge_radius
                 );
+                model.is_editing = true;
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Wait before active");
+            let mut value = backend_config.smoothing_wait_before_active_ms as u64;
+            if ui
+                .add(Slider::new(&mut value, 0..=5000).suffix("ms"))
+                .changed()
+            {
+                backend_config.smoothing_wait_before_active_ms = value as u128;
+                model.is_editing = true;
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Wait before expire");
+            let mut value = backend_config.smoothing_expire_ms as u64;
+            if ui
+                .add(Slider::new(&mut value, 0..=5000).suffix("ms"))
+                .changed()
+            {
+                backend_config.smoothing_expire_ms = value as u128;
+                model.is_editing = true;
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Smoothing update interval");
+            let mut value = backend_config.smoothing_update_interval as u64;
+            if ui
+                .add(Slider::new(&mut value, 0..=5000).suffix("ms"))
+                .changed()
+            {
+                backend_config.smoothing_update_interval = value as u128;
                 model.is_editing = true;
             }
         });
