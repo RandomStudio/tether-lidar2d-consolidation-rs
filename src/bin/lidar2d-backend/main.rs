@@ -1,6 +1,6 @@
 use clap::Parser;
 use quad_to_quad_transformer::QuadTransformer;
-use tether_lidar2d_consolidation::backend_config::{self, load_config_from_file, BackendConfig};
+use tether_lidar2d_consolidation::backend_config::{load_config_from_file, BackendConfig};
 use tether_lidar2d_consolidation::clustering::ClusteringSystem;
 use tether_lidar2d_consolidation::consolidator_system::{calculate_dst_quad, Outputs, Systems};
 use tether_lidar2d_consolidation::smoothing::{SmoothSettings, TrackingSmoother};

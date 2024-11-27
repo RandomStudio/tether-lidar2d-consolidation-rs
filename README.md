@@ -1,10 +1,6 @@
 # Tether Lidar2D Consolidator, in Rust
 
-This was originally a direct port of the [original NodeJS Agent](https://github.com/RandomStudio/tether-lidar2d-consolidation) (here referred to as "the OG Agent" ✌️) into Rust 🦀. Some new features have now been added after v0.3.
-
-The two main goals were
-- Learn to use Rust in a real-world application, following an existing codebase which was well known and where the fundamental engineering challenges had already been "solved"
-- Produce a usable version of the Lidar Consolidator Agent that was faster and lighter (e.g. on RAM) which could be deployed to lower-resource platforms (e.g. Raspberry Pi) without putting as much strain on the system
+This is a [Tether](https://github.com/RandomStudio/tether) agent which combines scan data from one or more 2D LIDAR sensors and produces smooth tracking output.
 
 ## Easy install via Cargo
 Since v0.3.1, you can install the binary via Cargo, ie.:
@@ -19,13 +15,8 @@ lidar2d-frontend
 ```
 
 ## Command-line configuration
-For the backend executable, you can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `lidar2d-backend --help` (installed) or `cargo run --bin lidar2d-backend -- --help` (development)
+For the boath executables, you can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `lidar2d-backend --help` (installed) or `cargo run --bin lidar2d-backend -- --help` (development)
 
-Options are deliberately made to be almost identical to those used in the OG Agent, with a few notable exceptions:
-
-- Here we use a flag `--perspectiveTransform.includeOutside` instead of setting a boolean `ignoreOutside`. This reflects the default usage better and makes more sense when using a flag (which defaults to `false` if not explicitly appended)
-- For Tether, you can optionally provide `--tether.host`, `--tether.username`, `--tether.password` if these differ from the defaults
-- There are no options relating to `autoBroadcastConfig` as there is no need for this behaviour; we save and (re)publish configuration essentially every time it changes, on startup and when requested
 
 ## Dev dependencies
 If you are compiling on your own system, Paho Eclipse MQTT has some (non-Rust) dependencies of its own. On Mac, you might need to the following:
