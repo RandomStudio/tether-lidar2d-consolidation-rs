@@ -330,5 +330,27 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                 }
             });
         });
+
+        // ---------------- MOVEMENT ANALYSIS SETTINGS
+        ui.separator();
+        ui.heading("Movement Analysis");
+
+        if ui
+            .checkbox(
+                &mut backend_config.movement_disable,
+                "Disable calculation + output",
+            )
+            .clicked()
+        {
+            model.is_editing = true;
+        }
+
+        ui.add_enabled_ui(!backend_config.movement_disable, |ui| {
+            let mut value = backend_config.movement_interval as u64;
+            if ui.add(Slider::new(&mut value, 8..=3000)).changed() {
+                model.is_editing = true;
+                backend_config.movement_interval = value as u128;
+            }
+        });
     }
 }
