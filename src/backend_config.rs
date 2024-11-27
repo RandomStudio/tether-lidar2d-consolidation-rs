@@ -122,8 +122,8 @@ pub struct BackendConfig {
     /// distance from the edges of the destination quad, i.e. tge range [0-margin,1+margin]
     pub transform_ignore_outside_margin: f32,
 
+    // -------- AUTOMASKING SETTINGS
     pub automask_scans_required: usize,
-
     pub automask_threshold_margin: f32,
 
     // -------- MOVEMENT ANALYSIS SETTINGS

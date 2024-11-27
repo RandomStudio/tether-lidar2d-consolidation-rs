@@ -31,6 +31,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
         }
     });
 
+    // ------------------------ CLUSTERING SETTINGS
     if let Some(backend_config) = &mut model.backend_config {
         ui.separator();
         ui.heading("Clustering");
@@ -121,6 +122,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
         };
     });
 
+    // ------------------------ SMOOTHING SETTINGS
     if let Some(backend_config) = &mut model.backend_config {
         ui.separator();
         ui.heading("Smoothing");
@@ -261,6 +263,48 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                 // *should_publish_update = true;
                 model.is_editing = true;
             };
+        });
+
+        // ---------------- PERSPECTIVE TRANSFORM SETTINGS
+        ui.separator();
+        ui.heading("Perspective/Quad Transformer");
+
+        if ui
+            .checkbox(
+                &mut backend_config.transform_include_outside,
+                "Include points outside ROI",
+            )
+            .clicked()
+        {
+            model.is_editing = true;
+        }
+
+        ui.add_enabled_ui(!backend_config.transform_include_outside, |ui| {
+            ui.horizontal(|ui| {
+                let (label_text, slider_range) = {
+                    if backend_config.smoothing_use_real_units {
+                        (
+                            String::from("Margin to ignore outside ROI (mm)"),
+                            0. ..=1000.,
+                        )
+                    } else {
+                        (
+                            String::from("Margin to ignore outside ROI (units)"),
+                            0. ..=1.0,
+                        )
+                    }
+                };
+                ui.label(label_text);
+                if ui
+                    .add(Slider::new(
+                        &mut backend_config.transform_ignore_outside_margin,
+                        slider_range,
+                    ))
+                    .changed()
+                {
+                    model.is_editing = true;
+                }
+            });
         });
     }
 }

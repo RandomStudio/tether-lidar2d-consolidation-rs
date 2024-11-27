@@ -1,7 +1,8 @@
 use clap::Parser;
-use tether_lidar2d_consolidation::backend_config::{load_config_from_file, BackendConfig};
+use quad_to_quad_transformer::QuadTransformer;
+use tether_lidar2d_consolidation::backend_config::{self, load_config_from_file, BackendConfig};
 use tether_lidar2d_consolidation::clustering::ClusteringSystem;
-use tether_lidar2d_consolidation::consolidator_system::{Outputs, Systems};
+use tether_lidar2d_consolidation::consolidator_system::{calculate_dst_quad, Outputs, Systems};
 use tether_lidar2d_consolidation::smoothing::{SmoothSettings, TrackingSmoother};
 use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D};
 
@@ -172,6 +173,28 @@ fn main() {
                     lerp_factor: smoothing_lerp_factor,
                     empty_list_send_mode: smoothing_empty_send_mode,
                 });
+                systems.perspective_transformer = QuadTransformer::new(
+                    match backend_config.region_of_interest() {
+                        Some(region_of_interest) => {
+                            let (c1, c2, c3, c4) = region_of_interest;
+                            let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
+                            Some(corners)
+                        }
+                        None => None,
+                    },
+                    if backend_config.smoothing_use_real_units {
+                        backend_config.region_of_interest().map(calculate_dst_quad)
+                    } else {
+                        None
+                    },
+                    {
+                        if backend_config.transform_include_outside {
+                            None
+                        } else {
+                            Some(backend_config.transform_ignore_outside_margin)
+                        }
+                    },
+                );
             }
 
             if inputs.request_automask_input.matches(&topic) {
