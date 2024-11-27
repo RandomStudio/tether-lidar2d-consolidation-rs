@@ -5,6 +5,8 @@ use tether_lidar2d_consolidation::automasking::AutoMaskMessage;
 
 use crate::model::{EditingCorner, Model};
 
+use super::SPACING_AMOUNT;
+
 pub fn render_tracking_settings(model: &mut Model, ui: &mut Ui) {
     ui.heading("Tracking Configuration");
     ui.group(|ui| match &mut model.backend_config {
@@ -78,8 +80,22 @@ pub fn render_tracking_settings(model: &mut Model, ui: &mut Ui) {
                 };
             });
 
+            ui.add_space(SPACING_AMOUNT);
+
             ui.separator();
             ui.heading("LIDAR Devices");
+
+            let mut should_publish_update = false;
+
+            ui.horizontal(|ui| {
+                ui.label("Clear all:");
+                if ui.button("Clear ⏏").clicked() {
+                    tracking_config.devices_mut().clear();
+                    should_publish_update = true;
+                }
+            });
+
+            ui.separator();
             let mut delete_index: Option<usize> = None;
             for (index, device) in tracking_config.devices_mut().iter_mut().enumerate() {
                 ui.group(|ui| {
@@ -169,8 +185,6 @@ pub fn render_tracking_settings(model: &mut Model, ui: &mut Ui) {
                     });
                 });
             }
-
-            let mut should_publish_update = false;
 
             if let Some(index) = delete_index {
                 warn!("Deleting device in list with index {}...", index);
