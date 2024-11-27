@@ -1,12 +1,14 @@
-use colors_transform::{Color, Rgb};
+use colorsys::Rgb;
 use egui::{
     plot::{MarkerShape, Plot, PlotPoints, Points},
     Color32, InnerResponse, Ui,
 };
+use log::{debug, warn};
+use tether_lidar2d_consolidation::backend_config::ConfigRectCornerPoint;
 
 use crate::model::{EditingCorner, Model};
 
-use super::{draw_circle, draw_line, scans_to_plot_points};
+use super::{angle_samples_to_plot_points, draw_circle, draw_line};
 
 pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
     let markers_plot = Plot::new("scans")
@@ -22,18 +24,14 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
         inner: (pointer_coordinate, _bounds),
         ..
     } = markers_plot.show(ui, |plot_ui| {
-        if let Some(tracking_config) = &model.tracking_config {
+        if let Some(tracking_config) = &model.backend_config {
             let mut all_points = Vec::new();
 
             for device in tracking_config.devices() {
-                let rgb: Rgb = Rgb::from_hex_str(&device.color).unwrap();
-                let (r, g, b) = (
-                    rgb.get_red() as u8,
-                    rgb.get_green() as u8,
-                    rgb.get_blue() as u8,
-                );
                 if let Some(scans_this_device) = model.scans.get(&device.serial) {
-                    let points = scans_to_plot_points(
+                    let rgb: [u8; 3] = Rgb::from_hex_str(&device.colour).unwrap().into();
+                    let [r, g, b] = rgb;
+                    let points = angle_samples_to_plot_points(
                         scans_this_device,
                         model.point_size,
                         Color32::from_rgb(r, g, b),
@@ -44,6 +42,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
                     all_points.push(points);
                 }
             }
+
             for points_group in all_points {
                 plot_ui.points(points_group);
             }
@@ -59,7 +58,7 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
             }
 
             if let Some((a, b, c, d)) = tracking_config.region_of_interest() {
-                let corner_points: Vec<(f32, f32, &str)> = [d, c, b, a]
+                let corner_points: Vec<(f32, f32, &str)> = [a, b, c, d]
                     .iter()
                     .enumerate()
                     .map(|(index, cp)| {
@@ -101,29 +100,26 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
     });
 
     if response.clicked() {
-        model.is_editing = true;
+        debug!("Clicked scan graph");
         match &mut model.editing_corners {
             EditingCorner::None => {
-                model.editing_corners = EditingCorner::A;
+                // Do nothing
+                debug!("No corners currently edited; do nothing")
             }
-            EditingCorner::A => {
-                model.editing_corners = EditingCorner::B;
+            _ => {
+                debug!("Was editing {:?}", model.editing_corners);
+                model.is_editing = true;
+                model.editing_corners = EditingCorner::None;
             }
-            EditingCorner::B => {
-                model.editing_corners = EditingCorner::C;
-            }
-            EditingCorner::C => {
-                model.editing_corners = EditingCorner::D;
-            }
-            EditingCorner::D => model.editing_corners = EditingCorner::None,
         }
     }
 
     if let Some(egui::plot::PlotPoint { x, y }) = pointer_coordinate {
+        // debug!("Should edit using pointer at {},{}", x, y);
         let x = x as f32;
         let y = y as f32;
-        if let Some(config) = &mut model.tracking_config {
-            if let Some((d, c, b, a)) = &mut config.region_of_interest_mut() {
+        if let Some(config) = &mut model.backend_config {
+            if let Some((a, b, c, d)) = &mut config.region_of_interest_mut() {
                 // println!("{}, {}", x, y);
                 match model.editing_corners {
                     EditingCorner::None => {}
@@ -142,6 +138,21 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
                     EditingCorner::D => {
                         d.x = x;
                         d.y = y;
+                    }
+                }
+            } else {
+                match model.editing_corners {
+                    EditingCorner::None => {}
+                    _ => {
+                        warn!("No ROI, create a new one with some default points",);
+                        let (x, y) = (0.0, 0.);
+                        let distance = 1000.;
+                        config.region_of_interest = Some((
+                            ConfigRectCornerPoint::new(0, x, y),
+                            ConfigRectCornerPoint::new(1, x + distance, y),
+                            ConfigRectCornerPoint::new(2, x + distance, y + distance),
+                            ConfigRectCornerPoint::new(3, x, y + distance),
+                        ));
                     }
                 }
             }

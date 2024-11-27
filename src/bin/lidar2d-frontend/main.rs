@@ -10,11 +10,12 @@
 //!
 use clap::Parser;
 
+use cli::Cli;
 use env_logger::Env;
 use log::debug;
 use model::Model;
-use tether_lidar2d_consolidation::settings::Cli;
 
+mod cli;
 mod model;
 mod ui;
 
@@ -27,6 +28,7 @@ fn main() -> Result<(), eframe::Error> {
         .filter_module("paho_mqtt", log::LevelFilter::Warn)
         .filter_module("winit", log::LevelFilter::Warn)
         .filter_module("eframe", log::LevelFilter::Warn)
+        .filter_module("tether_agent", log::LevelFilter::Warn)
         .init();
 
     debug!("Started; args: {:?}", cli);

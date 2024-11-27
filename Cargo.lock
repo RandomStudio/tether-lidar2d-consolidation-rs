@@ -194,9 +194,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.90"
+version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37bf3594c4c988a53154954629820791dde498571819ae4ca50ca811e060cc95"
+checksum = "c042108f3ed77fd83760a5fd79b53be043192bb3b9dba91d8c574c0ada7850c8"
 
 [[package]]
 name = "approx"
@@ -733,10 +733,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
 
 [[package]]
-name = "colors-transform"
-version = "0.2.11"
+name = "colorsys"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9226dbc05df4fb986f48d730b001532580883c4c06c5d1c213f4b34c1c157178"
+checksum = "54261aba646433cb567ec89844be4c4825ca92a4f8afba52fc4dd88436e31bbd"
 
 [[package]]
 name = "combine"
@@ -2348,9 +2348,9 @@ dependencies = [
 
 [[package]]
 name = "quad-to-quad-transformer"
-version = "0.1.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b622bf5e178c5a4e453b46ae45596c25b07d725240d0b08ce275ddd7d87a4527"
+checksum = "3ad8810c21dab794b29dece09147dddd71453242c6f74005866ee11e3baacfa4"
 dependencies = [
  "anyhow",
  "log",
@@ -2832,11 +2832,12 @@ dependencies = [
 
 [[package]]
 name = "tether-lidar2d-consolidation"
-version = "0.6.2"
+version = "0.7.0"
 dependencies = [
+ "anyhow",
  "async-std",
  "clap",
- "colors-transform",
+ "colorsys",
  "eframe",
  "egui 0.21.0",
  "egui_plot",

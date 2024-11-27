@@ -1,197 +1,38 @@
 mod scan_graph;
 mod tracking_graph;
+mod tracking_settings;
 
 use std::f64::consts::TAU;
 
 use egui::{
     plot::{Line, MarkerShape, PlotPoints, Points},
-    remap, Checkbox, Color32, RichText, Slider,
+    remap, Color32, Slider,
 };
 
 use scan_graph::render_scan_graph;
 use tether_lidar2d_consolidation::{
-    automasking::AutoMaskMessage, tracking::TrackedPoint2D, Point2D,
+    consolidator_system::distance, tracking::TrackedPoint2D, Point2D,
 };
 use tracking_graph::render_tracking_graph;
+use tracking_settings::render_tracking_settings;
 
-use crate::model::{EditingCorner, Model};
+use crate::model::Model;
+
+pub const SPACING_AMOUNT: f32 = 16.0;
 
 pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
     egui::SidePanel::left("config").show(ctx, |ui| {
         ui.heading("Visualisation Settings");
-        ui.horizontal(|ui| {
-            ui.label("Point radius");
-            ui.add(Slider::new(&mut model.point_size, 1.0..=20.0));
+        ui.group(|ui| {
+            ui.horizontal(|ui| {
+                ui.label("Point radius");
+                ui.add(Slider::new(&mut model.point_size, 1.0..=20.0));
+            });
         });
-        ui.separator();
 
-        ui.heading("Tracking Configuration");
+        ui.add_space(SPACING_AMOUNT);
 
-        match &mut model.tracking_config {
-            None => {
-                ui.label("No config received (yet)");
-            }
-            Some(tracking_config) => {
-                ui.heading("Automasking");
-                ui.horizontal(|ui| {
-                    if ui.button("New auto-calibration").clicked() {
-                        model
-                            .tether_agent
-                            .encode_and_publish(
-                                &model.outputs.request_automask,
-                                AutoMaskMessage {
-                                    r#type: "new".into(),
-                                },
-                            )
-                            .expect("failed to publish automask command");
-                    }
-                    if ui.button("Clear calibration").clicked() {
-                        model
-                            .tether_agent
-                            .encode_and_publish(
-                                &model.outputs.request_automask,
-                                AutoMaskMessage {
-                                    r#type: "clear".into(),
-                                },
-                            )
-                            .expect("failed to publish automask command");
-                    }
-                });
-                ui.separator();
-
-                ui.heading("Tracking region (ROI)");
-                ui.horizontal(|ui| {
-                    if ui
-                        .selectable_label(
-                            matches!(model.editing_corners, EditingCorner::None),
-                            "None",
-                        )
-                        .clicked()
-                    {
-                        model.editing_corners = EditingCorner::None;
-                        model.is_editing = true;
-                    };
-                    if ui
-                        .selectable_label(matches!(model.editing_corners, EditingCorner::A), "A")
-                        .clicked()
-                    {
-                        model.is_editing = true;
-                        model.editing_corners = EditingCorner::A
-                    };
-                    if ui
-                        .selectable_label(matches!(model.editing_corners, EditingCorner::B), "B")
-                        .clicked()
-                    {
-                        model.is_editing = true;
-                        model.editing_corners = EditingCorner::B
-                    };
-                    if ui
-                        .selectable_label(matches!(model.editing_corners, EditingCorner::C), "C")
-                        .clicked()
-                    {
-                        model.is_editing = true;
-                        model.editing_corners = EditingCorner::C
-                    };
-                    if ui
-                        .selectable_label(matches!(model.editing_corners, EditingCorner::D), "D")
-                        .clicked()
-                    {
-                        model.is_editing = true;
-                        model.editing_corners = EditingCorner::D
-                    };
-                });
-
-                ui.separator();
-                ui.heading("Devices");
-                for device in tracking_config.devices_mut().iter_mut() {
-                    ui.group(|ui| {
-                        if model.is_editing {
-                            ui.text_edit_singleline(&mut device.name);
-                        } else {
-                            ui.heading(&device.name);
-                        }
-                        ui.end_row();
-                        ui.horizontal(|ui| {
-                            ui.label("Serial #");
-                            ui.label(&device.serial);
-                        });
-                        ui.end_row();
-                        ui.horizontal(|ui| {
-                            ui.label("Rotation");
-                            if ui
-                                .add(Slider::new(&mut device.rotation, 0. ..=360.))
-                                .changed()
-                            {
-                                model.is_editing = true;
-                            };
-                        });
-                        ui.end_row();
-                        ui.horizontal(|ui| {
-                            ui.label("Offset X");
-                            if ui
-                                .add(Slider::new(&mut device.x, -10000. ..=10000.))
-                                .changed()
-                            {
-                                model.is_editing = true;
-                            };
-                        });
-                        ui.end_row();
-                        ui.horizontal(|ui| {
-                            ui.label("Offset Y");
-                            if ui
-                                .add(Slider::new(&mut device.y, -10000. ..=10000.))
-                                .changed()
-                            {
-                                model.is_editing = true;
-                            };
-                        });
-                        ui.end_row();
-                        let (current_flip_x, current_flip_y) = device.flip_coords.unwrap_or((1, 1));
-                        ui.horizontal(|ui| {
-                            let mut flip_x_checked = current_flip_x != 1;
-                            if ui
-                                .add(Checkbox::new(&mut flip_x_checked, "Flip X"))
-                                .clicked()
-                            {
-                                model.is_editing = true;
-                                let new_flip_x: i8 = if flip_x_checked { -1 } else { 1 };
-                                device.flip_coords = Some((new_flip_x, current_flip_y));
-                            };
-
-                            let mut flip_y_checked = current_flip_y != 1;
-                            if ui
-                                .add(Checkbox::new(&mut flip_y_checked, "Flip Y"))
-                                .clicked()
-                            {
-                                model.is_editing = true;
-                                let new_flip_y: i8 = if flip_y_checked { -1 } else { 1 };
-                                device.flip_coords = Some((current_flip_x, new_flip_y));
-                            };
-                        });
-                    });
-                }
-                if model.is_editing {
-                    if ui
-                        .button(
-                            RichText::new("Save 🖴")
-                                .color(Color32::LIGHT_GREEN)
-                                .size(16.0),
-                        )
-                        .clicked()
-                    {
-                        model
-                            .tether_agent
-                            .encode_and_publish(&model.outputs.config, &model.tracking_config)
-                            .expect("failed to publish config");
-                        model.is_editing = false;
-                    }
-                } else {
-                    if ui.button("Edit ✏").clicked() {
-                        model.is_editing = true;
-                    }
-                }
-            }
-        }
+        render_tracking_settings(model, ui);
     });
 
     egui::SidePanel::right("stats").show(ctx, |ui| {
@@ -207,6 +48,25 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
             ui.label("Smoothed tracked points count: ");
             ui.label(format!("{}", model.smoothed_tracked_points.len()));
         });
+        if let Some(tracking_config) = &model.backend_config {
+            ui.heading("Tracking Config");
+            if tracking_config.smoothing_use_real_units {
+                if let Some(roi) = tracking_config.region_of_interest() {
+                    ui.horizontal(|ui| {
+                        ui.label("Output width:");
+                        let (a, b, _c, _d) = roi;
+                        ui.label(format!("{:.1}mm", distance(a.x, a.y, b.x, b.y)))
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Output height:");
+                        let (a, _b, _c, d) = roi;
+                        ui.label(format!("{:.1}mm", distance(a.x, a.y, d.x, d.y)))
+                    });
+                }
+            } else {
+                ui.label("Normalised 1x1 output size");
+            }
+        }
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {
@@ -218,7 +78,8 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
     });
 }
 
-pub fn scans_to_plot_points(
+/// NB: measurements Point2D are (angle,distance) not (x,y)
+pub fn angle_samples_to_plot_points(
     measurements: &[Point2D],
     size: f32,
     color: Color32,

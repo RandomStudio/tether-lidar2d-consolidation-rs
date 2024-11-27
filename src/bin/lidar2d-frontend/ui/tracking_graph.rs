@@ -3,11 +3,11 @@ use egui::{
     plot::{Plot, PlotPoint, Text},
     Color32, Ui,
 };
+use tether_lidar2d_consolidation::consolidator_system::calculate_dst_quad;
 
-use super::{raw_tracked_points_to_plot_points, smoothed_tracked_points_to_plot_points};
+use super::{draw_line, raw_tracked_points_to_plot_points, smoothed_tracked_points_to_plot_points};
 
 pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
-    ui.heading("boo");
     let tracker_plot = Plot::new("tracker_plot")
         .data_aspect(1.0)
         .include_x(-1.)
@@ -43,6 +43,36 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
 
         for points_group in all_points {
             plot_ui.points(points_group);
+        }
+
+        if let Some(tracking_config) = &model.backend_config {
+            if tracking_config.smoothing_use_real_units {
+                if let Some(roi) = tracking_config.region_of_interest() {
+                    let dst_quad = calculate_dst_quad(roi);
+
+                    let [a, b, c, d] = dst_quad;
+
+                    let line1 = draw_line(a.0, a.1, b.0, b.1);
+                    plot_ui.line(line1.color(Color32::RED));
+                    // TODO: vertical lines seem to disappear; hence the strange offset here
+                    let line2 = draw_line(b.0, b.1, c.0 + 0.01, c.1);
+                    plot_ui.line(line2.color(Color32::RED));
+                    let line3 = draw_line(c.0, c.1, d.0, d.1);
+                    plot_ui.line(line3.color(Color32::RED));
+                    let line4 = draw_line(d.0, d.1, a.0 + 0.01, a.1);
+                    plot_ui.line(line4.color(Color32::RED));
+                }
+            } else {
+                let line1 = draw_line(0., 0., 1.0, 0.);
+                plot_ui.line(line1.color(Color32::RED));
+                // TODO: vertical lines seem to disappear; hence the strange offset here
+                let line2 = draw_line(1.0, 0., 1.0 + 0.01, 1.0);
+                plot_ui.line(line2.color(Color32::RED));
+                let line3 = draw_line(1.0, 1.0, 0., 1.0);
+                plot_ui.line(line3.color(Color32::RED));
+                let line4 = draw_line(0., 1.0, 0. + 0.01, 0.);
+                plot_ui.line(line4.color(Color32::RED));
+            }
         }
     });
 }

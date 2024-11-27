@@ -1,6 +1,10 @@
 use clap::Parser;
-use tether_lidar2d_consolidation::consolidator_system::{Outputs, Systems};
-use tether_lidar2d_consolidation::tracking_config::TrackingConfig;
+use quad_to_quad_transformer::QuadTransformer;
+use tether_lidar2d_consolidation::backend_config::{load_config_from_file, BackendConfig};
+use tether_lidar2d_consolidation::clustering::ClusteringSystem;
+use tether_lidar2d_consolidation::consolidator_system::{calculate_dst_quad, Outputs, Systems};
+use tether_lidar2d_consolidation::smoothing::{SmoothSettings, TrackingSmoother};
+use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D};
 
 use env_logger::Env;
 use log::{debug, info};
@@ -9,11 +13,14 @@ use std::time::Duration;
 use tether_agent::TetherAgentOptionsBuilder;
 
 use tether_lidar2d_consolidation::automasking::handle_automask_message;
-use tether_lidar2d_consolidation::clustering::handle_scans_message;
-use tether_lidar2d_consolidation::consolidator_system::Inputs;
+use tether_lidar2d_consolidation::consolidator_system::{
+    handle_external_tracking_message, handle_scans_message, Inputs,
+};
 use tether_lidar2d_consolidation::movement::get_total_movement;
 use tether_lidar2d_consolidation::presence::publish_presence_change;
-use tether_lidar2d_consolidation::settings::Cli;
+
+mod cli;
+use cli::Cli;
 
 fn main() {
     let cli = Cli::parse();
@@ -22,6 +29,7 @@ fn main() {
 
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
         .filter_module("paho_mqtt", log::LevelFilter::Warn)
+        .filter_module("tether_agent", log::LevelFilter::Warn)
         .init();
 
     debug!("Started; args: {:?}", cli);
@@ -35,25 +43,21 @@ fn main() {
     let inputs = Inputs::new(&tether_agent);
     let outputs = Outputs::new(&tether_agent);
 
-    let mut tracking_config = TrackingConfig::new(&cli.config_path);
-
-    match tracking_config.load_config_from_file() {
-        Ok(count) => {
-            info!(
-                "Loaded {} devices OK into Config; publish with retain=true",
-                count
-            );
-            // Always publish on first start/load...
-            tether_agent
-                .encode_and_publish(&outputs.config_output, &tracking_config)
-                .expect("failed to publish config");
+    let mut backend_config = match load_config_from_file(&cli.config_path) {
+        Ok(config) => {
+            info!("Loaded tracking config OK into Config; publish with retain=true",);
+            // Always save and publish on first start/load...
+            config
+                .save_and_republish(&tether_agent, &outputs.config_output, &cli.config_path)
+                .expect("failed to save and publish config");
+            config
         }
-        Err(()) => {
-            panic!("Error loading devices into config manager!")
+        Err(e) => {
+            panic!("Error loading devices into config manager: {}", e)
         }
     };
 
-    let mut systems = Systems::new(&cli, &tracking_config);
+    let mut systems = Systems::new(&backend_config);
 
     loop {
         let mut work_done = false;
@@ -78,23 +82,119 @@ fn main() {
                 handle_scans_message(
                     serial_number,
                     &scans,
-                    &mut tracking_config,
+                    &mut backend_config,
                     &tether_agent,
                     &mut systems,
                     &outputs,
-                    cli.default_min_distance_threshold,
+                    &cli.config_path,
                 )
             }
 
+            if inputs.external_tracking_input.matches(&topic) {
+                let serial_number = match &topic {
+                    tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
+                    tether_agent::TetherOrCustomTopic::Custom(s) => {
+                        panic!(
+                            "The topic \"{}\" is not expected for Lidar scan messages",
+                            &s
+                        );
+                    }
+                };
+
+                let position_data: BodyFrame3D =
+                    rmp_serde::from_slice(message.payload()).expect("failed to decode bodyFrames");
+
+                for body in position_data.iter() {
+                    let Body3D { body_xyz, .. } = body;
+                    let (x, y, z) = *body_xyz;
+                    debug!(
+                        "External body tracking position received: {},{},{}",
+                        x, y, z
+                    );
+                    let points = vec![(x, z)];
+                    handle_external_tracking_message(
+                        serial_number,
+                        &points,
+                        &mut backend_config,
+                        &tether_agent,
+                        &mut systems,
+                        &outputs,
+                        &cli.config_path,
+                    );
+                }
+
+                if position_data.is_empty() {
+                    handle_external_tracking_message(
+                        serial_number,
+                        &[],
+                        &mut backend_config,
+                        &tether_agent,
+                        &mut systems,
+                        &outputs,
+                        &cli.config_path,
+                    );
+                }
+            }
+
             if inputs.save_config_input.matches(&topic) {
-                tracking_config
+                backend_config
                     .handle_save_message(
                         &tether_agent,
                         &outputs.config_output,
                         &message,
                         &mut systems.perspective_transformer,
+                        &cli.config_path,
                     )
                     .expect("config failed to update and save");
+
+                info!("New config was received and saved; must update systems now...");
+
+                let BackendConfig {
+                    clustering_neighbourhood_radius,
+                    clustering_min_neighbours,
+                    clustering_max_cluster_size,
+                    smoothing_merge_radius,
+                    smoothing_wait_before_active_ms,
+                    smoothing_expire_ms,
+                    smoothing_lerp_factor,
+                    smoothing_empty_send_mode,
+                    ..
+                } = backend_config;
+
+                systems.clustering_system = ClusteringSystem::new(
+                    clustering_neighbourhood_radius,
+                    clustering_min_neighbours,
+                    clustering_max_cluster_size,
+                );
+                systems.smoothing_system = TrackingSmoother::new(SmoothSettings {
+                    merge_radius: smoothing_merge_radius,
+                    wait_before_active_ms: smoothing_wait_before_active_ms,
+                    expire_ms: smoothing_expire_ms,
+                    lerp_factor: smoothing_lerp_factor,
+                    empty_list_send_mode: smoothing_empty_send_mode,
+                });
+                systems.perspective_transformer = QuadTransformer::new(
+                    match backend_config.region_of_interest() {
+                        Some(region_of_interest) => {
+                            let (c1, c2, c3, c4) = region_of_interest;
+                            let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
+                            Some(corners)
+                        }
+                        None => None,
+                    },
+                    if backend_config.smoothing_use_real_units {
+                        backend_config.region_of_interest().map(calculate_dst_quad)
+                    } else {
+                        None
+                    },
+                    {
+                        if backend_config.transform_include_outside {
+                            None
+                        } else {
+                            Some(backend_config.transform_ignore_outside_margin)
+                        }
+                    },
+                );
             }
 
             if inputs.request_automask_input.matches(&topic) {
@@ -102,21 +202,24 @@ fn main() {
                 if let Ok(should_update_config) = handle_automask_message(
                     &message,
                     &mut systems.automask_samplers,
-                    &mut tracking_config,
-                    cli.automask_scans_required,
-                    cli.automask_threshold_margin,
+                    &mut backend_config,
                 ) {
                     if should_update_config {
-                        tracking_config
-                            .save_and_republish(&tether_agent, &outputs.config_output)
+                        backend_config
+                            .save_and_republish(
+                                &tether_agent,
+                                &outputs.config_output,
+                                &cli.config_path,
+                            )
                             .expect("failed to save and republish config");
                     }
                 }
             }
         }
 
-        if !cli.smoothing_disable
-            && systems.smoothing_system.get_elapsed().as_millis() > cli.smoothing_update_interval
+        if !backend_config.smoothing_disable
+            && systems.smoothing_system.get_elapsed().as_millis()
+                > backend_config.smoothing_update_interval
         {
             work_done = true;
             systems.smoothing_system.update_smoothing();
@@ -128,9 +231,9 @@ fn main() {
                     .encode_and_publish(&outputs.smoothed_tracking_output, &active_smoothed_points)
                     .expect("failed to publish smoothed tracking points");
 
-                if !cli.movement_disable
+                if !backend_config.movement_disable
                     && systems.movement_analysis.get_elapsed()
-                        >= Duration::from_millis(cli.movement_interval as u64)
+                        >= Duration::from_millis(backend_config.movement_interval as u64)
                 {
                     // Use smoothed points for movement analysis...
                     let movement_vector = get_total_movement(&active_smoothed_points);
@@ -156,9 +259,9 @@ fn main() {
                     publish_presence_change(changed_zone, &tether_agent);
                 }
                 // No smoothed points, but update movement analysis with zero-points...
-                if !cli.movement_disable
+                if !backend_config.movement_disable
                     && systems.movement_analysis.get_elapsed()
-                        >= Duration::from_millis(cli.movement_interval as u64)
+                        >= Duration::from_millis(backend_config.movement_interval as u64)
                 {
                     let movement_vector = get_total_movement(&[]);
 

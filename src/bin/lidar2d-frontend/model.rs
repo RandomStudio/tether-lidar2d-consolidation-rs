@@ -3,7 +3,7 @@ use std::{collections::HashMap, thread, time::Duration};
 use log::{debug, error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 use tether_lidar2d_consolidation::{
-    clustering::Cluster2D, tracking::TrackedPoint2D, tracking_config::TrackingConfig, Point2D,
+    backend_config::BackendConfig, clustering::Cluster2D, tracking::TrackedPoint2D, Point2D,
 };
 
 use crate::ui::render_ui;
@@ -23,6 +23,7 @@ pub struct Outputs {
     pub request_automask: PlugDefinition,
 }
 
+#[derive(Debug)]
 pub enum EditingCorner {
     None,
     A,
@@ -35,7 +36,8 @@ pub struct Model {
     pub tether_agent: TetherAgent,
     pub inputs: Inputs,
     pub outputs: Outputs,
-    pub tracking_config: Option<TrackingConfig>,
+    pub backend_config: Option<BackendConfig>,
+    /// Warning: these scan values are (angle,distance) for LIDAR devices, and (x,y) for External Trackers!
     pub scans: HashMap<String, Vec<(f32, f32)>>,
     pub clusters: Vec<Cluster2D>,
     pub raw_tracked_points: Vec<Point2D>,
@@ -96,7 +98,7 @@ impl Default for Model {
                 config: config_output,
                 request_automask,
             },
-            tracking_config: None,
+            backend_config: None,
             is_editing: false,
             scans: HashMap::new(),
             clusters: Vec::new(),
@@ -119,7 +121,7 @@ impl eframe::App for Model {
             if self.inputs.config.matches(topic) {
                 if let Ok(tracking_config) = rmp_serde::from_slice(msg.payload()) {
                     debug!("Got new Tracking Config: {:?}", tracking_config);
-                    self.tracking_config = Some(tracking_config);
+                    self.backend_config = Some(tracking_config);
                 } else {
                     error!("Error reading new config");
                 }
@@ -147,10 +149,6 @@ impl eframe::App for Model {
 
             if self.inputs.raw_tracked_points.matches(topic) {
                 if let Ok(tracked_points) = rmp_serde::from_slice::<Vec<Point2D>>(msg.payload()) {
-                    // println!("tracked points! {:?}", tracked_points);
-                    // if !tracked_points.is_empty() {
-                    //     panic!("yes they exist");
-                    // }
                     self.raw_tracked_points = tracked_points;
                 }
             }

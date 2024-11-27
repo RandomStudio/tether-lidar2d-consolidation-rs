@@ -1,9 +1,11 @@
 use std::time::{Duration, SystemTime};
 
 use log::debug;
+use serde::{Deserialize, Serialize};
 
 use crate::{tracking::TrackedPoint2D, Point2D};
-
+use anyhow::{anyhow, Result};
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum EmptyListSendMode {
     Never,
     Once,
@@ -48,6 +50,7 @@ impl TrackingSmoother {
         }
     }
 
+    /// Add some raw points (clusters, position data, etc.) to the tracking-smoothing system
     pub fn update_tracked_points(&mut self, points: &[Point2D]) {
         points.iter().for_each(|new_point| {
             // Fist, check if this "is" actually an existing point that wasn't (yet)
@@ -113,7 +116,8 @@ impl TrackingSmoother {
                 Ok(elapsed) => {
                     if elapsed.as_millis() > self.settings.wait_before_active_ms && !p.ready {
                         debug!(
-                            "Remove point waiting too long to become active; {}ms > {} ms",
+                            "Remove point {:?} waiting too long to become active; {}ms > {} ms",
+                            p,
                             elapsed.as_millis(),
                             self.settings.wait_before_active_ms
                         );
@@ -213,11 +217,11 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a * (1. - t) + (b * t)
 }
 
-pub fn get_mode(string_mode: &str) -> Result<EmptyListSendMode, ()> {
+pub fn get_mode(string_mode: &str) -> Result<EmptyListSendMode> {
     match string_mode {
         "once" => Ok(EmptyListSendMode::Once),
         "never" => Ok(EmptyListSendMode::Never),
         "always" => Ok(EmptyListSendMode::Always),
-        _ => Err(()),
+        _ => Err(anyhow!("invalid mode")),
     }
 }

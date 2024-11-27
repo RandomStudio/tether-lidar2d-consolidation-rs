@@ -1,9 +1,10 @@
-use log::{error, info};
+use anyhow::{anyhow, Result};
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tether_agent::mqtt::Message;
 
-use crate::{tracking_config::TrackingConfig, Point2D};
+use crate::{backend_config::BackendConfig, Point2D};
 
 pub type MaskThresholdMap = HashMap<String, f32>;
 
@@ -64,10 +65,8 @@ impl AutoMaskSampler {
 pub fn handle_automask_message(
     incoming_message: &Message,
     automask_samplers: &mut HashMap<String, AutoMaskSampler>,
-    config: &mut TrackingConfig,
-    scans_required: usize,
-    threshold_margin: f32,
-) -> Result<bool, ()> {
+    config: &mut BackendConfig,
+) -> Result<bool> {
     let payload = incoming_message.payload().to_vec();
 
     if let Ok(automask_command) = rmp_serde::from_slice::<AutoMaskMessage>(&payload) {
@@ -80,7 +79,10 @@ pub fn handle_automask_message(
                 for device in config.devices().iter() {
                     automask_samplers.insert(
                         String::from(&device.serial),
-                        AutoMaskSampler::new(scans_required, threshold_margin),
+                        AutoMaskSampler::new(
+                            config.automask_scans_required,
+                            config.automask_threshold_margin,
+                        ),
                     );
                 }
                 Ok(false)
@@ -91,13 +93,11 @@ pub fn handle_automask_message(
                 config.clear_device_masking();
                 Ok(true)
             }
-            _ => {
-                error!("Unrecognised command type for RequestAutoMask message");
-                Err(())
-            }
+            _ => Err(anyhow!(
+                "Unrecognised command type for RequestAutoMask message"
+            )),
         }
     } else {
-        error!("Failed to parse auto mask command");
-        Err(())
+        Err(anyhow!("Failed to parse auto mask command"))
     }
 }
