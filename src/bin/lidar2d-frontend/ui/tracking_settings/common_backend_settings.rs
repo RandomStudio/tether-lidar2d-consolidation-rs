@@ -5,34 +5,60 @@ use tether_lidar2d_consolidation::{automasking::AutoMaskMessage, smoothing::Empt
 use crate::model::{EditingCorner, Model};
 
 pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
-    ui.heading("Automasking");
-    ui.horizontal(|ui| {
-        if ui.button("New auto-calibration").clicked() {
-            model
-                .tether_agent
-                .encode_and_publish(
-                    &model.outputs.request_automask,
-                    AutoMaskMessage {
-                        r#type: "new".into(),
-                    },
-                )
-                .expect("failed to publish automask command");
-        }
-        if ui.button("Clear calibration").clicked() {
-            model
-                .tether_agent
-                .encode_and_publish(
-                    &model.outputs.request_automask,
-                    AutoMaskMessage {
-                        r#type: "clear".into(),
-                    },
-                )
-                .expect("failed to publish automask command");
-        }
-    });
-
-    // ------------------------ CLUSTERING SETTINGS
     if let Some(backend_config) = &mut model.backend_config {
+        // ------------------------ AUTOMASKING SETTINGS
+
+        ui.heading("Automasking");
+        ui.horizontal(|ui| {
+            if ui.button("New auto-calibration").clicked() {
+                model
+                    .tether_agent
+                    .encode_and_publish(
+                        &model.outputs.request_automask,
+                        AutoMaskMessage {
+                            r#type: "new".into(),
+                        },
+                    )
+                    .expect("failed to publish automask command");
+            }
+            if ui.button("Clear calibration").clicked() {
+                model
+                    .tether_agent
+                    .encode_and_publish(
+                        &model.outputs.request_automask,
+                        AutoMaskMessage {
+                            r#type: "clear".into(),
+                        },
+                    )
+                    .expect("failed to publish automask command");
+            }
+        });
+        ui.horizontal(|ui| {
+            ui.label("Number of scans required");
+            if ui
+                .add(Slider::new(
+                    &mut backend_config.automask_scans_required,
+                    1..=100,
+                ))
+                .changed()
+            {
+                model.is_editing = true;
+            }
+        });
+        ui.horizontal(|ui| {
+            ui.label("Threshold tolerance");
+            if ui
+                .add(Slider::new(
+                    &mut backend_config.automask_threshold_margin,
+                    0. ..=1000.,
+                ))
+                .changed()
+            {
+                model.is_editing = true;
+            }
+        });
+
+        // ------------------------ CLUSTERING SETTINGS
         ui.separator();
         ui.heading("Clustering");
 
@@ -80,50 +106,48 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                 model.is_editing = true;
             }
         });
-    }
 
-    ui.separator();
-    ui.heading("Tracking region (ROI)");
-    ui.horizontal(|ui| {
-        if ui
-            .selectable_label(matches!(model.editing_corners, EditingCorner::None), "None")
-            .clicked()
-        {
-            model.editing_corners = EditingCorner::None;
-            model.is_editing = true;
-        };
-        if ui
-            .selectable_label(matches!(model.editing_corners, EditingCorner::A), "A")
-            .clicked()
-        {
-            model.is_editing = true;
-            model.editing_corners = EditingCorner::A
-        };
-        if ui
-            .selectable_label(matches!(model.editing_corners, EditingCorner::B), "B")
-            .clicked()
-        {
-            model.is_editing = true;
-            model.editing_corners = EditingCorner::B
-        };
-        if ui
-            .selectable_label(matches!(model.editing_corners, EditingCorner::C), "C")
-            .clicked()
-        {
-            model.is_editing = true;
-            model.editing_corners = EditingCorner::C
-        };
-        if ui
-            .selectable_label(matches!(model.editing_corners, EditingCorner::D), "D")
-            .clicked()
-        {
-            model.is_editing = true;
-            model.editing_corners = EditingCorner::D
-        };
-    });
+        ui.separator();
+        ui.heading("Tracking region (ROI)");
+        ui.horizontal(|ui| {
+            if ui
+                .selectable_label(matches!(model.editing_corners, EditingCorner::None), "None")
+                .clicked()
+            {
+                model.editing_corners = EditingCorner::None;
+                model.is_editing = true;
+            };
+            if ui
+                .selectable_label(matches!(model.editing_corners, EditingCorner::A), "A")
+                .clicked()
+            {
+                model.is_editing = true;
+                model.editing_corners = EditingCorner::A
+            };
+            if ui
+                .selectable_label(matches!(model.editing_corners, EditingCorner::B), "B")
+                .clicked()
+            {
+                model.is_editing = true;
+                model.editing_corners = EditingCorner::B
+            };
+            if ui
+                .selectable_label(matches!(model.editing_corners, EditingCorner::C), "C")
+                .clicked()
+            {
+                model.is_editing = true;
+                model.editing_corners = EditingCorner::C
+            };
+            if ui
+                .selectable_label(matches!(model.editing_corners, EditingCorner::D), "D")
+                .clicked()
+            {
+                model.is_editing = true;
+                model.editing_corners = EditingCorner::D
+            };
+        });
 
-    // ------------------------ SMOOTHING SETTINGS
-    if let Some(backend_config) = &mut model.backend_config {
+        // ------------------------ SMOOTHING SETTINGS
         ui.separator();
         ui.heading("Smoothing");
 
