@@ -12,13 +12,13 @@ mod device_settings;
 
 pub fn render_tracking_settings(model: &mut Model, ui: &mut Ui) {
     ui.heading("Tracking Configuration");
-    ui.group(|ui| match &mut model.backend_config {
+    egui::ScrollArea::vertical().show(ui, |ui| match &mut model.backend_config {
         None => {
             ui.label("No config received (yet)");
         }
         Some(_) => {
             let mut should_publish_update = false;
-            render_common_backend_settings(model, ui, &mut should_publish_update);
+            render_common_backend_settings(model, ui);
 
             ui.add_space(SPACING_AMOUNT);
             ui.separator();

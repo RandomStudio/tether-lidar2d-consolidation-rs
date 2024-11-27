@@ -79,7 +79,7 @@ pub struct BackendConfig {
     /// Min points count that constitutes a valid cluster
     pub clustering_min_neighbours: usize,
 
-    /// Exclude clusters above this size, in cluster count
+    /// Exclude clusters above this size (where size is bigger of height/width bounds, in mm)
     pub clustering_max_cluster_size: f32,
 
     // -------- SMOOTHING SETTINGS

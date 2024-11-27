@@ -18,6 +18,22 @@ pub fn render_device_settings(model: &mut Model, ui: &mut Ui, should_publish_upd
                 }
             });
 
+            ui.horizontal(|ui| {
+                ui.label("Default min distance threshold");
+                if ui
+                    .add(
+                        Slider::new(
+                            &mut backend_config.default_min_distance_threshold,
+                            0. ..=2000.,
+                        )
+                        .suffix("mm"),
+                    )
+                    .changed()
+                {
+                    model.is_editing = true;
+                }
+            });
+
             ui.separator();
             let mut delete_index: Option<usize> = None;
             for (index, device) in backend_config.devices_mut().iter_mut().enumerate() {

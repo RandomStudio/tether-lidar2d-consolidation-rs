@@ -4,11 +4,7 @@ use tether_lidar2d_consolidation::{automasking::AutoMaskMessage, smoothing::Empt
 
 use crate::model::{EditingCorner, Model};
 
-pub fn render_common_backend_settings(
-    model: &mut Model,
-    ui: &mut Ui,
-    should_publish_update: &mut bool,
-) {
+pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
     ui.heading("Automasking");
     ui.horizontal(|ui| {
         if ui.button("New auto-calibration").clicked() {
@@ -34,8 +30,58 @@ pub fn render_common_backend_settings(
                 .expect("failed to publish automask command");
         }
     });
-    ui.separator();
 
+    if let Some(backend_config) = &mut model.backend_config {
+        ui.separator();
+        ui.heading("Clustering");
+
+        ui.horizontal(|ui| {
+            ui.label("Neighbourhood radius (mm)");
+            if ui
+                .add(
+                    Slider::new(
+                        &mut backend_config.clustering_neighbourhood_radius,
+                        0. ..=2000.,
+                    )
+                    .suffix("mm"),
+                )
+                .changed()
+            {
+                model.is_editing = true;
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Min neighbours (count)");
+            if ui
+                .add(Slider::new(
+                    &mut backend_config.clustering_min_neighbours,
+                    0..=100,
+                ))
+                .changed()
+            {
+                model.is_editing = true;
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Max cluster size (mm)");
+            if ui
+                .add(
+                    Slider::new(
+                        &mut backend_config.clustering_max_cluster_size,
+                        0. ..=10000.,
+                    )
+                    .suffix("mm"),
+                )
+                .changed()
+            {
+                model.is_editing = true;
+            }
+        });
+    }
+
+    ui.separator();
     ui.heading("Tracking region (ROI)");
     ui.horizontal(|ui| {
         if ui
