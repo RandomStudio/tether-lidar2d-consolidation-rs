@@ -7,8 +7,10 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    automasking::MaskThresholdMap, consolidator_system::calculate_dst_quad, presence::Zone,
-    smoothing::EmptyListSendMode,
+    automasking::MaskThresholdMap,
+    consolidator_system::calculate_dst_quad,
+    presence::Zone,
+    smoothing::{EmptyListSendMode, OriginLocation},
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -112,6 +114,8 @@ pub struct BackendConfig {
     /// destination quad will be a normalised rect in the range [0;1] on both axes
     pub smoothing_use_real_units: bool,
 
+    pub origin_location: OriginLocation,
+
     // -------- PERSPECTIVE TRANSFORM SETTINGS
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad
     /// **(with a little margin for error; see perspectiveTransform.ignoreOutsideMargin)**;
@@ -153,6 +157,7 @@ impl Default for BackendConfig {
             smoothing_lerp_factor: 0.1,
             smoothing_empty_send_mode: EmptyListSendMode::Once,
             smoothing_update_interval: 16,
+            origin_location: OriginLocation::TopLeft,
             transform_include_outside: false,
             transform_ignore_outside_margin: 0.,
             automask_scans_required: 60,
@@ -170,19 +175,6 @@ impl BackendConfig {
         match rmp_serde::from_slice::<BackendConfig>(&payload) {
             Ok(config) => {
                 *self = config;
-                // let BackendConfig {
-                //     devices,
-                //     external_trackers,
-                //     region_of_interest,
-                //     smoothing_use_real_units: use_real_units,
-                //     smoothing_merge_radius,
-                //     ..
-                // } = config;
-                // self.devices = devices;
-                // self.external_trackers = external_trackers;
-                // self.region_of_interest = region_of_interest;
-                // self.smoothing_use_real_units = use_real_units;
-                // self.smoothing_merge_radius = smoothing_merge_radius;
                 Ok(())
             }
             Err(e) => Err(anyhow!("Failed to parse Config from message: {}", e)),

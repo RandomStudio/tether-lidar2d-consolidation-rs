@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TrackedPoint2D {
-    id: usize,
+    pub id: usize,
     pub x: f32,
     pub y: f32,
     pub velocity: Option<[f32; 2]>,

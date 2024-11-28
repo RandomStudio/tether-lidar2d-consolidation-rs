@@ -19,6 +19,7 @@ pub struct Outputs {
     pub clusters_output: PlugDefinition,
     pub tracking_output: PlugDefinition,
     pub smoothed_tracking_output: PlugDefinition,
+    pub smoothed_remapped_output: PlugDefinition,
     pub movement_output: PlugDefinition,
 }
 
@@ -40,8 +41,13 @@ impl Outputs {
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
-        // Smoothed tracked points output
+        // Smoothed tracked points output (with TopLeft origin)
         let smoothed_tracking_output = PlugOptionsBuilder::create_output("smoothedTrackedPoints")
+            .qos(Some(1))
+            .build(tether_agent)
+            .expect("failed to create Output Plug");
+
+        let smoothed_remapped_output = PlugOptionsBuilder::create_output("smoothedRemappedPoints")
             .qos(Some(1))
             .build(tether_agent)
             .expect("failed to create Output Plug");
@@ -56,6 +62,7 @@ impl Outputs {
             tracking_output,
             clusters_output,
             smoothed_tracking_output,
+            smoothed_remapped_output,
             movement_output,
         }
     }
@@ -145,8 +152,8 @@ impl Systems {
             wait_before_active_ms: config.smoothing_wait_before_active_ms,
             expire_ms: config.smoothing_expire_ms,
             lerp_factor: config.smoothing_lerp_factor,
-            // TODO: set this from CLI
-            empty_list_send_mode: config.smoothing_empty_send_mode.clone(),
+            empty_list_send_mode: config.smoothing_empty_send_mode,
+            origin_mode: config.origin_location,
         });
 
         let presence_detector = PresenceDetectionZones::new(config.zones().unwrap_or_default());
@@ -163,7 +170,6 @@ impl Systems {
 }
 
 pub fn calculate_dst_quad(roi: &CornerPoints) -> RectCorners {
-    // DEFAULT_DST_QUAD
     let (a, b, _c, d) = roi;
     let w = distance(a.x, a.y, b.x, b.y);
     let h = distance(a.x, a.y, d.x, d.y);

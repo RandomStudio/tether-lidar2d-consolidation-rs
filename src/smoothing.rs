@@ -4,12 +4,22 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{tracking::TrackedPoint2D, Point2D};
-use anyhow::{anyhow, Result};
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum EmptyListSendMode {
     Never,
     Once,
     Always,
+}
+
+/// Which part of the destination quad (ROI) to use as the origin [0,0].
+/// All points sent on "smoothedTrackedPoints" will be relative to this.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum OriginLocation {
+    TopLeft,
+    TopCentre,
+    BottomCentre,
+    Centre,
 }
 
 pub struct SmoothSettings {
@@ -18,6 +28,7 @@ pub struct SmoothSettings {
     pub expire_ms: u128,
     pub lerp_factor: f32,
     pub empty_list_send_mode: EmptyListSendMode,
+    pub origin_mode: OriginLocation,
 }
 
 #[derive(Debug)]
@@ -215,13 +226,4 @@ fn distance(a: &Point2D, b: &Point2D) -> f32 {
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a * (1. - t) + (b * t)
-}
-
-pub fn get_mode(string_mode: &str) -> Result<EmptyListSendMode> {
-    match string_mode {
-        "once" => Ok(EmptyListSendMode::Once),
-        "never" => Ok(EmptyListSendMode::Never),
-        "always" => Ok(EmptyListSendMode::Always),
-        _ => Err(anyhow!("invalid mode")),
-    }
 }
