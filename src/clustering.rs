@@ -3,7 +3,7 @@ use crate::{
     Point2D,
 };
 
-use log::{debug, info};
+use log::debug;
 use serde::{Deserialize, Serialize};
 
 use ndarray::{Array, ArrayView};
