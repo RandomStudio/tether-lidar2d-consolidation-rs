@@ -1,9 +1,8 @@
 use clap::Parser;
-use quad_to_quad_transformer::{QuadTransformer, DEFAULT_DST_QUAD};
-use tether_lidar2d_consolidation::backend_config::{load_config_from_file, BackendConfig};
-use tether_lidar2d_consolidation::clustering::ClusteringSystem;
+use quad_to_quad_transformer::DEFAULT_DST_QUAD;
+use tether_lidar2d_consolidation::backend_config::load_config_from_file;
 use tether_lidar2d_consolidation::consolidator_system::{calculate_dst_quad, Outputs, Systems};
-use tether_lidar2d_consolidation::smoothing::{SmoothSettings, TrackingSmoother};
+use tether_lidar2d_consolidation::smoothing::OriginLocation;
 use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D, TrackedPoint2D};
 
 use env_logger::Env;
@@ -188,41 +187,66 @@ fn main() {
                     .expect("failed to publish smoothed tracking points");
 
                 match &backend_config.origin_location {
-                    tether_lidar2d_consolidation::smoothing::OriginLocation::TopLeft => {
+                    OriginLocation::TopLeft => {
                         // do nothing extra
                     }
-                    // _ => {
-                    //     m
-                    // }
-                    tether_lidar2d_consolidation::smoothing::OriginLocation::TopCentre => {
+                    _ => {
                         if let Some(roi) = &backend_config.region_of_interest {
                             let dst_quad = if backend_config.smoothing_use_real_units {
                                 calculate_dst_quad(roi)
                             } else {
                                 DEFAULT_DST_QUAD
                             };
-                            let [_a, b, _c, _d] = dst_quad;
+                            let [_a, b, c, _d] = dst_quad;
                             let mid_x = b.0 / 2.0;
-                            info!("mid_x {}", mid_x);
-                            let remapped_points: Vec<TrackedPoint2D> = active_smoothed_points
-                                .iter()
-                                .map(|p| TrackedPoint2D {
-                                    x: p.x.map_range(0. ..b.0, -mid_x..mid_x),
-                                    ..*p
-                                })
-                                .collect();
+
+                            let remapped_points: Option<Vec<TrackedPoint2D>> =
+                                match &backend_config.origin_location {
+                                    OriginLocation::TopLeft => None,
+                                    OriginLocation::TopCentre => Some(
+                                        active_smoothed_points
+                                            .iter()
+                                            .map(|p| TrackedPoint2D {
+                                                x: p.x.map_range(0. ..b.0, -mid_x..mid_x),
+                                                ..*p
+                                            })
+                                            .collect(),
+                                    ),
+                                    OriginLocation::BottomCentre => {
+                                        Some(
+                                            active_smoothed_points
+                                                .iter()
+                                                .map(|p| TrackedPoint2D {
+                                                    x: p.x.map_range(0. ..b.0, -mid_x..mid_x),
+                                                    y: c.1 - p.y, // inverted
+                                                    ..*p
+                                                })
+                                                .collect(),
+                                        )
+                                    }
+                                    OriginLocation::Centre => {
+                                        let mid_y = c.1 / 2.0;
+
+                                        Some(
+                                            active_smoothed_points
+                                                .iter()
+                                                .map(|p| TrackedPoint2D {
+                                                    x: p.x.map_range(0. ..b.0, -mid_x..mid_x),
+                                                    y: p.y.map_range(0. ..c.1, -mid_y..mid_y),
+                                                    ..*p
+                                                })
+                                                .collect(),
+                                        )
+                                    }
+                                };
                             tether_agent
                                 .encode_and_publish(
                                     &outputs.smoothed_remapped_output,
                                     &remapped_points,
                                 )
-                                .expect("failed to publish smoothed tracking points");
+                                .expect("failed to publish smoothed+remapped points");
                         }
                     }
-                    tether_lidar2d_consolidation::smoothing::OriginLocation::BottomCentre => {
-                        todo!()
-                    }
-                    tether_lidar2d_consolidation::smoothing::OriginLocation::Centre => todo!(),
                 }
 
                 if !backend_config.movement_disable
