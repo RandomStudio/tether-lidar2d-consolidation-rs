@@ -117,12 +117,24 @@ impl ClusteringSystem {
             }
         }
 
+        debug!(
+            "inserting {} points for external tracker, around {:?}",
+            fake_points.len(),
+            points,
+        );
+
         self.scan_points
             .insert(String::from(&tracker.serial), fake_points);
 
         let combined_points = self.combine_all_points();
 
         let (clusters, _outliers) = self.clustering_engine.fit(&combined_points);
+
+        debug!(
+            "{} clusters from {} combined points",
+            clusters.len(),
+            combined_points.len()
+        );
 
         self.cached_clusters = clusters
             .iter()
@@ -262,7 +274,7 @@ fn external_point_transformed(p: &Point2D, tracker: &ExternalTracker) -> Point2D
     // Translate so origin is at (x,y), then tRotate about origin...
     let px = px * rotation.to_radians().cos() - py * rotation.to_radians().sin() + *x;
     let py = py * rotation.to_radians().cos() + px * rotation.to_radians().sin() + *y;
-    debug!("{},{} => {},{}", p.0, p.1, px, py);
+    debug!("external point {},{} => {},{}", p.0, p.1, px, py);
     match flip_coords {
         None => (px, py),
         Some((flip_x, flip_y)) => (px * (*flip_x as f32), py * (*flip_y as f32)),

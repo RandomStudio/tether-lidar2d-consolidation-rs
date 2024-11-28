@@ -30,6 +30,7 @@ fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
         .filter_module("paho_mqtt", log::LevelFilter::Warn)
         .filter_module("tether_agent", log::LevelFilter::Warn)
+        .filter_module("quad_to_quad_transformer", log::LevelFilter::Warn)
         .init();
 
     debug!("Started; args: {:?}", cli);
