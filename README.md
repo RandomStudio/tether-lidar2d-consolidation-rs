@@ -34,6 +34,7 @@ sudo apt install libssl-dev build-essential cmake
 Plugs:
 - "trackedPoints": an array of 2D vectors (arrays with [x,y]) for transformed but not-smoothed points within the tracking region (ROI)
 - "smoothedTrackedPoints:" an array of objects with "id", "x", y" and "velocity" (2D vector) for each smoothed point
+- "smoothedRemappedPoints": exactly as per "smoothedTrackedPoints", but respecting the Origin Location setting, if applied
 
 ## Notes on Libraries
 
