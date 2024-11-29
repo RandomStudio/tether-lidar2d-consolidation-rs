@@ -43,12 +43,12 @@ impl Outputs {
 
         // Smoothed tracked points output (with TopLeft origin)
         let smoothed_tracking_output = PlugOptionsBuilder::create_output("smoothedTrackedPoints")
-            .qos(Some(1))
+            .qos(Some(0))
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
         let smoothed_remapped_output = PlugOptionsBuilder::create_output("smoothedRemappedPoints")
-            .qos(Some(1))
+            .qos(Some(0))
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
