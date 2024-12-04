@@ -3,14 +3,14 @@ use std::net::{IpAddr, Ipv4Addr};
 use clap::{command, Parser};
 
 // Some defaults; some of which can be overriden via CLI args
-const CONFIG_FILE_PATH: &str = "./lidar_backend.json";
+const CONFIG_FILE_PATH: &str = "./tracking_config.json";
 const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
-    /// Where to load LIDAR device config
-    #[arg(long="lidarConfigPath",default_value_t=String::from(CONFIG_FILE_PATH))]
+    /// Where to load backend config (devices and settings)
+    #[arg(default_value_t = String::from(CONFIG_FILE_PATH))]
     pub config_path: String,
 
     /// The IP address of the MQTT broker (server)
