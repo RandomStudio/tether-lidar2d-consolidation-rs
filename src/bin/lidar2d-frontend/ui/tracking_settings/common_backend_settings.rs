@@ -162,6 +162,16 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
         }
 
         ui.add_enabled_ui(!backend_config.smoothing_disable, |ui| {
+            if ui
+                .checkbox(
+                    &mut backend_config.enable_velocity,
+                    "Enable velocity per point",
+                )
+                .clicked()
+            {
+                model.is_editing = true;
+            }
+
             ui.horizontal(|ui| {
                 let (label_text, slider_range) = {
                     if backend_config.smoothing_use_real_units {

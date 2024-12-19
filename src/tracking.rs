@@ -5,6 +5,7 @@ pub struct TrackedPoint2D {
     pub id: usize,
     pub x: f32,
     pub y: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub velocity: Option<[f32; 2]>,
 }
 

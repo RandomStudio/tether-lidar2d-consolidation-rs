@@ -3,7 +3,7 @@ use std::time::{Duration, SystemTime};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::{tracking::TrackedPoint2D, Point2D};
+use crate::{backend_config::BackendConfig, tracking::TrackedPoint2D, Point2D};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum EmptyListSendMode {
@@ -29,6 +29,7 @@ pub struct SmoothSettings {
     pub lerp_factor: f32,
     pub empty_list_send_mode: EmptyListSendMode,
     pub origin_mode: OriginLocation,
+    pub calculate_velocity: bool,
 }
 
 #[derive(Debug)]
@@ -164,7 +165,9 @@ impl TrackingSmoother {
             let (x1, y1) = p.current_position;
             let (x2, y2) = p.target_position;
             let [new_x, new_y] = [lerp(x1, x2, t), lerp(y1, y2, t)];
-            p.velocity = Some([x2 - x1, y2 - y1]);
+            if self.settings.calculate_velocity {
+                p.velocity = Some([x2 - x1, y2 - y1]);
+            }
             p.current_position = (new_x, new_y);
         })
     }
