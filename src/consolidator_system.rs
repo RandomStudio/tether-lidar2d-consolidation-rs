@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use log::{debug, error, info, warn};
 use quad_to_quad_transformer::{QuadTransformer, RectCorners};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
@@ -163,7 +162,7 @@ impl Systems {
         Systems {
             clustering_system,
             smoothing_system,
-            automask_samplers: HashMap::new(),
+            automask_samplers: IndexMap::new(),
             perspective_transformer,
             presence_detector,
             movement_analysis: MovementAnalysis::new(),
