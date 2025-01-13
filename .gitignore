@@ -1,3 +1,4 @@
 /target
 *.msg
 lidar*.json
+tracking_config*.json

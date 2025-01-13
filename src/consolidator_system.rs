@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use log::{debug, error, info, warn};
 use quad_to_quad_transformer::{QuadTransformer, RectCorners};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
@@ -154,6 +153,8 @@ impl Systems {
             lerp_factor: config.smoothing_lerp_factor,
             empty_list_send_mode: config.smoothing_empty_send_mode,
             origin_mode: config.origin_location,
+            should_calculate_velocity: config.enable_velocity,
+            should_calculate_angles: config.enable_angles,
         });
 
         let presence_detector = PresenceDetectionZones::new(config.zones().unwrap_or_default());
@@ -161,7 +162,7 @@ impl Systems {
         Systems {
             clustering_system,
             smoothing_system,
-            automask_samplers: HashMap::new(),
+            automask_samplers: IndexMap::new(),
             perspective_transformer,
             presence_detector,
             movement_analysis: MovementAnalysis::new(),

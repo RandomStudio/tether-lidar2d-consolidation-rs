@@ -1,6 +1,7 @@
+use indexmap::IndexMap;
 use log::{debug, error, info, warn};
 use quad_to_quad_transformer::QuadTransformer;
-use std::{collections::HashMap, fmt::Error, fs};
+use std::{fmt::Error, fs};
 use tether_agent::{mqtt::Message, PlugDefinition, TetherAgent};
 
 use anyhow::{anyhow, Result};
@@ -116,6 +117,9 @@ pub struct BackendConfig {
 
     pub origin_location: OriginLocation,
 
+    pub enable_velocity: bool,
+    pub enable_angles: bool,
+
     // -------- PERSPECTIVE TRANSFORM SETTINGS
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad
     /// **(with a little margin for error; see perspectiveTransform.ignoreOutsideMargin)**;
@@ -151,7 +155,7 @@ impl Default for BackendConfig {
             clustering_min_neighbours: 4,
             clustering_max_cluster_size: 2500.,
             smoothing_disable: false,
-            smoothing_merge_radius: 0.25,
+            smoothing_merge_radius: 100.,
             smoothing_wait_before_active_ms: 100,
             smoothing_expire_ms: 3000,
             smoothing_lerp_factor: 0.1,
@@ -164,6 +168,8 @@ impl Default for BackendConfig {
             automask_threshold_margin: 50.,
             movement_disable: false,
             movement_interval: 250,
+            enable_velocity: true,
+            enable_angles: false,
         }
     }
 }
@@ -272,7 +278,7 @@ impl BackendConfig {
         let device = self.get_device_mut(serial);
         match device {
             Some(d) => {
-                let mut m: MaskThresholdMap = HashMap::new();
+                let mut m: MaskThresholdMap = IndexMap::new();
                 for (key, value) in masking {
                     m.insert(String::from(key), *value);
                 }

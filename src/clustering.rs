@@ -3,6 +3,7 @@ use crate::{
     Point2D,
 };
 
+use indexmap::IndexMap;
 use log::debug;
 use serde::{Deserialize, Serialize};
 
@@ -284,7 +285,7 @@ fn external_point_transformed(p: &Point2D, tracker: &ExternalTracker) -> Point2D
 fn passes_mask_threshold(
     angle: &f32,
     distance: &f32,
-    mask_thresholds: &Option<HashMap<String, f32>>,
+    mask_thresholds: &Option<IndexMap<String, f32>>,
 ) -> bool {
     match mask_thresholds {
         None => true,
