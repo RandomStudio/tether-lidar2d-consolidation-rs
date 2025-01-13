@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Result};
+use indexmap::IndexMap;
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use tether_agent::mqtt::Message;
 
 use crate::{backend_config::BackendConfig, Point2D};
 
-pub type MaskThresholdMap = HashMap<String, f32>;
+pub type MaskThresholdMap = IndexMap<String, f32>;
 
 pub struct AutoMaskSampler {
     threshold_margin: f32,
@@ -14,7 +14,7 @@ pub struct AutoMaskSampler {
     scans_remaining: usize,
 }
 
-pub type AutoMaskSamplerMap = HashMap<String, AutoMaskSampler>;
+pub type AutoMaskSamplerMap = IndexMap<String, AutoMaskSampler>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AutoMaskMessage {
@@ -25,7 +25,7 @@ impl AutoMaskSampler {
     pub fn new(required_scans_count: usize, threshold_margin: f32) -> AutoMaskSampler {
         AutoMaskSampler {
             threshold_margin,
-            angles_with_thresholds: HashMap::new(),
+            angles_with_thresholds: IndexMap::new(),
             scans_remaining: required_scans_count,
         }
     }
@@ -64,7 +64,7 @@ impl AutoMaskSampler {
 /// updated Tracking Config.
 pub fn handle_automask_message(
     incoming_message: &Message,
-    automask_samplers: &mut HashMap<String, AutoMaskSampler>,
+    automask_samplers: &mut IndexMap<String, AutoMaskSampler>,
     config: &mut BackendConfig,
 ) -> Result<bool> {
     let payload = incoming_message.payload().to_vec();
