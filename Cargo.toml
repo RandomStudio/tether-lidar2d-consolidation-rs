@@ -5,6 +5,7 @@ version = "0.9.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/RandomStudio/tether-lidar2d-consolidation-rs"
+homepage = "https://github.com/RandomStudio/tether-lidar2d-consolidation-rs"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -40,3 +41,8 @@ anyhow = "1.0.91"
 colorsys = "0.6.7"
 map-range = "0.1.2"
 indexmap = { version = "2.7.0", features = ["serde"] }
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
