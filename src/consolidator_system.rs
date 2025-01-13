@@ -154,7 +154,8 @@ impl Systems {
             lerp_factor: config.smoothing_lerp_factor,
             empty_list_send_mode: config.smoothing_empty_send_mode,
             origin_mode: config.origin_location,
-            calculate_velocity: config.enable_velocity,
+            should_calculate_velocity: config.enable_velocity,
+            should_calculate_angles: config.enable_angles,
         });
 
         let presence_detector = PresenceDetectionZones::new(config.zones().unwrap_or_default());

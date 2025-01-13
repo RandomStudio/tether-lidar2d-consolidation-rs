@@ -3,7 +3,7 @@ use std::time::{Duration, SystemTime};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::{backend_config::BackendConfig, tracking::TrackedPoint2D, Point2D};
+use crate::{tracking::TrackedPoint2D, Point2D};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum EmptyListSendMode {
@@ -29,7 +29,8 @@ pub struct SmoothSettings {
     pub lerp_factor: f32,
     pub empty_list_send_mode: EmptyListSendMode,
     pub origin_mode: OriginLocation,
-    pub calculate_velocity: bool,
+    pub should_calculate_velocity: bool,
+    pub should_calculate_angles: bool,
 }
 
 #[derive(Debug)]
@@ -165,7 +166,7 @@ impl TrackingSmoother {
             let (x1, y1) = p.current_position;
             let (x2, y2) = p.target_position;
             let [new_x, new_y] = [lerp(x1, x2, t), lerp(y1, y2, t)];
-            if self.settings.calculate_velocity {
+            if self.settings.should_calculate_velocity {
                 p.velocity = Some([x2 - x1, y2 - y1]);
             }
             p.current_position = (new_x, new_y);
@@ -181,6 +182,10 @@ impl TrackingSmoother {
             .map(|(i, p)| {
                 let mut tp = TrackedPoint2D::new(i, p.current_position);
                 tp.set_velocity(p.velocity);
+                if self.settings.should_calculate_angles {
+                    let (x, y) = p.current_position;
+                    tp.angle = Some(angle_from_x_axis(x, y));
+                }
                 tp
             })
             .collect();
@@ -229,4 +234,9 @@ fn distance(a: &Point2D, b: &Point2D) -> f32 {
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a * (1. - t) + (b * t)
+}
+
+fn angle_from_x_axis(x: f32, y: f32) -> f32 {
+    let radians = y.atan2(x);
+    radians.to_degrees()
 }
