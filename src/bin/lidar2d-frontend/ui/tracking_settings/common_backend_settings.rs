@@ -165,7 +165,17 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             if ui
                 .checkbox(
                     &mut backend_config.enable_velocity,
-                    "Enable velocity per point",
+                    "Calculate velocity per point",
+                )
+                .clicked()
+            {
+                model.is_editing = true;
+            }
+
+            if ui
+                .checkbox(
+                    &mut backend_config.enable_angles,
+                    "Calculate angle from origin per point",
                 )
                 .clicked()
             {
