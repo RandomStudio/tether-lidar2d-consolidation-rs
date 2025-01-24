@@ -184,7 +184,7 @@ impl TrackingSmoother {
                 tp.set_velocity(p.velocity);
                 if self.settings.should_calculate_angles {
                     let (x, y) = p.current_position;
-                    tp.angle = Some(angle_from_x_axis(x, y));
+                    tp.angle = Some(heading(x, y));
                 }
                 tp
             })
@@ -236,7 +236,39 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a * (1. - t) + (b * t)
 }
 
-fn angle_from_x_axis(x: f32, y: f32) -> f32 {
-    let radians = y.atan2(x);
-    radians.to_degrees()
+/// Return the clockwise angle (in degrees) between two lines:
+/// - origin to a point on the y-axis (0,a) where a is positive
+/// - origin to the point (x,y)
+///
+/// This corresponds to the common-sense "heading" of a point
+/// from the point-of-view of the origin
+fn heading(x: f32, y: f32) -> f32 {
+    let angle_rad = y.atan2(x); // Get the angle from the positive x-axis in radians
+    let angle_deg = angle_rad.to_degrees(); // Convert to degrees
+
+    // Convert from positive x-axis reference to positive y-axis reference
+    let heading = (90.0 - angle_deg) % 360.0;
+    if heading < 0.0 {
+        heading + 360.0
+    } else {
+        heading
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_heading_easy_cardinals() {
+        assert_eq!(heading(0., 1.0), 0.); // N
+        assert_eq!(heading(1.0, 1.0), 45.0); // NE
+        assert_eq!(heading(3.5, 3.5), 45.0); // Also NE
+        assert_eq!(heading(1.0, 0.), 90.0); // E
+        assert_eq!(heading(1.0, -1.0), 135.); // SE
+        assert_eq!(heading(0.0, -101.0), 180.); // S
+        assert_eq!(heading(-1.0, -1.0), 225.); // SW
+        assert_eq!(heading(-1.0, -0.), 270.); // W
+        assert_eq!(heading(-3.1, 3.1), 315.); // NW
+    }
 }
