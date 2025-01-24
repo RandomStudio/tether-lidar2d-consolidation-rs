@@ -18,7 +18,6 @@ use super::clustering::Cluster2D;
 pub enum OriginLocation {
     Corner,
     CloseCentre,
-    FarCentre,
     Centre,
 }
 
@@ -75,28 +74,8 @@ impl PositionRemapping {
             .collect()
     }
 
-    pub fn filter_points_inside(&self, points: &[Point2D]) -> anyhow::Result<Vec<Point2D>> {
+    pub fn filter_points_inside(&self, points: &[Point2D]) -> Vec<Point2D> {
         self.transformer.filter_points_inside(points)
-    }
-
-    pub fn tracked_points_remap_from_origin(
-        &self,
-        points: &[TrackedPoint2D],
-        origin_location: OriginLocation,
-    ) -> Vec<TrackedPoint2D> {
-        points
-            .iter()
-            .map(|p| {
-                let TrackedPoint2D { x, y, .. } = p;
-                let (remapped_x, remapped_y) =
-                    point_remap_from_origin((*x, *y), origin_location, self.dst_quad);
-                TrackedPoint2D {
-                    x: remapped_x,
-                    y: remapped_y,
-                    ..*p
-                }
-            })
-            .collect()
     }
 
     pub fn update_with_roi(
@@ -134,7 +113,6 @@ pub fn calculate_dst_quad(roi: &CornerPoints, origin_location: OriginLocation) -
         // "counter-clockwise" from "bottom left" (a)
         OriginLocation::Corner => [(0., 0.), (w, 0.), (w, h), (0., h)],
         OriginLocation::CloseCentre => [(-w / 2., 0.), (w / 2., 0.), (w / 2., h), (-w / 2., h)],
-        OriginLocation::FarCentre => [(-w / 2., 0.), (w / 2., 0.), (w / 2., -h), (-w / 2., -h)],
         OriginLocation::Centre => [
             (-w / 2., -h / 2.),
             (w / 2., -h / 2.),
@@ -156,10 +134,6 @@ pub fn point_remap_from_origin(
     match origin_location {
         OriginLocation::Corner => (x, y),
         OriginLocation::CloseCentre => (x.map_range(0. ..b.0, -mid_x..mid_x), y),
-        OriginLocation::FarCentre => (
-            x.map_range(0. ..b.0, -mid_x..mid_x),
-            c.1 - y, // inverted
-        ),
         OriginLocation::Centre => {
             let mid_y = c.1 / 2.0;
 

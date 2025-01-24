@@ -1,16 +1,14 @@
 use clap::Parser;
-use quad_to_quad_transformer::DEFAULT_DST_QUAD;
 use tether_lidar2d_consolidation::backend_config::load_config_from_file;
 use tether_lidar2d_consolidation::systems::automasking::handle_automask_message;
 use tether_lidar2d_consolidation::systems::movement::get_total_movement;
 use tether_lidar2d_consolidation::systems::presence::publish_presence_change;
 use tether_lidar2d_consolidation::systems::Systems;
 use tether_lidar2d_consolidation::tether_interface::Outputs;
-use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D, TrackedPoint2D};
+use tether_lidar2d_consolidation::tracking::TrackedPoint2D;
 
 use env_logger::Env;
 use log::{debug, info};
-use map_range::MapRange;
 use std::thread;
 use std::time::Duration;
 use tether_agent::TetherAgentOptionsBuilder;
@@ -184,16 +182,6 @@ fn main() {
                 tether_agent
                     .encode_and_publish(&outputs.smoothed_tracking_output, &active_smoothed_points)
                     .expect("failed to publish smoothed tracking points");
-
-                let remapped_points: Vec<TrackedPoint2D> =
-                    systems.position_remapping.tracked_points_remap_from_origin(
-                        &active_smoothed_points,
-                        backend_config.origin_location,
-                    );
-
-                tether_agent
-                    .encode_and_publish(&outputs.smoothed_remapped_output, &remapped_points)
-                    .expect("failed to publish smoothed+remapped points");
 
                 if !backend_config.movement_disable
                     && systems.movement_analysis.get_elapsed()

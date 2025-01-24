@@ -315,23 +315,14 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                     if ui
                         .selectable_label(
                             matches!(backend_config.origin_location, OriginLocation::CloseCentre),
-                            "TopCentre",
+                            "CloseCentre",
                         )
                         .clicked()
                     {
                         backend_config.origin_location = OriginLocation::CloseCentre;
                         model.is_editing = true;
                     };
-                    if ui
-                        .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::FarCentre),
-                            "BottomCentre",
-                        )
-                        .clicked()
-                    {
-                        backend_config.origin_location = OriginLocation::FarCentre;
-                        model.is_editing = true;
-                    };
+
                     if ui
                         .selectable_label(
                             matches!(backend_config.origin_location, OriginLocation::Centre),

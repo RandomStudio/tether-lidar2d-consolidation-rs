@@ -135,13 +135,12 @@ pub fn handle_scans_message(
         if position_remapping.is_ready() {
             let points: Vec<Point2D> = position_remapping.transform_clusters(clusters);
 
-            if let Ok(tracked_points) = position_remapping.filter_points_inside(&points) {
-                // Normal (unsmoothed) tracked points...
-                tether_agent
-                    .encode_and_publish(tracking_output, &tracked_points)
-                    .expect("failed to publish tracked points");
-                smoothing_system.update_tracked_points(&tracked_points);
-            }
+            let tracked_points = position_remapping.filter_points_inside(&points);
+            // Normal (unsmoothed) tracked points...
+            tether_agent
+                .encode_and_publish(tracking_output, &tracked_points)
+                .expect("failed to publish tracked points");
+            smoothing_system.update_tracked_points(&tracked_points);
         }
 
         if let Some(sampler) = automask_samplers.get_mut(serial) {
