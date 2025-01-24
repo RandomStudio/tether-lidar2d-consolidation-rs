@@ -3,7 +3,8 @@ use egui::{
     plot::{MarkerShape, Plot, PlotPoint, PlotPoints, Points, Text},
     Color32, Ui,
 };
-use tether_lidar2d_consolidation::consolidator_system::calculate_dst_quad;
+use quad_to_quad_transformer::DEFAULT_DST_QUAD;
+use tether_lidar2d_consolidation::{systems::position_remapping::point_remap_from_origin, Point2D};
 
 use super::{draw_line, raw_tracked_points_to_plot_points, smoothed_tracked_points_to_plot_points};
 
@@ -46,36 +47,36 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         }
 
         if let Some(tracking_config) = &model.backend_config {
-            // match tracking_config.origin_location {
-            //     tether_lidar2d_consolidation::smoothing::OriginLocation::Centre => plot_ui.points(
-            //         Points::new(vec![[0., 0.]])
-            //             .filled(true)
-            //             .radius(10.)
-            //             .shape(MarkerShape::Circle)
-            //             .color(Color32::DARK_RED),
-            //     ),
+            if let Some(dst_quad) = model.calculated_dst_quad {
+                let remapped_origin_location: Point2D =
+                    point_remap_from_origin((0., 0.), tracking_config.origin_location, dst_quad);
 
-            //     _ => todo!(), // tether_lidar2d_consolidation::smoothing::OriginLocation::TopLeft => {
-            //                   // tether_lidar2d_consolidation::smoothing::OriginLocation::TopCentre => todo!(),
-            //                   // tether_lidar2d_consolidation::smoothing::OriginLocation::BottomCentre => todo!(),
-            // }
+                plot_ui.points(
+                    Points::new(vec![[
+                        remapped_origin_location.0 as f64,
+                        remapped_origin_location.1 as f64,
+                    ]])
+                    .filled(true)
+                    .radius(10.)
+                    .shape(MarkerShape::Circle)
+                    .color(Color32::DARK_RED),
+                )
+            }
 
             if tracking_config.smoothing_use_real_units {
-                if let Some(roi) = tracking_config.region_of_interest() {
-                    let dst_quad = calculate_dst_quad(roi);
+                let dst_quad = model.calculated_dst_quad.unwrap_or(DEFAULT_DST_QUAD);
 
-                    let [a, b, c, d] = dst_quad;
+                let [a, b, c, d] = dst_quad;
 
-                    let line1 = draw_line(a.0, a.1, b.0, b.1);
-                    plot_ui.line(line1.color(Color32::RED));
-                    // TODO: vertical lines seem to disappear; hence the strange offset here
-                    let line2 = draw_line(b.0, b.1, c.0 + 0.01, c.1);
-                    plot_ui.line(line2.color(Color32::RED));
-                    let line3 = draw_line(c.0, c.1, d.0, d.1);
-                    plot_ui.line(line3.color(Color32::RED));
-                    let line4 = draw_line(d.0, d.1, a.0 + 0.01, a.1);
-                    plot_ui.line(line4.color(Color32::RED));
-                }
+                let line1 = draw_line(a.0, a.1, b.0, b.1);
+                plot_ui.line(line1.color(Color32::RED));
+                // TODO: vertical lines seem to disappear; hence the strange offset here
+                let line2 = draw_line(b.0, b.1, c.0 + 0.01, c.1);
+                plot_ui.line(line2.color(Color32::RED));
+                let line3 = draw_line(c.0, c.1, d.0, d.1);
+                plot_ui.line(line3.color(Color32::RED));
+                let line4 = draw_line(d.0, d.1, a.0 + 0.01, a.1);
+                plot_ui.line(line4.color(Color32::RED));
             } else {
                 let line1 = draw_line(0., 0., 1.0, 0.);
                 plot_ui.line(line1.color(Color32::RED));

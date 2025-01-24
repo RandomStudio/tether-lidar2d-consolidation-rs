@@ -1,23 +1,23 @@
 pub mod automasking;
 pub mod clustering;
 pub mod movement;
+pub mod position_remapping;
 pub mod presence;
 pub mod smoothing;
 
 use automasking::AutoMaskSamplerMap;
 use clustering::ClusteringSystem;
 use indexmap::IndexMap;
-use log::{info, warn};
 use movement::MovementAnalysis;
+use position_remapping::PositionRemapping;
 use presence::PresenceDetectionZones;
-use quad_to_quad_transformer::QuadTransformer;
 use smoothing::{SmoothSettings, TrackingSmoother};
 
-use crate::{backend_config::BackendConfig, consolidator_system::calculate_dst_quad};
+use crate::backend_config::BackendConfig;
 
 pub struct Systems {
     pub clustering_system: ClusteringSystem,
-    pub perspective_transformer: QuadTransformer,
+    pub position_remapping: PositionRemapping,
     pub smoothing_system: TrackingSmoother,
     pub automask_samplers: AutoMaskSamplerMap,
     pub presence_detector: PresenceDetectionZones,
@@ -32,31 +32,6 @@ impl Systems {
             config.clustering_max_cluster_size,
         );
 
-        let perspective_transformer = QuadTransformer::new(
-            match config.region_of_interest() {
-                Some(region_of_interest) => {
-                    let (c1, c2, c3, c4) = region_of_interest;
-                    let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                    Some(corners)
-                }
-                None => None,
-            },
-            if config.smoothing_use_real_units {
-                info!("Using real units");
-                config.region_of_interest().map(calculate_dst_quad)
-            } else {
-                warn!("Using normalised units");
-                None
-            },
-            {
-                if config.transform_include_outside {
-                    None
-                } else {
-                    Some(config.transform_ignore_outside_margin)
-                }
-            },
-        );
-
         let smoothing_system = TrackingSmoother::new(SmoothSettings {
             merge_radius: config.smoothing_merge_radius,
             wait_before_active_ms: config.smoothing_wait_before_active_ms,
@@ -68,13 +43,15 @@ impl Systems {
             should_calculate_angles: config.enable_angles,
         });
 
+        let position_system = PositionRemapping::new(&config);
+
         let presence_detector = PresenceDetectionZones::new(config.zones().unwrap_or_default());
 
         Systems {
             clustering_system,
             smoothing_system,
             automask_samplers: IndexMap::new(),
-            perspective_transformer,
+            position_remapping: position_system,
             presence_detector,
             movement_analysis: MovementAnalysis::new(),
         }

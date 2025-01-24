@@ -1,12 +1,12 @@
 use clap::Parser;
 use quad_to_quad_transformer::DEFAULT_DST_QUAD;
 use tether_lidar2d_consolidation::backend_config::load_config_from_file;
-use tether_lidar2d_consolidation::consolidator_system::{calculate_dst_quad, Outputs};
 use tether_lidar2d_consolidation::systems::automasking::handle_automask_message;
 use tether_lidar2d_consolidation::systems::movement::get_total_movement;
 use tether_lidar2d_consolidation::systems::presence::publish_presence_change;
 use tether_lidar2d_consolidation::systems::smoothing::OriginLocation;
 use tether_lidar2d_consolidation::systems::Systems;
+use tether_lidar2d_consolidation::tether_interface::Outputs;
 use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D, TrackedPoint2D};
 
 use env_logger::Env;
@@ -16,9 +16,7 @@ use std::thread;
 use std::time::Duration;
 use tether_agent::TetherAgentOptionsBuilder;
 
-use tether_lidar2d_consolidation::consolidator_system::{
-    handle_external_tracking_message, handle_scans_message, Inputs,
-};
+use tether_lidar2d_consolidation::tether_interface::{handle_scans_message, Inputs};
 
 mod cli;
 use cli::Cli;
@@ -92,51 +90,51 @@ fn main() {
                 )
             }
 
-            if inputs.external_tracking_input.matches(&topic) {
-                let serial_number = match &topic {
-                    tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
-                    tether_agent::TetherOrCustomTopic::Custom(s) => {
-                        panic!(
-                            "The topic \"{}\" is not expected for Lidar scan messages",
-                            &s
-                        );
-                    }
-                };
+            // if inputs.external_tracking_input.matches(&topic) {
+            //     let serial_number = match &topic {
+            //         tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
+            //         tether_agent::TetherOrCustomTopic::Custom(s) => {
+            //             panic!(
+            //                 "The topic \"{}\" is not expected for Lidar scan messages",
+            //                 &s
+            //             );
+            //         }
+            //     };
 
-                let position_data: BodyFrame3D =
-                    rmp_serde::from_slice(message.payload()).expect("failed to decode bodyFrames");
+            //     let position_data: BodyFrame3D =
+            //         rmp_serde::from_slice(message.payload()).expect("failed to decode bodyFrames");
 
-                for body in position_data.iter() {
-                    let Body3D { body_xyz, .. } = body;
-                    let (x, y, z) = *body_xyz;
-                    debug!(
-                        "External body tracking position received: {},{},{}",
-                        x, y, z
-                    );
-                    let points = vec![(x, z)];
-                    handle_external_tracking_message(
-                        serial_number,
-                        &points,
-                        &mut backend_config,
-                        &tether_agent,
-                        &mut systems,
-                        &outputs,
-                        &cli.config_path,
-                    );
-                }
+            //     for body in position_data.iter() {
+            //         let Body3D { body_xyz, .. } = body;
+            //         let (x, y, z) = *body_xyz;
+            //         debug!(
+            //             "External body tracking position received: {},{},{}",
+            //             x, y, z
+            //         );
+            //         let points = vec![(x, z)];
+            //         handle_external_tracking_message(
+            //             serial_number,
+            //             &points,
+            //             &mut backend_config,
+            //             &tether_agent,
+            //             &mut systems,
+            //             &outputs,
+            //             &cli.config_path,
+            //         );
+            //     }
 
-                if position_data.is_empty() {
-                    handle_external_tracking_message(
-                        serial_number,
-                        &[],
-                        &mut backend_config,
-                        &tether_agent,
-                        &mut systems,
-                        &outputs,
-                        &cli.config_path,
-                    );
-                }
-            }
+            //     if position_data.is_empty() {
+            //         handle_external_tracking_message(
+            //             serial_number,
+            //             &[],
+            //             &mut backend_config,
+            //             &tether_agent,
+            //             &mut systems,
+            //             &outputs,
+            //             &cli.config_path,
+            //         );
+            //     }
+            // }
 
             if inputs.save_config_input.matches(&topic) {
                 backend_config
@@ -144,7 +142,7 @@ fn main() {
                         &tether_agent,
                         &outputs.config_output,
                         &message,
-                        &mut systems.perspective_transformer,
+                        &mut systems.position_remapping,
                         &cli.config_path,
                     )
                     .expect("config failed to update and save");
@@ -188,50 +186,15 @@ fn main() {
                     .encode_and_publish(&outputs.smoothed_tracking_output, &active_smoothed_points)
                     .expect("failed to publish smoothed tracking points");
 
-                if let Some(roi) = &backend_config.region_of_interest {
-                    let dst_quad = if backend_config.smoothing_use_real_units {
-                        calculate_dst_quad(roi)
-                    } else {
-                        DEFAULT_DST_QUAD
-                    };
-                    let [_a, b, c, _d] = dst_quad;
-                    let mid_x = b.0 / 2.0;
+                let remapped_points: Vec<TrackedPoint2D> =
+                    systems.position_remapping.tracked_points_remap_from_origin(
+                        &active_smoothed_points,
+                        backend_config.origin_location,
+                    );
 
-                    let remapped_points: Vec<TrackedPoint2D> = match &backend_config.origin_location
-                    {
-                        OriginLocation::TopLeft => active_smoothed_points.clone(),
-                        OriginLocation::TopCentre => active_smoothed_points
-                            .iter()
-                            .map(|p| TrackedPoint2D {
-                                x: p.x.map_range(0. ..b.0, -mid_x..mid_x),
-                                ..*p
-                            })
-                            .collect(),
-                        OriginLocation::BottomCentre => active_smoothed_points
-                            .iter()
-                            .map(|p| TrackedPoint2D {
-                                x: p.x.map_range(0. ..b.0, -mid_x..mid_x),
-                                y: c.1 - p.y, // inverted
-                                ..*p
-                            })
-                            .collect(),
-                        OriginLocation::Centre => {
-                            let mid_y = c.1 / 2.0;
-
-                            active_smoothed_points
-                                .iter()
-                                .map(|p| TrackedPoint2D {
-                                    x: p.x.map_range(0. ..b.0, -mid_x..mid_x),
-                                    y: p.y.map_range(0. ..c.1, -mid_y..mid_y),
-                                    ..*p
-                                })
-                                .collect()
-                        }
-                    };
-                    tether_agent
-                        .encode_and_publish(&outputs.smoothed_remapped_output, &remapped_points)
-                        .expect("failed to publish smoothed+remapped points");
-                }
+                tether_agent
+                    .encode_and_publish(&outputs.smoothed_remapped_output, &remapped_points)
+                    .expect("failed to publish smoothed+remapped points");
 
                 if !backend_config.movement_disable
                     && systems.movement_analysis.get_elapsed()

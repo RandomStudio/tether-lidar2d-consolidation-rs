@@ -1,12 +1,7 @@
-use log::{debug, error, info, warn};
-use quad_to_quad_transformer::RectCorners;
+use log::{debug, error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
 
-use crate::{
-    backend_config::{BackendConfig, CornerPoints},
-    systems::Systems,
-    Point2D,
-};
+use crate::{backend_config::BackendConfig, systems::Systems, Point2D};
 
 pub struct Outputs {
     pub config_output: PlugDefinition,
@@ -99,17 +94,6 @@ impl Inputs {
     }
 }
 
-pub fn calculate_dst_quad(roi: &CornerPoints) -> RectCorners {
-    let (a, b, _c, d) = roi;
-    let w = distance(a.x, a.y, b.x, b.y);
-    let h = distance(a.x, a.y, d.x, d.y);
-    [(0., 0.), (w, 0.), (w, h), (0., h)]
-}
-
-pub fn distance(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
-    ((x2 - x1).powf(2.0) + (y2 - y1).powf(2.0)).sqrt()
-}
-
 pub fn handle_scans_message(
     serial: &str,
     scans: &[Point2D],
@@ -121,7 +105,7 @@ pub fn handle_scans_message(
 ) {
     let Systems {
         clustering_system,
-        perspective_transformer,
+        position_remapping,
         automask_samplers,
         smoothing_system,
         ..
@@ -148,13 +132,10 @@ pub fn handle_scans_message(
             .encode_and_publish(clusters_output, clusters)
             .expect("failed to publish clusters");
 
-        if perspective_transformer.is_ready() {
-            let points: Vec<Point2D> = clusters
-                .iter()
-                .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
-                .collect();
+        if position_remapping.is_ready() {
+            let points: Vec<Point2D> = position_remapping.transform_clusters(clusters);
 
-            if let Ok(tracked_points) = perspective_transformer.filter_points_inside(&points) {
+            if let Ok(tracked_points) = position_remapping.filter_points_inside(&points) {
                 // Normal (unsmoothed) tracked points...
                 tether_agent
                     .encode_and_publish(tracking_output, &tracked_points)
@@ -185,56 +166,56 @@ pub fn handle_scans_message(
     }
 }
 
-pub fn handle_external_tracking_message(
-    serial: &str,
-    points: &[Point2D],
-    config: &mut BackendConfig,
-    tether_agent: &TetherAgent,
-    systems: &mut Systems,
-    outputs: &Outputs,
-    config_file_path: &str,
-) {
-    let Systems {
-        clustering_system,
-        perspective_transformer,
-        smoothing_system,
-        ..
-    } = systems;
+// pub fn handle_external_tracking_message(
+//     serial: &str,
+//     points: &[Point2D],
+//     config: &mut BackendConfig,
+//     tether_agent: &TetherAgent,
+//     systems: &mut Systems,
+//     outputs: &Outputs,
+//     config_file_path: &str,
+// ) {
+//     let Systems {
+//         clustering_system,
+//         perspective_transformer,
+//         smoothing_system,
+//         ..
+//     } = systems;
 
-    let Outputs {
-        config_output,
-        clusters_output,
-        tracking_output,
-        ..
-    } = outputs;
+//     let Outputs {
+//         config_output,
+//         clusters_output,
+//         tracking_output,
+//         ..
+//     } = outputs;
 
-    // If an unknown device was found (and added), re-publish the Device config
-    if let Some(()) = config.check_or_create_external_tracker(serial) {
-        config
-            .save_and_republish(tether_agent, config_output, config_file_path)
-            .expect("failed to save and republish config");
-    }
+//     // If an unknown device was found (and added), re-publish the Device config
+//     if let Some(()) = config.check_or_create_external_tracker(serial) {
+//         config
+//             .save_and_republish(tether_agent, config_output, config_file_path)
+//             .expect("failed to save and republish config");
+//     }
 
-    if let Some(tracker) = config.get_external_tracker(serial) {
-        clustering_system.update_from_external_tracker(points, tracker);
-        let clusters = clustering_system.clusters();
-        tether_agent
-            .encode_and_publish(clusters_output, clusters)
-            .expect("failed to publish clusters");
+//     if let Some(tracker) = config.get_external_tracker(serial) {
+//         clustering_system.update_from_external_tracker(points, tracker);
+//         let clusters = clustering_system.clusters();
+//         tether_agent
+//             .encode_and_publish(clusters_output, clusters)
+//             .expect("failed to publish clusters");
 
-        if perspective_transformer.is_ready() {
-            let points: Vec<Point2D> = clusters
-                .iter()
-                .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
-                .collect();
+//         if perspective_transformer.is_ready() {
+//             let points: Vec<Point2D> = clusters
+//                 .iter()
+//                 .map(|c| perspective_transformer.transform(&(c.x, c.y)).unwrap())
+//                 .collect();
 
-            if let Ok(tracked_points) = perspective_transformer.filter_points_inside(&points) {
-                // Normal (unsmoothed) tracked points...
-                tether_agent
-                    .encode_and_publish(tracking_output, &tracked_points)
-                    .expect("failed to publish tracked points");
-                smoothing_system.update_tracked_points(&tracked_points);
-            }
-        }
-    }
-}
+//             if let Ok(tracked_points) = perspective_transformer.filter_points_inside(&points) {
+//                 // Normal (unsmoothed) tracked points...
+//                 tether_agent
+//                     .encode_and_publish(tracking_output, &tracked_points)
+//                     .expect("failed to publish tracked points");
+//                 smoothing_system.update_tracked_points(&tracked_points);
+//             }
+//         }
+//     }
+// }

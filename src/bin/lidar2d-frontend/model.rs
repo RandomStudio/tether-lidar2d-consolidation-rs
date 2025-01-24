@@ -1,9 +1,12 @@
 use std::{collections::HashMap, thread, time::Duration};
 
 use log::{debug, error, info};
+use quad_to_quad_transformer::{RectCorners, DEFAULT_DST_QUAD};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 use tether_lidar2d_consolidation::{
-    backend_config::BackendConfig, systems::clustering::Cluster2D, tracking::TrackedPoint2D,
+    backend_config::BackendConfig,
+    systems::{clustering::Cluster2D, position_remapping::calculate_dst_quad},
+    tracking::TrackedPoint2D,
     Point2D,
 };
 
@@ -38,6 +41,7 @@ pub struct Model {
     pub inputs: Inputs,
     pub outputs: Outputs,
     pub backend_config: Option<BackendConfig>,
+    pub calculated_dst_quad: Option<RectCorners>,
     /// Warning: these scan values are (angle,distance) for LIDAR devices, and (x,y) for External Trackers!
     pub scans: HashMap<String, Vec<(f32, f32)>>,
     pub clusters: Vec<Cluster2D>,
@@ -107,6 +111,7 @@ impl Default for Model {
             smoothed_tracked_points: Vec::new(),
             editing_corners: EditingCorner::None,
             point_size: 2.5,
+            calculated_dst_quad: None,
         }
     }
 }
@@ -120,8 +125,13 @@ impl eframe::App for Model {
             work_done = true;
 
             if self.inputs.config.matches(topic) {
-                if let Ok(tracking_config) = rmp_serde::from_slice(msg.payload()) {
+                if let Ok(tracking_config) = rmp_serde::from_slice::<BackendConfig>(msg.payload()) {
                     debug!("Got new Tracking Config: {:?}", tracking_config);
+                    if let Some(roi) = tracking_config.region_of_interest() {
+                        self.calculated_dst_quad = Some(calculate_dst_quad(roi));
+                    } else {
+                        self.calculated_dst_quad = None;
+                    }
                     self.backend_config = Some(tracking_config);
                 } else {
                     error!("Error reading new config");

@@ -1,19 +1,16 @@
 use indexmap::IndexMap;
 use log::{debug, error, info, warn};
-use quad_to_quad_transformer::QuadTransformer;
 use std::{fmt::Error, fs};
 use tether_agent::{mqtt::Message, PlugDefinition, TetherAgent};
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    consolidator_system::calculate_dst_quad,
-    systems::{
-        automasking::MaskThresholdMap,
-        presence::Zone,
-        smoothing::{EmptyListSendMode, OriginLocation},
-    },
+use crate::systems::{
+    automasking::MaskThresholdMap,
+    position_remapping::PositionRemapping,
+    presence::Zone,
+    smoothing::{EmptyListSendMode, OriginLocation},
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -342,23 +339,15 @@ impl BackendConfig {
         tether_agent: &TetherAgent,
         config_output: &PlugDefinition,
         incoming_message: &Message,
-        perspective_transformer: &mut QuadTransformer,
+        position_remapping: &mut PositionRemapping,
         config_file_path: &str,
     ) -> Result<()> {
         match self.parse_remote_config(incoming_message) {
             Ok(()) => {
                 if let Some(region_of_interest) = self.region_of_interest() {
                     info!("New Region of Interest was provided remotely; update the Perspective Transformer");
-                    let (c1, c2, c3, c4) = region_of_interest;
-                    let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                    perspective_transformer.set_new_quad(
-                        &corners,
-                        if self.smoothing_use_real_units {
-                            Some(calculate_dst_quad(region_of_interest))
-                        } else {
-                            None
-                        },
-                    );
+                    position_remapping
+                        .update_roi(&region_of_interest, self.smoothing_use_real_units);
                 }
 
                 info!("Remote-provided config parsed OK; now save to disk and (re) publish");

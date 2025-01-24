@@ -10,9 +10,7 @@ use egui::{
 };
 
 use scan_graph::render_scan_graph;
-use tether_lidar2d_consolidation::{
-    consolidator_system::distance, tracking::TrackedPoint2D, Point2D,
-};
+use tether_lidar2d_consolidation::{geometry_utils::distance, tracking::TrackedPoint2D, Point2D};
 use tracking_graph::render_tracking_graph;
 use tracking_settings::render_tracking_settings;
 
