@@ -1,6 +1,6 @@
 use crate::model::Model;
 use egui::{
-    plot::{Plot, PlotPoint, Text},
+    plot::{MarkerShape, Plot, PlotPoint, PlotPoints, Points, Text},
     Color32, Ui,
 };
 use tether_lidar2d_consolidation::consolidator_system::calculate_dst_quad;
@@ -46,6 +46,20 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         }
 
         if let Some(tracking_config) = &model.backend_config {
+            // match tracking_config.origin_location {
+            //     tether_lidar2d_consolidation::smoothing::OriginLocation::Centre => plot_ui.points(
+            //         Points::new(vec![[0., 0.]])
+            //             .filled(true)
+            //             .radius(10.)
+            //             .shape(MarkerShape::Circle)
+            //             .color(Color32::DARK_RED),
+            //     ),
+
+            //     _ => todo!(), // tether_lidar2d_consolidation::smoothing::OriginLocation::TopLeft => {
+            //                   // tether_lidar2d_consolidation::smoothing::OriginLocation::TopCentre => todo!(),
+            //                   // tether_lidar2d_consolidation::smoothing::OriginLocation::BottomCentre => todo!(),
+            // }
+
             if tracking_config.smoothing_use_real_units {
                 if let Some(roi) = tracking_config.region_of_interest() {
                     let dst_quad = calculate_dst_quad(roi);
