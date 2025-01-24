@@ -1,8 +1,12 @@
 use clap::Parser;
 use quad_to_quad_transformer::DEFAULT_DST_QUAD;
 use tether_lidar2d_consolidation::backend_config::load_config_from_file;
-use tether_lidar2d_consolidation::consolidator_system::{calculate_dst_quad, Outputs, Systems};
-use tether_lidar2d_consolidation::smoothing::OriginLocation;
+use tether_lidar2d_consolidation::consolidator_system::{calculate_dst_quad, Outputs};
+use tether_lidar2d_consolidation::systems::automasking::handle_automask_message;
+use tether_lidar2d_consolidation::systems::movement::get_total_movement;
+use tether_lidar2d_consolidation::systems::presence::publish_presence_change;
+use tether_lidar2d_consolidation::systems::smoothing::OriginLocation;
+use tether_lidar2d_consolidation::systems::Systems;
 use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D, TrackedPoint2D};
 
 use env_logger::Env;
@@ -12,12 +16,9 @@ use std::thread;
 use std::time::Duration;
 use tether_agent::TetherAgentOptionsBuilder;
 
-use tether_lidar2d_consolidation::automasking::handle_automask_message;
 use tether_lidar2d_consolidation::consolidator_system::{
     handle_external_tracking_message, handle_scans_message, Inputs,
 };
-use tether_lidar2d_consolidation::movement::get_total_movement;
-use tether_lidar2d_consolidation::presence::publish_presence_change;
 
 mod cli;
 use cli::Cli;

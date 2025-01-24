@@ -1,6 +1,6 @@
 use egui::{Slider, Ui};
 use log::debug;
-use tether_lidar2d_consolidation::{
+use tether_lidar2d_consolidation::systems::{
     automasking::AutoMaskMessage,
     smoothing::{EmptyListSendMode, OriginLocation},
 };

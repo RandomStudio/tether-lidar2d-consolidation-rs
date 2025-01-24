@@ -3,7 +3,8 @@ use std::{collections::HashMap, thread, time::Duration};
 use log::{debug, error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 use tether_lidar2d_consolidation::{
-    backend_config::BackendConfig, clustering::Cluster2D, tracking::TrackedPoint2D, Point2D,
+    backend_config::BackendConfig, systems::clustering::Cluster2D, tracking::TrackedPoint2D,
+    Point2D,
 };
 
 use crate::ui::render_ui;

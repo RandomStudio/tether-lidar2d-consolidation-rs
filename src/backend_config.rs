@@ -8,10 +8,12 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    automasking::MaskThresholdMap,
     consolidator_system::calculate_dst_quad,
-    presence::Zone,
-    smoothing::{EmptyListSendMode, OriginLocation},
+    systems::{
+        automasking::MaskThresholdMap,
+        presence::Zone,
+        smoothing::{EmptyListSendMode, OriginLocation},
+    },
 };
 
 #[derive(Serialize, Deserialize, Debug)]
