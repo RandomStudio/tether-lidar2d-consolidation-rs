@@ -1,6 +1,7 @@
 use log::{info, warn};
 use map_range::MapRange;
 use quad_to_quad_transformer::{QuadTransformer, RectCorners, DEFAULT_DST_QUAD};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     backend_config::{BackendConfig, CornerPoints},
@@ -9,7 +10,17 @@ use crate::{
     Point2D,
 };
 
-use super::{clustering::Cluster2D, smoothing::OriginLocation};
+use super::clustering::Cluster2D;
+
+/// Which part of the destination quad (ROI) to use as the origin [0,0].
+/// All points sent on "smoothedTrackedPoints" will be relative to this.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum OriginLocation {
+    Corner,
+    CloseCentre,
+    FarCentre,
+    Centre,
+}
 
 pub struct PositionRemapping {
     transformer: QuadTransformer,
@@ -18,6 +29,11 @@ pub struct PositionRemapping {
 
 impl PositionRemapping {
     pub fn new(config: &BackendConfig) -> Self {
+        let dst_quad = if let Some(roi) = config.region_of_interest() {
+            calculate_dst_quad(roi, config.origin_location)
+        } else {
+            DEFAULT_DST_QUAD
+        };
         let perspective_transformer = QuadTransformer::new(
             match config.region_of_interest() {
                 Some(region_of_interest) => {
@@ -29,7 +45,7 @@ impl PositionRemapping {
             },
             if config.smoothing_use_real_units {
                 info!("Using real units");
-                config.region_of_interest().map(calculate_dst_quad)
+                Some(dst_quad)
             } else {
                 warn!("Using normalised units");
                 None
@@ -44,11 +60,7 @@ impl PositionRemapping {
         );
         PositionRemapping {
             transformer: perspective_transformer,
-            dst_quad: if let Some(roi) = config.region_of_interest() {
-                calculate_dst_quad(roi)
-            } else {
-                DEFAULT_DST_QUAD
-            },
+            dst_quad,
         }
     }
 
@@ -87,13 +99,18 @@ impl PositionRemapping {
             .collect()
     }
 
-    pub fn update_roi(&mut self, region_of_interest: &CornerPoints, use_real_units: bool) {
+    pub fn update_with_roi(
+        &mut self,
+        region_of_interest: &CornerPoints,
+        origin_location: OriginLocation,
+        use_real_units: bool,
+    ) {
         let (c1, c2, c3, c4) = region_of_interest;
         let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
         self.transformer.set_new_quad(
             &corners,
             if use_real_units {
-                Some(calculate_dst_quad(region_of_interest))
+                Some(calculate_dst_quad(region_of_interest, origin_location))
             } else {
                 None
             },
@@ -105,11 +122,26 @@ impl PositionRemapping {
     }
 }
 
-pub fn calculate_dst_quad(roi: &CornerPoints) -> RectCorners {
+/// Take a ROI, which might **not** be a rectangle, and return
+/// a corresponding new "destination quad" which is a rectangle
+pub fn calculate_dst_quad(roi: &CornerPoints, origin_location: OriginLocation) -> RectCorners {
     let (a, b, _c, d) = roi;
     let w = distance(a.x, a.y, b.x, b.y);
     let h = distance(a.x, a.y, d.x, d.y);
-    [(0., 0.), (w, 0.), (w, h), (0., h)]
+
+    match origin_location {
+        // As seen on a normal graph (positive-y-up), corners are ordered (a,b,c,d) as if
+        // "counter-clockwise" from "bottom left" (a)
+        OriginLocation::Corner => [(0., 0.), (w, 0.), (w, h), (0., h)],
+        OriginLocation::CloseCentre => [(-w / 2., 0.), (w / 2., 0.), (w / 2., h), (-w / 2., h)],
+        OriginLocation::FarCentre => [(-w / 2., 0.), (w / 2., 0.), (w / 2., -h), (-w / 2., -h)],
+        OriginLocation::Centre => [
+            (-w / 2., -h / 2.),
+            (w / 2., -h / 2.),
+            (w / 2., h / 2.),
+            (-w / 2., h / 2.),
+        ],
+    }
 }
 
 pub fn point_remap_from_origin(
@@ -122,9 +154,9 @@ pub fn point_remap_from_origin(
 
     let (x, y) = p;
     match origin_location {
-        OriginLocation::TopLeft => (x, y),
-        OriginLocation::TopCentre => (x.map_range(0. ..b.0, -mid_x..mid_x), y),
-        OriginLocation::BottomCentre => (
+        OriginLocation::Corner => (x, y),
+        OriginLocation::CloseCentre => (x.map_range(0. ..b.0, -mid_x..mid_x), y),
+        OriginLocation::FarCentre => (
             x.map_range(0. ..b.0, -mid_x..mid_x),
             c.1 - y, // inverted
         ),

@@ -1,8 +1,7 @@
 use egui::{Slider, Ui};
 use log::debug;
 use tether_lidar2d_consolidation::systems::{
-    automasking::AutoMaskMessage,
-    smoothing::{EmptyListSendMode, OriginLocation},
+    automasking::AutoMaskMessage, position_remapping::OriginLocation, smoothing::EmptyListSendMode,
 };
 
 use crate::model::{EditingCorner, Model};
@@ -305,32 +304,32 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                 ui.horizontal(|ui| {
                     if ui
                         .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::TopLeft),
-                            "Top Left",
+                            matches!(backend_config.origin_location, OriginLocation::Corner),
+                            "Corner",
                         )
                         .clicked()
                     {
-                        backend_config.origin_location = OriginLocation::TopLeft;
+                        backend_config.origin_location = OriginLocation::Corner;
                         model.is_editing = true;
                     };
                     if ui
                         .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::TopCentre),
+                            matches!(backend_config.origin_location, OriginLocation::CloseCentre),
                             "TopCentre",
                         )
                         .clicked()
                     {
-                        backend_config.origin_location = OriginLocation::TopCentre;
+                        backend_config.origin_location = OriginLocation::CloseCentre;
                         model.is_editing = true;
                     };
                     if ui
                         .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::BottomCentre),
+                            matches!(backend_config.origin_location, OriginLocation::FarCentre),
                             "BottomCentre",
                         )
                         .clicked()
                     {
-                        backend_config.origin_location = OriginLocation::BottomCentre;
+                        backend_config.origin_location = OriginLocation::FarCentre;
                         model.is_editing = true;
                     };
                     if ui

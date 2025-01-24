@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::systems::{
     automasking::MaskThresholdMap,
-    position_remapping::PositionRemapping,
+    position_remapping::{OriginLocation, PositionRemapping},
     presence::Zone,
-    smoothing::{EmptyListSendMode, OriginLocation},
+    smoothing::EmptyListSendMode,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -160,7 +160,7 @@ impl Default for BackendConfig {
             smoothing_lerp_factor: 0.1,
             smoothing_empty_send_mode: EmptyListSendMode::Once,
             smoothing_update_interval: 16,
-            origin_location: OriginLocation::TopLeft,
+            origin_location: OriginLocation::Corner,
             transform_include_outside: false,
             transform_ignore_outside_margin: 0.,
             automask_scans_required: 60,
@@ -346,8 +346,11 @@ impl BackendConfig {
             Ok(()) => {
                 if let Some(region_of_interest) = self.region_of_interest() {
                     info!("New Region of Interest was provided remotely; update the Perspective Transformer");
-                    position_remapping
-                        .update_roi(&region_of_interest, self.smoothing_use_real_units);
+                    position_remapping.update_with_roi(
+                        &region_of_interest,
+                        self.origin_location,
+                        self.smoothing_use_real_units,
+                    );
                 }
 
                 info!("Remote-provided config parsed OK; now save to disk and (re) publish");

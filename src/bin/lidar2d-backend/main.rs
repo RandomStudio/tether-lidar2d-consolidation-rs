@@ -4,7 +4,6 @@ use tether_lidar2d_consolidation::backend_config::load_config_from_file;
 use tether_lidar2d_consolidation::systems::automasking::handle_automask_message;
 use tether_lidar2d_consolidation::systems::movement::get_total_movement;
 use tether_lidar2d_consolidation::systems::presence::publish_presence_change;
-use tether_lidar2d_consolidation::systems::smoothing::OriginLocation;
 use tether_lidar2d_consolidation::systems::Systems;
 use tether_lidar2d_consolidation::tether_interface::Outputs;
 use tether_lidar2d_consolidation::tracking::{Body3D, BodyFrame3D, TrackedPoint2D};

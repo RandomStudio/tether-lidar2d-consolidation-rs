@@ -5,21 +5,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::{tracking::TrackedPoint2D, Point2D};
 
+use super::position_remapping::OriginLocation;
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum EmptyListSendMode {
     Never,
     Once,
     Always,
-}
-
-/// Which part of the destination quad (ROI) to use as the origin [0,0].
-/// All points sent on "smoothedTrackedPoints" will be relative to this.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub enum OriginLocation {
-    TopLeft,
-    TopCentre,
-    BottomCentre,
-    Centre,
 }
 
 pub struct SmoothSettings {

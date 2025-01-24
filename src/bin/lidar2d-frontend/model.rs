@@ -128,7 +128,8 @@ impl eframe::App for Model {
                 if let Ok(tracking_config) = rmp_serde::from_slice::<BackendConfig>(msg.payload()) {
                     debug!("Got new Tracking Config: {:?}", tracking_config);
                     if let Some(roi) = tracking_config.region_of_interest() {
-                        self.calculated_dst_quad = Some(calculate_dst_quad(roi));
+                        self.calculated_dst_quad =
+                            Some(calculate_dst_quad(roi, tracking_config.origin_location));
                     } else {
                         self.calculated_dst_quad = None;
                     }

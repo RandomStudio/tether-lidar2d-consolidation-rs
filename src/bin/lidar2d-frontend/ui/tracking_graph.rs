@@ -47,21 +47,21 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         }
 
         if let Some(tracking_config) = &model.backend_config {
-            if let Some(dst_quad) = model.calculated_dst_quad {
-                let remapped_origin_location: Point2D =
-                    point_remap_from_origin((0., 0.), tracking_config.origin_location, dst_quad);
+            // if let Some(dst_quad) = model.calculated_dst_quad {
+            //     let remapped_origin_location: Point2D =
+            //         point_remap_from_origin((0., 0.), tracking_config.origin_location, dst_quad);
 
-                plot_ui.points(
-                    Points::new(vec![[
-                        remapped_origin_location.0 as f64,
-                        remapped_origin_location.1 as f64,
-                    ]])
-                    .filled(true)
-                    .radius(10.)
-                    .shape(MarkerShape::Circle)
-                    .color(Color32::DARK_RED),
-                )
-            }
+            //     plot_ui.points(
+            //         Points::new(vec![[
+            //             remapped_origin_location.0 as f64,
+            //             remapped_origin_location.1 as f64,
+            //         ]])
+            //         .filled(true)
+            //         .radius(10.)
+            //         .shape(MarkerShape::Circle)
+            //         .color(Color32::DARK_RED),
+            //     )
+            // }
 
             if tracking_config.smoothing_use_real_units {
                 let dst_quad = model.calculated_dst_quad.unwrap_or(DEFAULT_DST_QUAD);
