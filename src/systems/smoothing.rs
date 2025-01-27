@@ -164,16 +164,12 @@ impl TrackingSmoother {
                         .iter()
                         .enumerate()
                         .find(|(other_index, other_point)| {
-                            let is_close = *other_index != this_index
+                            *other_index != this_index
                                 && other_point.ready
                                 && distance(
                                     &other_point.current_position,
                                     &this_point.current_position,
-                                ) < self.settings.merge_radius;
-                            if is_close {
-                                debug!("{:?} ~ {:?}: points within range", other_point, this_point)
-                            }
-                            is_close
+                                ) < self.settings.merge_radius
                         })
                 {
                     if other_point.first_updated.gt(&this_point.first_updated) {
