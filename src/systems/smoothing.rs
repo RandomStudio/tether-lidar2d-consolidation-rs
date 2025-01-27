@@ -161,12 +161,12 @@ impl TrackingSmoother {
                     && distance(&other_point.current_position, &p.current_position)
                         < self.settings.merge_radius;
                 if is_close {
-                    info!("{:?} ~ {:?}: points within range", other_point, p)
+                    debug!("{:?} ~ {:?}: points within range", other_point, p)
                 }
                 is_close
             })
         }) {
-            info!("therefore should delete point index {}", i);
+            debug!("therefore should delete point index {}", i);
             self.known_points.swap_remove(i);
         }
 

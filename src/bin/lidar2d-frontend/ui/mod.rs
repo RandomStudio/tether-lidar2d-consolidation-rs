@@ -127,27 +127,6 @@ pub fn smoothed_tracked_points_to_plot_points(
         .color(color)
 }
 
-pub fn raw_tracked_points_to_plot_points(
-    tracked_points: &[Point2D],
-    size: f32,
-    color: Color32,
-) -> Points {
-    let plot_points = PlotPoints::new(
-        tracked_points
-            .iter()
-            .map(|tp| {
-                let (x, y) = *tp;
-                [x as f64, y as f64]
-            })
-            .collect(),
-    );
-    Points::new(plot_points)
-        .filled(true)
-        .radius(size)
-        .shape(MarkerShape::Circle)
-        .color(color)
-}
-
 fn draw_circle(x: f32, y: f32, radius: f32, colour: Color32) -> Line {
     let n = 512;
     let circle_points: PlotPoints = (0..=n)

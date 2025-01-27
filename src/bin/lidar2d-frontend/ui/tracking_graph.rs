@@ -5,7 +5,7 @@ use egui::{
 };
 use quad_to_quad_transformer::DEFAULT_DST_QUAD;
 
-use super::{draw_line, raw_tracked_points_to_plot_points, smoothed_tracked_points_to_plot_points};
+use super::{draw_circle, draw_line, smoothed_tracked_points_to_plot_points};
 
 pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
     let tracker_plot = Plot::new("tracker_plot")
@@ -20,12 +20,30 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
     tracker_plot.show(ui, |plot_ui| {
         let mut all_points = Vec::new();
 
-        let raw_points = raw_tracked_points_to_plot_points(
-            &model.raw_tracked_points,
-            12.0,
-            Color32::from_rgba_unmultiplied(200, 200, 200, 128),
-        );
-        all_points.push(raw_points);
+        let config = &model.backend_config.as_ref();
+        let radius = {
+            if let Some(c) = config {
+                c.smoothing_merge_radius
+            } else {
+                12.0
+            }
+        };
+
+        // let raw_points = raw_tracked_points_to_plot_points(
+        //     &model.raw_tracked_points,
+        //     radius,
+        //     Color32::from_rgba_unmultiplied(200, 200, 200, 128),
+        // );
+        // all_points.push(raw_points);
+
+        for (x, y) in &model.raw_tracked_points {
+            plot_ui.line(draw_circle(
+                *x,
+                *y,
+                radius,
+                Color32::from_rgba_unmultiplied(200, 200, 200, 128),
+            ));
+        }
 
         let smoothed_points = smoothed_tracked_points_to_plot_points(
             &model.smoothed_tracked_points,
