@@ -167,7 +167,7 @@ impl Default for BackendConfig {
             automask_threshold_margin: 50.,
             movement_disable: false,
             movement_interval: 250,
-            enable_velocity: true,
+            enable_velocity: false,
             enable_angles: false,
         }
     }
