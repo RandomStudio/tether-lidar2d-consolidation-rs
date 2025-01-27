@@ -154,21 +154,38 @@ impl TrackingSmoother {
         }
 
         // Next, remove any duplicate points (within merge radius of each other)...
-        if let Some(i) = self.known_points.iter().position(|p| {
-            self.known_points.iter().any(|other_point| {
-                let is_close = other_point.id != p.id
-                    && other_point.ready
-                    && distance(&other_point.current_position, &p.current_position)
-                        < self.settings.merge_radius;
-                if is_close {
-                    debug!("{:?} ~ {:?}: points within range", other_point, p)
+        let mut duplicate_index = None;
+        self.known_points
+            .iter()
+            .enumerate()
+            .for_each(|(this_index, this_point)| {
+                if let Some((other_index, other_point)) =
+                    self.known_points
+                        .iter()
+                        .enumerate()
+                        .find(|(other_index, other_point)| {
+                            let is_close = *other_index != this_index
+                                && other_point.ready
+                                && distance(
+                                    &other_point.current_position,
+                                    &this_point.current_position,
+                                ) < self.settings.merge_radius;
+                            if is_close {
+                                debug!("{:?} ~ {:?}: points within range", other_point, this_point)
+                            }
+                            is_close
+                        })
+                {
+                    if other_point.first_updated.gt(&this_point.first_updated) {
+                        duplicate_index = Some(other_index);
+                    } else {
+                        duplicate_index = Some(this_index);
+                    }
                 }
-                is_close
-            })
-        }) {
-            debug!("therefore should delete point index {}", i);
+            });
+        if let Some(i) = duplicate_index {
             self.known_points.swap_remove(i);
-        }
+        };
 
         // Next, remove all points which were active but have now expired...
         if let Some(i) = self
