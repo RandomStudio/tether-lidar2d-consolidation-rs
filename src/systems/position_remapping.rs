@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     backend_config::{BackendConfig, CornerPoints},
     geometry_utils::distance,
-    tracking::TrackedPoint2D,
     Point2D,
 };
 

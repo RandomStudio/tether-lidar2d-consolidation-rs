@@ -1,7 +1,7 @@
 use std::{collections::HashMap, thread, time::Duration};
 
 use log::{debug, error, info};
-use quad_to_quad_transformer::{RectCorners, DEFAULT_DST_QUAD};
+use quad_to_quad_transformer::RectCorners;
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
 use tether_lidar2d_consolidation::{
     backend_config::BackendConfig,

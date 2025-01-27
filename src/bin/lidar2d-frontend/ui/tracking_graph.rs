@@ -1,6 +1,6 @@
 use crate::model::Model;
 use egui::{
-    plot::{MarkerShape, Plot, PlotPoint, PlotPoints, Points, Text},
+    plot::{Plot, PlotPoint, Text},
     Color32, Ui,
 };
 use quad_to_quad_transformer::DEFAULT_DST_QUAD;

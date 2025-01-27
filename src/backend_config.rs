@@ -347,7 +347,7 @@ impl BackendConfig {
                 if let Some(region_of_interest) = self.region_of_interest() {
                     info!("New Region of Interest was provided remotely; update the Perspective Transformer");
                     position_remapping.update_with_roi(
-                        &region_of_interest,
+                        region_of_interest,
                         self.origin_location,
                         self.smoothing_use_real_units,
                     );

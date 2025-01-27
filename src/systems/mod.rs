@@ -43,7 +43,7 @@ impl Systems {
             should_calculate_angles: config.enable_angles,
         });
 
-        let position_system = PositionRemapping::new(&config);
+        let position_system = PositionRemapping::new(config);
 
         let presence_detector = PresenceDetectionZones::new(config.zones().unwrap_or_default());
 
