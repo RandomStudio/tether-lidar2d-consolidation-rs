@@ -127,7 +127,9 @@ fn main() {
                 > backend_config.smoothing_update_interval
         {
             work_done = true;
-            systems.smoothing_system.update_smoothing();
+            systems
+                .smoothing_system
+                .update_smoothing(backend_config.smoothing_update_interval);
 
             let smoothed_points = systems.smoothing_system.get_active_smoothed_points();
 

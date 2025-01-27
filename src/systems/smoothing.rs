@@ -125,7 +125,7 @@ impl TrackingSmoother {
     /// Do time-based smoothing of all known points, and also automatically expire any points
     /// that are "stale". This function should be called as often as possible, not necessarily
     /// only when a new TrackedPoint message comes in.
-    pub fn update_smoothing(&mut self) {
+    pub fn update_smoothing(&mut self, interval: u128) {
         self.last_updated = SystemTime::now();
         // First, remove all points which were waiting too long to become "active"...
         if let Some(i) = self
@@ -203,7 +203,10 @@ impl TrackingSmoother {
             let (x2, y2) = p.target_position;
             let [new_x, new_y] = [lerp(x1, x2, t), lerp(y1, y2, t)];
             if self.settings.should_calculate_velocity {
-                p.velocity = Some([x2 - x1, y2 - y1]);
+                p.velocity = Some([
+                    (new_x - x1) / interval as f32 * 1000.,
+                    (new_y - y1) / interval as f32 * 1000.,
+                ]);
             }
             p.current_position = (new_x, new_y);
         })

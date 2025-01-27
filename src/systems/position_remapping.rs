@@ -42,7 +42,7 @@ impl PositionRemapping {
                 None => None,
             },
             if config.smoothing_use_real_units {
-                info!("Using real units");
+                info!("Using real units (mm)");
                 Some(dst_quad)
             } else {
                 warn!("Using normalised units");
