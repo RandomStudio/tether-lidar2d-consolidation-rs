@@ -1,6 +1,6 @@
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use log::debug;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
 use crate::{tracking::TrackedPoint2D, Point2D};
@@ -27,12 +27,15 @@ pub struct SmoothSettings {
 
 #[derive(Debug)]
 struct SmoothedPoint {
+    id: usize,
     current_position: Point2D,
     target_position: Point2D,
     velocity: Option<[f32; 2]>,
     ready: bool,
     first_updated: SystemTime,
     last_updated: SystemTime,
+    /// A list of raw tracking points currently in range of this point
+    points_in_range: Vec<usize>,
 }
 
 pub struct TrackingSmoother {
@@ -57,55 +60,66 @@ impl TrackingSmoother {
 
     /// Add some raw points (clusters, position data, etc.) to the tracking-smoothing system
     pub fn update_tracked_points(&mut self, points: &[Point2D]) {
-        points.iter().for_each(|new_point| {
-            // Fist, check if this "is" actually an existing point that wasn't (yet)
-            // marked active
-            if let Some(existing) = self.known_points.iter_mut().find(|known_point| {
-                let (x, y) = new_point;
-                distance(&(*x, *y), &known_point.current_position) <= self.settings.merge_radius
-            }) {
-                // ---- CASE A: This "is" a point we already know
+        let mut marked_points_in_range: Vec<usize> = Vec::new();
 
-                if !existing.ready {
-                    if let Ok(elapsed) = existing.first_updated.elapsed() {
-                        if elapsed.as_millis() > self.settings.wait_before_active_ms {
-                            debug!("Existing point {:?} ready to become active", &existing);
-                            existing.ready = true;
-                        }
-                    } else {
-                        panic!("Failed to get elapsed time");
-                    }
+        for sp in self.known_points.iter_mut() {
+            sp.points_in_range.clear();
+            let points_in_my_range: Vec<(usize, Point2D)> = points
+                .iter()
+                .enumerate()
+                .filter(|(_i, p)| distance(p, &sp.current_position) <= self.settings.merge_radius)
+                .map(|(i, p)| (i, *p))
+                .collect();
+            for (i, _p) in points_in_my_range.iter() {
+                marked_points_in_range.push(*i);
+                sp.points_in_range.push(*i);
+            }
+            if !points_in_my_range.is_empty() {
+                // There were points in range; so update time
+                sp.last_updated = SystemTime::now();
+                // If the SmoothedPoint was not ready till now, check if it's time to mark it "ready"
+                if !sp.ready
+                    && sp.first_updated.elapsed().unwrap().as_millis()
+                        > self.settings.wait_before_active_ms
+                {
+                    sp.ready = true;
                 }
-
-                // If this "is" actually the same point, update the time
-                // it was last updated
-                existing.last_updated = SystemTime::now();
-
-                // If this "is" actually the same point, and only if it's "ready",
-                // update its target position
-                if existing.ready {
-                    let (x, y) = new_point;
-                    existing.target_position = (*x, *y);
+                // Finally, set the target position as the centroid between all the points in range
+                if let Some(centroid) = centroid(
+                    &points_in_my_range
+                        .iter()
+                        .map(|(_i, p)| *p)
+                        .collect::<Vec<Point2D>>(),
+                ) {
+                    sp.target_position = centroid;
                 }
-            } else {
-                // ---- CASE B: This is not (close to) a point we already know
+            }
+        }
 
+        for (i, p) in points.iter().enumerate() {
+            if !marked_points_in_range.contains(&i) {
                 // Append to list
-                let (x, y) = new_point;
+                let (x, y) = p;
 
-                debug!("Added new, unknown point {:?}", &new_point);
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("time error");
 
                 let new_point = SmoothedPoint {
+                    id: timestamp.as_millis() as usize,
                     current_position: (*x, *y),
                     target_position: (*x, *y),
                     first_updated: SystemTime::now(),
                     last_updated: SystemTime::now(),
                     velocity: None,
                     ready: self.settings.wait_before_active_ms == 0,
+                    points_in_range: Vec::new(), // will be cleared next frame, anyway
                 };
+                debug!("Added new, unknown point {:?}", &new_point);
+
                 self.known_points.push(new_point);
             }
-        });
+        }
     }
 
     /// Do time-based smoothing of all known points, and also automatically expire any points
@@ -139,6 +153,23 @@ impl TrackingSmoother {
             self.known_points.swap_remove(i);
         }
 
+        // Next, remove any duplicate points (within merge radius of each other)...
+        if let Some(i) = self.known_points.iter().position(|p| {
+            self.known_points.iter().any(|other_point| {
+                let is_close = other_point.id != p.id
+                    && other_point.ready
+                    && distance(&other_point.current_position, &p.current_position)
+                        < self.settings.merge_radius;
+                if is_close {
+                    info!("{:?} ~ {:?}: points within range", other_point, p)
+                }
+                is_close
+            })
+        }) {
+            info!("therefore should delete point index {}", i);
+            self.known_points.swap_remove(i);
+        }
+
         // Next, remove all points which were active but have now expired...
         if let Some(i) = self
             .known_points
@@ -152,7 +183,7 @@ impl TrackingSmoother {
             self.known_points.swap_remove(i);
         }
 
-        // Next, smooth (lerp) points towards target positions
+        // Next, smooth (lerp) points towards target positions...
         self.known_points.iter_mut().for_each(|p| {
             let t = self.settings.lerp_factor;
             let (x1, y1) = p.current_position;
@@ -165,18 +196,17 @@ impl TrackingSmoother {
         })
     }
 
-    pub fn get_smoothed_points(&mut self) -> Option<Vec<TrackedPoint2D>> {
+    pub fn get_active_smoothed_points(&mut self) -> Option<Vec<TrackedPoint2D>> {
         let known_points: Vec<TrackedPoint2D> = self
             .known_points
             .iter()
             .filter(|p| p.ready)
-            .enumerate()
-            .map(|(i, p)| {
-                let mut tp = TrackedPoint2D::new(i, p.current_position);
+            .map(|p| {
+                let mut tp = TrackedPoint2D::new(p.id, p.current_position);
                 tp.set_velocity(p.velocity);
                 if self.settings.should_calculate_angles {
                     let (x, y) = p.current_position;
-                    tp.angle = Some(heading(x, y));
+                    tp.heading = Some(heading(x, y));
                 }
                 tp
             })
@@ -215,6 +245,15 @@ impl TrackingSmoother {
     pub fn get_elapsed(&self) -> Duration {
         self.last_updated.elapsed().unwrap_or_default()
     }
+}
+
+fn centroid(points: &[Point2D]) -> Option<Point2D> {
+    let count = points.len();
+    points
+        .iter()
+        .cloned()
+        .reduce(|acc, el| (acc.0 + el.0, acc.1 + el.1))
+        .map(|(x, y)| (x / count as f32, y / count as f32))
 }
 
 fn distance(a: &Point2D, b: &Point2D) -> f32 {

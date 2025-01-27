@@ -5,7 +5,6 @@ use tether_lidar2d_consolidation::systems::movement::get_total_movement;
 use tether_lidar2d_consolidation::systems::presence::publish_presence_change;
 use tether_lidar2d_consolidation::systems::Systems;
 use tether_lidar2d_consolidation::tether_interface::Outputs;
-use tether_lidar2d_consolidation::tracking::TrackedPoint2D;
 
 use env_logger::Env;
 use log::{debug, info};
@@ -176,7 +175,7 @@ fn main() {
             work_done = true;
             systems.smoothing_system.update_smoothing();
 
-            let smoothed_points = systems.smoothing_system.get_smoothed_points();
+            let smoothed_points = systems.smoothing_system.get_active_smoothed_points();
 
             if let Some(active_smoothed_points) = smoothed_points {
                 tether_agent

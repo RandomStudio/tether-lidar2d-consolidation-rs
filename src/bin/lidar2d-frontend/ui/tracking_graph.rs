@@ -4,7 +4,6 @@ use egui::{
     Color32, Ui,
 };
 use quad_to_quad_transformer::DEFAULT_DST_QUAD;
-use tether_lidar2d_consolidation::{systems::position_remapping::point_remap_from_origin, Point2D};
 
 use super::{draw_line, raw_tracked_points_to_plot_points, smoothed_tracked_points_to_plot_points};
 

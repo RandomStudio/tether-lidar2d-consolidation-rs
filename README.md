@@ -15,7 +15,7 @@ lidar2d-frontend
 ```
 
 ## Command-line configuration
-For the boath executables, you can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `lidar2d-backend --help` (installed) or `cargo run --bin lidar2d-backend -- --help` (development)
+For both executables, you can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `lidar2d-backend --help` (installed) or `cargo run --bin lidar2d-backend -- --help` (development)
 
 
 ## Dev dependencies
