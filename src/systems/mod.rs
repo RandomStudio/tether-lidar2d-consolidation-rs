@@ -40,7 +40,8 @@ impl Systems {
             empty_list_send_mode: config.smoothing_empty_send_mode,
             origin_mode: config.origin_location,
             should_calculate_velocity: config.enable_velocity,
-            should_calculate_angles: config.enable_angles,
+            should_calculate_heading: config.enable_heading,
+            should_calculate_distance: config.enable_distance,
         });
 
         let position_system = PositionRemapping::new(config);

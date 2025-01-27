@@ -117,7 +117,8 @@ pub struct BackendConfig {
     pub origin_location: OriginLocation,
 
     pub enable_velocity: bool,
-    pub enable_angles: bool,
+    pub enable_heading: bool,
+    pub enable_distance: bool,
 
     // -------- PERSPECTIVE TRANSFORM SETTINGS
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad
@@ -168,7 +169,8 @@ impl Default for BackendConfig {
             movement_disable: false,
             movement_interval: 250,
             enable_velocity: false,
-            enable_angles: false,
+            enable_heading: false,
+            enable_distance: false,
         }
     }
 }

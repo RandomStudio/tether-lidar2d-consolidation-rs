@@ -22,7 +22,8 @@ pub struct SmoothSettings {
     pub empty_list_send_mode: EmptyListSendMode,
     pub origin_mode: OriginLocation,
     pub should_calculate_velocity: bool,
-    pub should_calculate_angles: bool,
+    pub should_calculate_heading: bool,
+    pub should_calculate_distance: bool,
 }
 
 #[derive(Debug)]
@@ -31,6 +32,7 @@ struct SmoothedPoint {
     current_position: Point2D,
     target_position: Point2D,
     velocity: Option<[f32; 2]>,
+    distance: Option<f32>,
     ready: bool,
     first_updated: SystemTime,
     last_updated: SystemTime,
@@ -112,6 +114,7 @@ impl TrackingSmoother {
                     first_updated: SystemTime::now(),
                     last_updated: SystemTime::now(),
                     velocity: None,
+                    distance: Some(distance(p, &(0., 0.))),
                     ready: self.settings.wait_before_active_ms == 0,
                     points_in_range: Vec::new(), // will be cleared next frame, anyway
                 };
@@ -208,6 +211,9 @@ impl TrackingSmoother {
                     (new_y - y1) / interval as f32 * 1000.,
                 ]);
             }
+            if self.settings.should_calculate_distance {
+                p.distance = Some(distance(&(x1, y1), &(0., 0.)));
+            }
             p.current_position = (new_x, new_y);
         })
     }
@@ -219,8 +225,9 @@ impl TrackingSmoother {
             .filter(|p| p.ready)
             .map(|p| {
                 let mut tp = TrackedPoint2D::new(p.id, p.current_position);
-                tp.set_velocity(p.velocity);
-                if self.settings.should_calculate_angles {
+                tp.velocity = p.velocity;
+                tp.distance = p.distance;
+                if self.settings.should_calculate_heading {
                     let (x, y) = p.current_position;
                     tp.heading = Some(heading(x, y));
                 }

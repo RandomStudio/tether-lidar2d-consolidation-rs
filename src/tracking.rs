@@ -9,6 +9,8 @@ pub struct TrackedPoint2D {
     pub velocity: Option<[f32; 2]>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heading: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distance: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -36,10 +38,8 @@ impl TrackedPoint2D {
             y: position.1,
             velocity: None,
             heading: None,
+            distance: None,
         }
-    }
-    pub fn set_velocity(&mut self, velocity: Option<[f32; 2]>) {
-        self.velocity = velocity;
     }
 
     pub fn id(&self) -> usize {
