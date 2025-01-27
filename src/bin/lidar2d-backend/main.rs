@@ -86,52 +86,6 @@ fn main() {
                 )
             }
 
-            // if inputs.external_tracking_input.matches(&topic) {
-            //     let serial_number = match &topic {
-            //         tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
-            //         tether_agent::TetherOrCustomTopic::Custom(s) => {
-            //             panic!(
-            //                 "The topic \"{}\" is not expected for Lidar scan messages",
-            //                 &s
-            //             );
-            //         }
-            //     };
-
-            //     let position_data: BodyFrame3D =
-            //         rmp_serde::from_slice(message.payload()).expect("failed to decode bodyFrames");
-
-            //     for body in position_data.iter() {
-            //         let Body3D { body_xyz, .. } = body;
-            //         let (x, y, z) = *body_xyz;
-            //         debug!(
-            //             "External body tracking position received: {},{},{}",
-            //             x, y, z
-            //         );
-            //         let points = vec![(x, z)];
-            //         handle_external_tracking_message(
-            //             serial_number,
-            //             &points,
-            //             &mut backend_config,
-            //             &tether_agent,
-            //             &mut systems,
-            //             &outputs,
-            //             &cli.config_path,
-            //         );
-            //     }
-
-            //     if position_data.is_empty() {
-            //         handle_external_tracking_message(
-            //             serial_number,
-            //             &[],
-            //             &mut backend_config,
-            //             &tether_agent,
-            //             &mut systems,
-            //             &outputs,
-            //             &cli.config_path,
-            //         );
-            //     }
-            // }
-
             if inputs.save_config_input.matches(&topic) {
                 backend_config
                     .handle_save_message(
