@@ -160,7 +160,7 @@ impl Default for BackendConfig {
             smoothing_lerp_factor: 0.1,
             smoothing_empty_send_mode: EmptyListSendMode::Once,
             smoothing_update_interval: 16,
-            origin_location: OriginLocation::Corner,
+            origin_location: OriginLocation::Centre,
             transform_include_outside: false,
             transform_ignore_outside_margin: 0.,
             automask_scans_required: 60,
