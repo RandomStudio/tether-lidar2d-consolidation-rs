@@ -1,10 +1,12 @@
-use egui::{Slider, Ui};
+use egui::{RichText, Slider, Ui};
 use log::debug;
 use tether_lidar2d_consolidation::systems::{
     automasking::AutoMaskMessage, position_remapping::OriginLocation, smoothing::EmptyListSendMode,
 };
 
 use crate::model::{EditingCorner, Model};
+
+const BIG_TEXT_SIZE: f32 = 20.0;
 
 pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
     if let Some(backend_config) = &mut model.backend_config {
@@ -113,35 +115,50 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
         ui.heading("Tracking region (ROI)");
         ui.horizontal(|ui| {
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::None), "None")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::None),
+                    RichText::new("None").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.editing_corners = EditingCorner::None;
                 model.is_editing = true;
             };
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::A), "A")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::A),
+                    RichText::new("A").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.is_editing = true;
                 model.editing_corners = EditingCorner::A
             };
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::B), "B")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::B),
+                    RichText::new("B").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.is_editing = true;
                 model.editing_corners = EditingCorner::B
             };
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::C), "C")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::C),
+                    RichText::new("C").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.is_editing = true;
                 model.editing_corners = EditingCorner::C
             };
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::D), "D")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::D),
+                    RichText::new("D").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.is_editing = true;
