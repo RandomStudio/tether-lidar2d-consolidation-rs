@@ -67,7 +67,7 @@ pub type CornerPoints = (
 #[serde(rename_all = "camelCase")]
 pub struct BackendConfig {
     pub devices: Vec<LidarDevice>,
-    pub external_trackers: Vec<ExternalTracker>,
+    // pub external_trackers: Vec<ExternalTracker>,
     pub region_of_interest: Option<CornerPoints>,
     pub zones: Option<Vec<Zone>>,
 
@@ -146,7 +146,7 @@ impl Default for BackendConfig {
     fn default() -> Self {
         BackendConfig {
             devices: Vec::new(),
-            external_trackers: Vec::new(),
+            // external_trackers: Vec::new(),
             region_of_interest: None,
             zones: None,
             smoothing_use_real_units: true,
@@ -234,36 +234,36 @@ impl BackendConfig {
         }
     }
 
-    /**  If the external tracker is known, return None; if unknown, create it and return
-    Some(())
-    */
-    pub fn check_or_create_external_tracker(&mut self, serial: &str) -> Option<()> {
-        let existing = self
-            .external_trackers()
-            .iter()
-            .find(|&d| d.serial.eq(serial));
-        match existing {
-            Some(_tracker) => None,
-            None => {
-                warn!("Unrecognised tracker for serial {}", serial);
-                let new_tracker = ExternalTracker {
-                    serial: String::from(serial),
-                    name: String::from(serial),
-                    rotation: 0.,
-                    x: 0.,
-                    y: 0.,
-                    color: pick_from_palette(self.devices.len()), // TODO: use random colour
-                    flip_coords: None,
-                };
-                self.external_trackers.push(new_tracker);
-                info!(
-                    "Creating an external tracker with defaults for serial {}",
-                    serial
-                );
-                Some(())
-            }
-        }
-    }
+    // /**  If the external tracker is known, return None; if unknown, create it and return
+    // Some(())
+    // */
+    // pub fn check_or_create_external_tracker(&mut self, serial: &str) -> Option<()> {
+    //     let existing = self
+    //         .external_trackers()
+    //         .iter()
+    //         .find(|&d| d.serial.eq(serial));
+    //     match existing {
+    //         Some(_tracker) => None,
+    //         None => {
+    //             warn!("Unrecognised tracker for serial {}", serial);
+    //             let new_tracker = ExternalTracker {
+    //                 serial: String::from(serial),
+    //                 name: String::from(serial),
+    //                 rotation: 0.,
+    //                 x: 0.,
+    //                 y: 0.,
+    //                 color: pick_from_palette(self.devices.len()), // TODO: use random colour
+    //                 flip_coords: None,
+    //             };
+    //             // self.external_trackers.push(new_tracker);
+    //             info!(
+    //                 "Creating an external tracker with defaults for serial {}",
+    //                 serial
+    //             );
+    //             Some(())
+    //         }
+    //     }
+    // }
 
     pub fn clear_device_masking(&mut self) {
         for d in self.devices.iter_mut() {
@@ -298,15 +298,15 @@ impl BackendConfig {
         self.devices.iter_mut().find(|d| d.serial.eq(serial))
     }
 
-    pub fn get_external_tracker(&self, serial: &str) -> Option<&ExternalTracker> {
-        self.external_trackers.iter().find(|&d| d.serial.eq(serial))
-    }
+    // pub fn get_external_tracker(&self, serial: &str) -> Option<&ExternalTracker> {
+    //     self.external_trackers.iter().find(|&d| d.serial.eq(serial))
+    // }
 
-    pub fn get_external_tracker_mut(&mut self, serial: &str) -> Option<&mut ExternalTracker> {
-        self.external_trackers
-            .iter_mut()
-            .find(|d| d.serial.eq(serial))
-    }
+    // pub fn get_external_tracker_mut(&mut self, serial: &str) -> Option<&mut ExternalTracker> {
+    //     self.external_trackers
+    //         .iter_mut()
+    //         .find(|d| d.serial.eq(serial))
+    // }
 
     pub fn devices(&self) -> &Vec<LidarDevice> {
         &self.devices
@@ -316,13 +316,13 @@ impl BackendConfig {
         &mut self.devices
     }
 
-    pub fn external_trackers(&self) -> &Vec<ExternalTracker> {
-        &self.external_trackers
-    }
+    // pub fn external_trackers(&self) -> &Vec<ExternalTracker> {
+    //     &self.external_trackers
+    // }
 
-    pub fn external_trackers_mut(&mut self) -> &mut Vec<ExternalTracker> {
-        &mut self.external_trackers
-    }
+    // pub fn external_trackers_mut(&mut self) -> &mut Vec<ExternalTracker> {
+    //     &mut self.external_trackers
+    // }
 
     pub fn region_of_interest(&self) -> Option<&CornerPoints> {
         self.region_of_interest.as_ref()
