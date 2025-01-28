@@ -1,6 +1,6 @@
 use colorsys::Rgb;
 use egui::{
-    plot::{MarkerShape, Plot, PlotPoints, Points},
+    plot::{MarkerShape, Plot, PlotPoint, PlotPoints, Points, Text},
     Color32, InnerResponse, Ui,
 };
 use log::{debug, warn};
@@ -82,8 +82,12 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
                             .radius(10.)
                             .shape(MarkerShape::Circle)
                             .name(name)
-                            .color(Color32::from_rgba_unmultiplied(255, 0, 0, 128)),
+                            .color(Color32::from_rgba_unmultiplied(255, 0, 0, 32)),
                     );
+                    plot_ui.text(
+                        Text::new(PlotPoint::new(x, y), name)
+                            .color(Color32::from_rgba_unmultiplied(255, 0, 0, 255)),
+                    )
                 }
 
                 let line1 = draw_line(a.x, a.y, d.x, d.y);

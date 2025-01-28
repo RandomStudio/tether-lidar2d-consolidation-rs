@@ -164,7 +164,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             if ui
                 .checkbox(
                     &mut backend_config.enable_velocity,
-                    "Calculate velocity per point",
+                    "Calculate velocity (mm/s) per point",
                 )
                 .clicked()
             {
@@ -174,7 +174,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             if ui
                 .checkbox(
                     &mut backend_config.enable_heading,
-                    "Calculate angle from origin per point",
+                    "Calculate heading (angle from N) per point",
                 )
                 .clicked()
             {
