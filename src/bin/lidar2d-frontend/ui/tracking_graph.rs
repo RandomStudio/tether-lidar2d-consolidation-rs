@@ -41,14 +41,14 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
                 *x,
                 *y,
                 radius,
-                Color32::from_rgba_unmultiplied(200, 200, 200, 128),
+                Color32::from_rgba_unmultiplied(200, 255, 200, 64),
             ));
         }
 
         let smoothed_points = smoothed_tracked_points_to_plot_points(
             &model.smoothed_tracked_points,
             5.0,
-            Color32::LIGHT_GREEN,
+            Color32::from_rgba_unmultiplied(200, 255, 200, 64),
         );
         all_points.push(smoothed_points);
 
