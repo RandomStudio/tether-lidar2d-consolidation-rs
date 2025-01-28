@@ -317,39 +317,44 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             });
 
             ui.horizontal(|ui| {
-                ui.label("Origin mode:");
-                ui.horizontal(|ui| {
-                    if ui
-                        .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::Corner),
-                            "Corner",
-                        )
-                        .clicked()
-                    {
-                        backend_config.origin_location = OriginLocation::Corner;
-                        model.is_editing = true;
-                    };
-                    if ui
-                        .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::CloseCentre),
-                            "CloseCentre",
-                        )
-                        .clicked()
-                    {
-                        backend_config.origin_location = OriginLocation::CloseCentre;
-                        model.is_editing = true;
-                    };
+                ui.add_enabled_ui(backend_config.smoothing_use_real_units, |ui| {
+                    ui.label("Origin mode:");
+                    ui.horizontal(|ui| {
+                        if ui
+                            .selectable_label(
+                                matches!(backend_config.origin_location, OriginLocation::Corner),
+                                "Corner",
+                            )
+                            .clicked()
+                        {
+                            backend_config.origin_location = OriginLocation::Corner;
+                            model.is_editing = true;
+                        };
+                        if ui
+                            .selectable_label(
+                                matches!(
+                                    backend_config.origin_location,
+                                    OriginLocation::CloseCentre
+                                ),
+                                "CloseCentre",
+                            )
+                            .clicked()
+                        {
+                            backend_config.origin_location = OriginLocation::CloseCentre;
+                            model.is_editing = true;
+                        };
 
-                    if ui
-                        .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::Centre),
-                            "Centre",
-                        )
-                        .clicked()
-                    {
-                        backend_config.origin_location = OriginLocation::Centre;
-                        model.is_editing = true;
-                    };
+                        if ui
+                            .selectable_label(
+                                matches!(backend_config.origin_location, OriginLocation::Centre),
+                                "Centre",
+                            )
+                            .clicked()
+                        {
+                            backend_config.origin_location = OriginLocation::Centre;
+                            model.is_editing = true;
+                        };
+                    });
                 });
             });
 

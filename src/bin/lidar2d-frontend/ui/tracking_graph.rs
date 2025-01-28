@@ -54,8 +54,7 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
 
         for p in &model.smoothed_tracked_points {
             plot_ui.text(
-                Text::new(PlotPoint::new(p.x + 0.1, p.y), format!("#{}", p.id()))
-                    .color(Color32::WHITE),
+                Text::new(PlotPoint::new(p.x, p.y), format!("#{}", p.id())).color(Color32::WHITE),
             );
         }
 
