@@ -1,11 +1,12 @@
-use egui::{Slider, Ui};
+use egui::{RichText, Slider, Ui};
 use log::debug;
-use tether_lidar2d_consolidation::{
-    automasking::AutoMaskMessage,
-    smoothing::{EmptyListSendMode, OriginLocation},
+use tether_lidar2d_consolidation::systems::{
+    automasking::AutoMaskMessage, position_remapping::OriginLocation, smoothing::EmptyListSendMode,
 };
 
 use crate::model::{EditingCorner, Model};
+
+const BIG_TEXT_SIZE: f32 = 20.0;
 
 pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
     if let Some(backend_config) = &mut model.backend_config {
@@ -114,35 +115,50 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
         ui.heading("Tracking region (ROI)");
         ui.horizontal(|ui| {
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::None), "None")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::None),
+                    RichText::new("None").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.editing_corners = EditingCorner::None;
                 model.is_editing = true;
             };
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::A), "A")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::A),
+                    RichText::new("A").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.is_editing = true;
                 model.editing_corners = EditingCorner::A
             };
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::B), "B")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::B),
+                    RichText::new("B").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.is_editing = true;
                 model.editing_corners = EditingCorner::B
             };
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::C), "C")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::C),
+                    RichText::new("C").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.is_editing = true;
                 model.editing_corners = EditingCorner::C
             };
             if ui
-                .selectable_label(matches!(model.editing_corners, EditingCorner::D), "D")
+                .selectable_label(
+                    matches!(model.editing_corners, EditingCorner::D),
+                    RichText::new("D").size(BIG_TEXT_SIZE),
+                )
                 .clicked()
             {
                 model.is_editing = true;
@@ -165,7 +181,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             if ui
                 .checkbox(
                     &mut backend_config.enable_velocity,
-                    "Calculate velocity per point",
+                    "Calculate velocity (mm/s) per point",
                 )
                 .clicked()
             {
@@ -174,8 +190,8 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
 
             if ui
                 .checkbox(
-                    &mut backend_config.enable_angles,
-                    "Calculate angle from origin per point",
+                    &mut backend_config.enable_heading,
+                    "Calculate heading (angle from N) per point",
                 )
                 .clicked()
             {
@@ -301,48 +317,44 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             });
 
             ui.horizontal(|ui| {
-                ui.label("Origin mode:");
-                ui.horizontal(|ui| {
-                    if ui
-                        .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::TopLeft),
-                            "Top Left",
-                        )
-                        .clicked()
-                    {
-                        backend_config.origin_location = OriginLocation::TopLeft;
-                        model.is_editing = true;
-                    };
-                    if ui
-                        .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::TopCentre),
-                            "TopCentre",
-                        )
-                        .clicked()
-                    {
-                        backend_config.origin_location = OriginLocation::TopCentre;
-                        model.is_editing = true;
-                    };
-                    if ui
-                        .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::BottomCentre),
-                            "BottomCentre",
-                        )
-                        .clicked()
-                    {
-                        backend_config.origin_location = OriginLocation::BottomCentre;
-                        model.is_editing = true;
-                    };
-                    if ui
-                        .selectable_label(
-                            matches!(backend_config.origin_location, OriginLocation::Centre),
-                            "Centre",
-                        )
-                        .clicked()
-                    {
-                        backend_config.origin_location = OriginLocation::Centre;
-                        model.is_editing = true;
-                    };
+                ui.add_enabled_ui(backend_config.smoothing_use_real_units, |ui| {
+                    ui.label("Origin mode:");
+                    ui.horizontal(|ui| {
+                        if ui
+                            .selectable_label(
+                                matches!(backend_config.origin_location, OriginLocation::Corner),
+                                "Corner",
+                            )
+                            .clicked()
+                        {
+                            backend_config.origin_location = OriginLocation::Corner;
+                            model.is_editing = true;
+                        };
+                        if ui
+                            .selectable_label(
+                                matches!(
+                                    backend_config.origin_location,
+                                    OriginLocation::CloseCentre
+                                ),
+                                "CloseCentre",
+                            )
+                            .clicked()
+                        {
+                            backend_config.origin_location = OriginLocation::CloseCentre;
+                            model.is_editing = true;
+                        };
+
+                        if ui
+                            .selectable_label(
+                                matches!(backend_config.origin_location, OriginLocation::Centre),
+                                "Centre",
+                            )
+                            .clicked()
+                        {
+                            backend_config.origin_location = OriginLocation::Centre;
+                            model.is_editing = true;
+                        };
+                    });
                 });
             });
 

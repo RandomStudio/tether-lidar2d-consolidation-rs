@@ -1,17 +1,16 @@
 use indexmap::IndexMap;
 use log::{debug, error, info, warn};
-use quad_to_quad_transformer::QuadTransformer;
 use std::{fmt::Error, fs};
 use tether_agent::{mqtt::Message, PlugDefinition, TetherAgent};
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::{
+use crate::systems::{
     automasking::MaskThresholdMap,
-    consolidator_system::calculate_dst_quad,
+    position_remapping::{OriginLocation, PositionRemapping},
     presence::Zone,
-    smoothing::{EmptyListSendMode, OriginLocation},
+    smoothing::EmptyListSendMode,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -118,7 +117,8 @@ pub struct BackendConfig {
     pub origin_location: OriginLocation,
 
     pub enable_velocity: bool,
-    pub enable_angles: bool,
+    pub enable_heading: bool,
+    pub enable_distance: bool,
 
     // -------- PERSPECTIVE TRANSFORM SETTINGS
     /// By default, we drop tracking points (resolved clusters) that lie outside of the defined quad
@@ -161,15 +161,16 @@ impl Default for BackendConfig {
             smoothing_lerp_factor: 0.1,
             smoothing_empty_send_mode: EmptyListSendMode::Once,
             smoothing_update_interval: 16,
-            origin_location: OriginLocation::TopLeft,
+            origin_location: OriginLocation::Centre,
             transform_include_outside: false,
             transform_ignore_outside_margin: 0.,
             automask_scans_required: 60,
             automask_threshold_margin: 50.,
             movement_disable: false,
             movement_interval: 250,
-            enable_velocity: true,
-            enable_angles: false,
+            enable_velocity: false,
+            enable_heading: false,
+            enable_distance: false,
         }
     }
 }
@@ -340,22 +341,17 @@ impl BackendConfig {
         tether_agent: &TetherAgent,
         config_output: &PlugDefinition,
         incoming_message: &Message,
-        perspective_transformer: &mut QuadTransformer,
+        position_remapping: &mut PositionRemapping,
         config_file_path: &str,
     ) -> Result<()> {
         match self.parse_remote_config(incoming_message) {
             Ok(()) => {
                 if let Some(region_of_interest) = self.region_of_interest() {
                     info!("New Region of Interest was provided remotely; update the Perspective Transformer");
-                    let (c1, c2, c3, c4) = region_of_interest;
-                    let corners = [c1, c2, c3, c4].map(|c| (c.x, c.y));
-                    perspective_transformer.set_new_quad(
-                        &corners,
-                        if self.smoothing_use_real_units {
-                            Some(calculate_dst_quad(region_of_interest))
-                        } else {
-                            None
-                        },
+                    position_remapping.update_with_roi(
+                        region_of_interest,
+                        self.origin_location,
+                        self.smoothing_use_real_units,
                     );
                 }
 

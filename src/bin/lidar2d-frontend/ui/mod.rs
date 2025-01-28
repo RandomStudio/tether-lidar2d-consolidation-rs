@@ -10,9 +10,7 @@ use egui::{
 };
 
 use scan_graph::render_scan_graph;
-use tether_lidar2d_consolidation::{
-    consolidator_system::distance, tracking::TrackedPoint2D, Point2D,
-};
+use tether_lidar2d_consolidation::{geometry_utils::distance, tracking::TrackedPoint2D, Point2D};
 use tracking_graph::render_tracking_graph;
 use tracking_settings::render_tracking_settings;
 
@@ -118,27 +116,6 @@ pub fn smoothed_tracked_points_to_plot_points(
             .map(|tp| {
                 let x = tp.x;
                 let y = tp.y;
-                [x as f64, y as f64]
-            })
-            .collect(),
-    );
-    Points::new(plot_points)
-        .filled(true)
-        .radius(size)
-        .shape(MarkerShape::Circle)
-        .color(color)
-}
-
-pub fn raw_tracked_points_to_plot_points(
-    tracked_points: &[Point2D],
-    size: f32,
-    color: Color32,
-) -> Points {
-    let plot_points = PlotPoints::new(
-        tracked_points
-            .iter()
-            .map(|tp| {
-                let (x, y) = *tp;
                 [x as f64, y as f64]
             })
             .collect(),

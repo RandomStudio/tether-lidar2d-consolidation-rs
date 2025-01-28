@@ -7,6 +7,24 @@
     {
       "type": "lldb",
       "request": "launch",
+      "name": "Debug backend",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=lidar2d-backend",
+          "--package=tether-lidar2d-consolidation"
+        ],
+        "filter": {
+          "name": "lidar2d-backend",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
       "name": "Debug frontend",
       "cargo": {
         "args": [

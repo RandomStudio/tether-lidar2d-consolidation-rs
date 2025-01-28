@@ -2358,9 +2358,9 @@ dependencies = [
 
 [[package]]
 name = "quad-to-quad-transformer"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ad8810c21dab794b29dece09147dddd71453242c6f74005866ee11e3baacfa4"
+checksum = "63834fd673ba5f9a68f1d6b6138fadf994fdebbaec6e00ea58eea39a96f0bcd2"
 dependencies = [
  "anyhow",
  "log",
@@ -2842,7 +2842,7 @@ dependencies = [
 
 [[package]]
 name = "tether-lidar2d-consolidation"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "async-std",
