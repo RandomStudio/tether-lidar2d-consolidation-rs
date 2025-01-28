@@ -325,6 +325,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                                 matches!(backend_config.origin_location, OriginLocation::Corner),
                                 "Corner",
                             )
+                            .on_hover_text("0,0 at A")
                             .clicked()
                         {
                             backend_config.origin_location = OriginLocation::Corner;
@@ -338,6 +339,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                                 ),
                                 "CloseCentre",
                             )
+                            .on_hover_text("0,0 on centre of AB line, positive Y towards DC")
                             .clicked()
                         {
                             backend_config.origin_location = OriginLocation::CloseCentre;
@@ -349,6 +351,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                                 matches!(backend_config.origin_location, OriginLocation::Centre),
                                 "Centre",
                             )
+                            .on_hover_text("0,0 at geometric centre of ROI")
                             .clicked()
                         {
                             backend_config.origin_location = OriginLocation::Centre;
