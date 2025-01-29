@@ -1,18 +1,22 @@
+mod info;
 mod scan_graph;
 mod tracking_graph;
 mod tracking_settings;
+mod vis_settings;
 
 use std::f64::consts::TAU;
 
 use egui::{
     plot::{Line, MarkerShape, PlotPoints, Points},
-    remap, Color32, Slider,
+    remap, Color32,
 };
 
+use info::render_info;
 use scan_graph::render_scan_graph;
-use tether_lidar2d_consolidation::{geometry_utils::distance, tracking::TrackedPoint2D, Point2D};
+use tether_lidar2d_consolidation::{tracking::TrackedPoint2D, Point2D};
 use tracking_graph::render_tracking_graph;
 use tracking_settings::render_tracking_settings;
+use vis_settings::render_vis_settings;
 
 use crate::model::Model;
 
@@ -20,51 +24,14 @@ pub const SPACING_AMOUNT: f32 = 16.0;
 
 pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
     egui::SidePanel::left("config").show(ctx, |ui| {
-        ui.heading("Visualisation Settings");
-        ui.group(|ui| {
-            ui.horizontal(|ui| {
-                ui.label("Point radius");
-                ui.add(Slider::new(&mut model.point_size, 1.0..=20.0));
-            });
-        });
-
         ui.add_space(SPACING_AMOUNT);
+        render_vis_settings(model, ui);
 
         render_tracking_settings(model, ui);
     });
 
     egui::SidePanel::right("stats").show(ctx, |ui| {
-        ui.horizontal(|ui| {
-            ui.label("Clusters count: ");
-            ui.label(format!("{}", model.clusters.len()));
-        });
-        ui.horizontal(|ui| {
-            ui.label("(Raw) tracked points count: ");
-            ui.label(format!("{}", model.raw_tracked_points.len()));
-        });
-        ui.horizontal(|ui| {
-            ui.label("Smoothed tracked points count: ");
-            ui.label(format!("{}", model.smoothed_tracked_points.len()));
-        });
-        if let Some(tracking_config) = &model.backend_config {
-            ui.heading("Tracking Config");
-            if tracking_config.smoothing_use_real_units {
-                if let Some(roi) = tracking_config.region_of_interest() {
-                    ui.horizontal(|ui| {
-                        ui.label("Output width:");
-                        let (a, b, _c, _d) = roi;
-                        ui.label(format!("{:.1}mm", distance(a.x, a.y, b.x, b.y)))
-                    });
-                    ui.horizontal(|ui| {
-                        ui.label("Output height:");
-                        let (a, _b, _c, d) = roi;
-                        ui.label(format!("{:.1}mm", distance(a.x, a.y, d.x, d.y)))
-                    });
-                }
-            } else {
-                ui.label("Normalised 1x1 output size");
-            }
-        }
+        render_info(model, ui);
     });
 
     egui::CentralPanel::default().show(ctx, |ui| {

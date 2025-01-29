@@ -29,13 +29,6 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
             }
         };
 
-        // let raw_points = raw_tracked_points_to_plot_points(
-        //     &model.raw_tracked_points,
-        //     radius,
-        //     Color32::from_rgba_unmultiplied(200, 200, 200, 128),
-        // );
-        // all_points.push(raw_points);
-
         for (x, y) in &model.raw_tracked_points {
             plot_ui.line(draw_circle(
                 *x,
@@ -52,10 +45,49 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         );
         all_points.push(smoothed_points);
 
-        for p in &model.smoothed_tracked_points {
-            plot_ui.text(
-                Text::new(PlotPoint::new(p.x, p.y), format!("#{}", p.id())).color(Color32::WHITE),
-            );
+        let text_offset = {
+            if let Some(c) = config {
+                if c.smoothing_use_real_units {
+                    Some(110.)
+                } else {
+                    Some(0.05)
+                }
+            } else {
+                None
+            }
+        };
+
+        if model.show_graph_labels {
+            for p in &model.smoothed_tracked_points {
+                if let Some(heading) = p.heading {
+                    plot_ui.text(Text::new(
+                        PlotPoint::new(p.x, p.y - text_offset.unwrap_or_default()),
+                        format!("{:.0}°", heading),
+                    ));
+                }
+                plot_ui.text(
+                    Text::new(PlotPoint::new(p.x, p.y), format!("#{}", p.id()))
+                        .color(Color32::WHITE),
+                );
+                if let Some(distance) = p.distance {
+                    plot_ui.text(Text::new(
+                        PlotPoint::new(p.x, p.y + text_offset.unwrap_or_default()),
+                        if let Some(c) = config {
+                            if c.smoothing_use_real_units {
+                                format!("{:.0}mm", distance)
+                            } else {
+                                format!("{:.2}", distance)
+                            }
+                        } else {
+                            format!("{:.0}mm", distance)
+                        },
+                    ));
+                }
+                plot_ui.line(
+                    draw_line(0., 0., p.x, p.y)
+                        .color(Color32::from_rgba_unmultiplied(200, 255, 200, 64)),
+                );
+            }
         }
 
         for points_group in all_points {
@@ -63,22 +95,6 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         }
 
         if let Some(tracking_config) = &model.backend_config {
-            // if let Some(dst_quad) = model.calculated_dst_quad {
-            //     let remapped_origin_location: Point2D =
-            //         point_remap_from_origin((0., 0.), tracking_config.origin_location, dst_quad);
-
-            //     plot_ui.points(
-            //         Points::new(vec![[
-            //             remapped_origin_location.0 as f64,
-            //             remapped_origin_location.1 as f64,
-            //         ]])
-            //         .filled(true)
-            //         .radius(10.)
-            //         .shape(MarkerShape::Circle)
-            //         .color(Color32::DARK_RED),
-            //     )
-            // }
-
             if tracking_config.smoothing_use_real_units {
                 let dst_quad = model.calculated_dst_quad.unwrap_or(DEFAULT_DST_QUAD);
 

@@ -52,6 +52,7 @@ pub struct Model {
     pub smoothed_tracked_points: Vec<TrackedPoint2D>,
     pub editing_corners: EditingCorner,
     pub point_size: f32,
+    pub show_graph_labels: bool,
     pub is_editing: bool,
 }
 
@@ -113,7 +114,8 @@ impl Default for Model {
             raw_tracked_points: Vec::new(),
             smoothed_tracked_points: Vec::new(),
             editing_corners: EditingCorner::None,
-            point_size: 2.5,
+            point_size: 2.0,
+            show_graph_labels: true,
             calculated_dst_quad: None,
         }
     }
