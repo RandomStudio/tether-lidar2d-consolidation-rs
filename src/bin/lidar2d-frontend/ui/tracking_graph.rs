@@ -83,6 +83,10 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
                         },
                     ));
                 }
+                plot_ui.line(
+                    draw_line(0., 0., p.x, p.y)
+                        .color(Color32::from_rgba_unmultiplied(200, 255, 200, 64)),
+                );
             }
         }
 
