@@ -1,0 +1,60 @@
+pub mod automasking;
+pub mod clustering;
+pub mod movement;
+pub mod position_remapping;
+pub mod presence;
+pub mod smoothing;
+
+use automasking::AutoMaskSamplerMap;
+use clustering::ClusteringSystem;
+use indexmap::IndexMap;
+use movement::AverageMovementAnalysis;
+use position_remapping::PositionRemapping;
+use presence::PresenceDetectionZones;
+use smoothing::{SmoothSettings, TrackingSmoother};
+
+use crate::backend_config::BackendConfig;
+
+pub struct Systems {
+    pub clustering_system: ClusteringSystem,
+    pub position_remapping: PositionRemapping,
+    pub smoothing_system: TrackingSmoother,
+    pub automask_samplers: AutoMaskSamplerMap,
+    pub presence_detector: PresenceDetectionZones,
+    pub movement_analysis: AverageMovementAnalysis,
+}
+
+impl Systems {
+    pub fn new(config: &BackendConfig) -> Systems {
+        let clustering_system = ClusteringSystem::new(
+            config.clustering_neighbourhood_radius,
+            config.clustering_min_neighbours,
+            config.clustering_max_cluster_size,
+        );
+
+        let smoothing_system = TrackingSmoother::new(SmoothSettings {
+            merge_radius: config.smoothing_merge_radius,
+            wait_before_active_ms: config.smoothing_wait_before_active_ms,
+            expire_ms: config.smoothing_expire_ms,
+            lerp_factor: config.smoothing_lerp_factor,
+            empty_list_send_mode: config.smoothing_empty_send_mode,
+            origin_mode: config.origin_location,
+            should_calculate_velocity: config.enable_velocity,
+            should_calculate_heading: config.enable_heading,
+            should_calculate_distance: config.enable_distance,
+        });
+
+        let position_system = PositionRemapping::new(config);
+
+        let presence_detector = PresenceDetectionZones::new(config.zones().unwrap_or_default());
+
+        Systems {
+            clustering_system,
+            smoothing_system,
+            automask_samplers: IndexMap::new(),
+            position_remapping: position_system,
+            presence_detector,
+            movement_analysis: AverageMovementAnalysis::new(),
+        }
+    }
+}

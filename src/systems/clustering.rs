@@ -1,0 +1,301 @@
+use crate::{
+    backend_config::{ExternalTracker, LidarDevice},
+    Point2D,
+};
+
+use indexmap::IndexMap;
+use log::debug;
+use serde::{Deserialize, Serialize};
+
+use ndarray::{Array, ArrayView};
+use petal_clustering::{Dbscan, Fit};
+use petal_neighbors::distance::Euclidean;
+use std::{collections::HashMap, f32::consts::TAU};
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Cluster2D {
+    pub id: usize,
+    pub x: f32,
+    pub y: f32,
+    pub size: f32,
+}
+
+struct Bounds2D {
+    x_min: Option<f32>,
+    y_min: Option<f32>,
+    x_max: Option<f32>,
+    y_max: Option<f32>,
+}
+
+pub struct ClusteringSystem {
+    scan_points: HashMap<String, Vec<Point2D>>,
+    clustering_engine: Dbscan<f32, Euclidean>,
+    cached_clusters: Vec<Cluster2D>,
+    max_cluster_size: f32,
+}
+
+impl ClusteringSystem {
+    pub fn new(
+        neighbourhood_radius: f32,
+        min_neighbours: usize,
+        max_cluster_size: f32,
+    ) -> ClusteringSystem {
+        ClusteringSystem {
+            scan_points: HashMap::new(),
+            clustering_engine: Dbscan {
+                eps: neighbourhood_radius,
+                min_samples: min_neighbours,
+                metric: Euclidean::default(),
+            },
+            cached_clusters: Vec::new(),
+            max_cluster_size,
+        }
+    }
+
+    /** A snapshot of the most recently-calculated clusters list */
+    pub fn clusters(&self) -> &[Cluster2D] {
+        &self.cached_clusters
+    }
+
+    pub fn update_from_scan(&mut self, scans: &[Point2D], device: &LidarDevice) {
+        debug!("Decoded {} scans", scans.len());
+        let mut points_this_scan: Vec<Point2D> = Vec::with_capacity(scans.len());
+
+        for sample in scans {
+            let (angle, distance) = sample;
+
+            if *distance > 0.0 {
+                if let Some(point) = scan_sample_to_point(angle, distance, device) {
+                    points_this_scan.push(point);
+                }
+            }
+        }
+
+        self.scan_points
+            .insert(String::from(&device.serial), points_this_scan);
+
+        let combined_points = self.combine_all_points();
+
+        let (clusters, outliers) = self.clustering_engine.fit(&combined_points);
+
+        debug!(
+            "Found {} clusters, {} outliers",
+            clusters.len(),
+            outliers.len()
+        );
+
+        self.cached_clusters = clusters
+            .iter()
+            .map(|c| {
+                let (cluster_index, point_indexes) = c;
+                let matched_points = point_indexes
+                    .iter()
+                    .map(|i| {
+                        let point = combined_points.row(*i);
+                        (point[0], point[1])
+                    })
+                    .collect();
+
+                circle_of_cluster_points(matched_points, *cluster_index)
+            })
+            .filter(|cluster| cluster.size <= self.max_cluster_size)
+            .collect()
+    }
+
+    pub fn update_from_external_tracker(&mut self, points: &[Point2D], tracker: &ExternalTracker) {
+        debug!("Tracker is {:?}", tracker);
+        let transformed_points: Vec<Point2D> = points
+            .iter()
+            .map(|p| external_point_transformed(p, tracker))
+            .collect();
+
+        let mut fake_points = Vec::new();
+        for (x, y) in transformed_points {
+            for i in 0..32 {
+                let t = (i as f32) / 32. * TAU;
+                let r = 500.;
+                fake_points.push((r * t.sin() + x, r * t.cos() + y));
+            }
+        }
+
+        debug!(
+            "inserting {} points for external tracker, around {:?}",
+            fake_points.len(),
+            points,
+        );
+
+        self.scan_points
+            .insert(String::from(&tracker.serial), fake_points);
+
+        let combined_points = self.combine_all_points();
+
+        let (clusters, _outliers) = self.clustering_engine.fit(&combined_points);
+
+        debug!(
+            "{} clusters from {} combined points",
+            clusters.len(),
+            combined_points.len()
+        );
+
+        self.cached_clusters = clusters
+            .iter()
+            .map(|c| {
+                let (cluster_index, point_indexes) = c;
+                let matched_points = point_indexes
+                    .iter()
+                    .map(|i| {
+                        let point = combined_points.row(*i);
+                        (point[0], point[1])
+                    })
+                    .collect();
+
+                circle_of_cluster_points(matched_points, *cluster_index)
+            })
+            .filter(|cluster| cluster.size <= self.max_cluster_size)
+            .collect()
+
+        // for (x, y) in points {
+        //     self.cached_clusters.push(Cluster2D {
+        //         id: self.cached_clusters.len(),
+        //         x: *x,
+        //         y: *y,
+        //         size: 500.0,
+        //     })
+        // }
+
+        // self.scan_points
+        //     .insert(String::from(&tracker.serial), transformed_points.to_vec());
+    }
+
+    pub fn combine_all_points(&self) -> ndarray::Array2<f32> {
+        let mut all_points = Array::zeros((0, 2));
+        for points in self.scan_points.values() {
+            for (x, y) in points {
+                all_points.push_row(ArrayView::from(&[*x, *y])).unwrap()
+            }
+        }
+        all_points
+    }
+}
+
+/**
+Represent points in a cluster as a single "Cluster2D" (same as Point2D, but including size)
+*/
+pub fn circle_of_cluster_points(points: Vec<Point2D>, id: usize) -> Cluster2D {
+    let bounds = points.iter().fold(
+        Bounds2D {
+            x_min: None,
+            y_min: None,
+            x_max: None,
+            y_max: None,
+        },
+        |acc, point| {
+            let (x, y) = point;
+            Bounds2D {
+                x_min: match acc.x_min {
+                    None => Some(*x),
+                    Some(v) => Some(v.min(*x)),
+                },
+                y_min: match acc.y_min {
+                    None => Some(*y),
+                    Some(v) => Some(v.min(*y)),
+                },
+                x_max: match acc.x_max {
+                    None => Some(*x),
+                    Some(v) => Some(v.max(*x)),
+                },
+                y_max: match acc.y_max {
+                    None => Some(*y),
+                    Some(v) => Some(v.max(*y)),
+                },
+            }
+        },
+    );
+    let width = bounds.x_max.unwrap() - bounds.x_min.unwrap();
+    let height = bounds.y_max.unwrap() - bounds.y_min.unwrap();
+    Cluster2D {
+        id,
+        x: bounds.x_min.unwrap() + 0.5 * width,
+        y: bounds.y_min.unwrap() + 0.5 * height,
+        size: { width.max(height) },
+    }
+}
+
+/**
+Take in angle, distance return as Point2D as (x,y) coordinates
+*/
+fn scan_sample_to_point(angle: &f32, distance: &f32, device: &LidarDevice) -> Option<Point2D> {
+    let LidarDevice {
+        x,
+        y,
+        rotation,
+        flip_coords,
+        min_distance_threshold,
+        scan_mask_thresholds,
+        ..
+    } = device;
+    if *distance > 0.
+        && *distance > *min_distance_threshold
+        && passes_mask_threshold(angle, distance, scan_mask_thresholds)
+    {
+        match flip_coords {
+            None => Some((
+                *x + (angle + *rotation).to_radians().sin() * distance,
+                *y + (angle + *rotation).to_radians().cos() * distance,
+            )),
+            Some((flip_x, flip_y)) => {
+                let altered_angle = {
+                    if flip_x == flip_y {
+                        *angle + *rotation
+                    } else {
+                        *angle - *rotation
+                    }
+                };
+                Some((
+                    *x + altered_angle.to_radians().sin() * *distance * (*flip_x as f32),
+                    *y + altered_angle.to_radians().cos() * *distance * (*flip_y as f32),
+                ))
+            }
+        }
+    } else {
+        None
+    }
+}
+
+fn external_point_transformed(p: &Point2D, tracker: &ExternalTracker) -> Point2D {
+    let ExternalTracker {
+        x,
+        y,
+        rotation,
+        flip_coords,
+        ..
+    } = tracker;
+    // let rotation = -rotation;
+    let (px, py) = p;
+    // Translate so origin is at (x,y), then tRotate about origin...
+    let px = px * rotation.to_radians().cos() - py * rotation.to_radians().sin() + *x;
+    let py = py * rotation.to_radians().cos() + px * rotation.to_radians().sin() + *y;
+    debug!("external point {},{} => {},{}", p.0, p.1, px, py);
+    match flip_coords {
+        None => (px, py),
+        Some((flip_x, flip_y)) => (px * (*flip_x as f32), py * (*flip_y as f32)),
+    }
+}
+
+fn passes_mask_threshold(
+    angle: &f32,
+    distance: &f32,
+    mask_thresholds: &Option<IndexMap<String, f32>>,
+) -> bool {
+    match mask_thresholds {
+        None => true,
+        Some(masking_map) => {
+            let angle_key = angle.round().to_string();
+            if let Some(threshold) = masking_map.get(&angle_key) {
+                *distance < *threshold
+            } else {
+                true
+            }
+        }
+    }
+}

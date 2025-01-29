@@ -7,15 +7,33 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'tether-lidar2d-consolidation-rs'",
+      "name": "Debug backend",
       "cargo": {
         "args": [
           "build",
-          "--bin=tether-lidar2d-consolidation-rs",
-          "--package=tether-lidar2d-consolidation-rs"
+          "--bin=lidar2d-backend",
+          "--package=tether-lidar2d-consolidation"
         ],
         "filter": {
-          "name": "tether-lidar2d-consolidation-rs",
+          "name": "lidar2d-backend",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug frontend",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=lidar2d-frontend",
+          "--package=tether-lidar2d-consolidation"
+        ],
+        "filter": {
+          "name": "lidar2d-frontend",
           "kind": "bin"
         }
       },
