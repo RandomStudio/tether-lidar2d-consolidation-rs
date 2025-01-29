@@ -84,10 +84,12 @@ pub fn render_scan_graph(model: &mut Model, ui: &mut Ui) {
                             .name(name)
                             .color(Color32::from_rgba_unmultiplied(255, 0, 0, 32)),
                     );
-                    plot_ui.text(
-                        Text::new(PlotPoint::new(x, y), name)
-                            .color(Color32::from_rgba_unmultiplied(255, 0, 0, 255)),
-                    )
+                    if model.show_graph_labels {
+                        plot_ui.text(
+                            Text::new(PlotPoint::new(x, y), name)
+                                .color(Color32::from_rgba_unmultiplied(255, 0, 0, 255)),
+                        )
+                    }
                 }
 
                 let line1 = draw_line(a.x, a.y, d.x, d.y);

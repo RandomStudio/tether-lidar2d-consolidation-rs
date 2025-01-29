@@ -26,6 +26,7 @@ pub fn render_ui(ctx: &egui::Context, model: &mut Model) {
                 ui.label("Point radius");
                 ui.add(Slider::new(&mut model.point_size, 1.0..=20.0));
             });
+            ui.checkbox(&mut model.show_graph_labels, "Show all graph text");
         });
 
         ui.add_space(SPACING_AMOUNT);
