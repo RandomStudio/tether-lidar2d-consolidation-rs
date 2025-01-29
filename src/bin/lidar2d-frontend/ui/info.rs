@@ -1,4 +1,5 @@
-use egui::{plot::Plot, Color32, Stroke, Ui};
+use egui::{plot::Plot, Color32, RichText, Stroke, Ui};
+use nalgebra::Vector2;
 use tether_lidar2d_consolidation::{geometry_utils::distance, systems::movement::calculate};
 
 use crate::model::Model;
@@ -54,6 +55,12 @@ pub fn render_info(model: &mut Model, ui: &mut Ui) {
             plot.show(ui, |plot_ui| {
                 plot_ui
                     .line(draw_line(0., 0., mx, my).stroke(Stroke::new(2.5, Color32::LIGHT_GREEN)));
+            });
+
+            let magnitude = Vector2::new(mx, my).magnitude();
+            ui.horizontal(|ui| {
+                ui.label("Mangitude (speed)");
+                ui.label(RichText::new(format!("{:.0}mm/s", magnitude)));
             });
         }
     }
