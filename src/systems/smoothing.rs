@@ -114,7 +114,11 @@ impl TrackingSmoother {
                     first_updated: SystemTime::now(),
                     last_updated: SystemTime::now(),
                     velocity: None,
-                    distance: Some(distance(p, &(0., 0.))),
+                    distance: if self.settings.should_calculate_distance {
+                        Some(distance(p, &(0., 0.)))
+                    } else {
+                        None
+                    },
                     ready: self.settings.wait_before_active_ms == 0,
                     points_in_range: Vec::new(), // will be cleared next frame, anyway
                 };
