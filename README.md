@@ -29,17 +29,17 @@ lidar2d-frontend
 For both executables, you can see a full list of available command-line arguments by appending `--help` onto your executing command, e.g. `lidar2d-backend --help` (installed) or `cargo run --bin lidar2d-backend -- --help` (development)
 
 ## Expected Output
-Most important plug:
-- "smoothedTrackedPoints:" an array of objects with "id", "x", y" for each smoothed point. Only produces output once an region of interest (ROI) has been defined
+Most important plug from `lidar2d-backend`:
+- `smoothedTrackedPoints`: an array of objects with "id", "x", y" for each smoothed point. Only produces output once a region of interest (ROI) has been defined
 
-Other plugs:
-- "trackedPoints": an array of 2D vectors arrays with [x,y]) for _transformed_ but not _smoothed_ points within the tracking region (ROI)
-- "provideLidarConfig": a retained-message with the complete backend configuration, typically used by `lidar2d-frontend`
-- "clusters": an array of clusters with size and position, typically used by `lidar2d-frontend` to display clustering on the tracking graph
-- "movement": if "enableAverageMovement" is `true`, then this will output a single 2D vector representing movement averaged from all smoothed tracked points
+Other plugs from `lidar2d-backend`:
+- `trackedPoints`: an array of 2D vectors arrays with [x,y]) for _transformed_ but not _smoothed_ points within the tracking region (ROI)
+- `provideLidarConfig`: a retained-message with the complete backend configuration, typically used by `lidar2d-frontend`
+- `clusters`: an array of clusters with size and position, typically used by `lidar2d-frontend` to display clustering on the tracking graph
+- `movement`: if "enableAverageMovement" is `true`, then this will output a single 2D vector representing movement averaged from all smoothed tracked points
 
-Lidar2D-frontend only:
-- "saveLidarConfig": used whenever a new configuration is saved from the frontend UI
+From `lidar2D-frontend` only:
+- `saveLidarConfig`: used whenever a new configuration is saved from the frontend UI
 
 ---
 ## Notes on Libraries
