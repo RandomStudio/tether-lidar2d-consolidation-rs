@@ -108,7 +108,7 @@ pub struct BackendConfig {
 
     /// How often (ms) to update smoothed tracking points - regardless of scan
     /// message rate
-    pub smoothing_update_interval: u128,
+    pub smoothing_update_interval: u64,
 
     /// If enabled, smoothing will use "real units" (i.e. mm); otherwise the
     /// destination quad will be a normalised rect in the range [0;1] on both axes
@@ -136,10 +136,10 @@ pub struct BackendConfig {
 
     // -------- MOVEMENT ANALYSIS SETTINGS
     /// Disable movement analysis calculation and output, even if available
-    pub movement_disable: bool,
+    pub enable_average_movement: bool,
 
     /// How often (ms) to send movement messages
-    pub movement_interval: u128,
+    pub average_movement_interval: u64,
 }
 
 impl Default for BackendConfig {
@@ -166,8 +166,8 @@ impl Default for BackendConfig {
             transform_ignore_outside_margin: 0.,
             automask_scans_required: 60,
             automask_threshold_margin: 50.,
-            movement_disable: false,
-            movement_interval: 250,
+            enable_average_movement: false,
+            average_movement_interval: 250,
             enable_velocity: false,
             enable_heading: false,
             enable_distance: false,

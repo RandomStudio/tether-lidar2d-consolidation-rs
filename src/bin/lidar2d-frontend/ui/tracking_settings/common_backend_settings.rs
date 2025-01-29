@@ -1,4 +1,4 @@
-use egui::{RichText, Slider, Ui};
+use egui::{Color32, RichText, Slider, Ui};
 use log::debug;
 use tether_lidar2d_consolidation::systems::{
     automasking::AutoMaskMessage, position_remapping::OriginLocation, smoothing::EmptyListSendMode,
@@ -67,7 +67,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
         ui.heading("Clustering");
 
         ui.horizontal(|ui| {
-            ui.label("Neighbourhood radius (mm)");
+            ui.label("Neighbourhood radius");
             if ui
                 .add(
                     Slider::new(
@@ -96,7 +96,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
         });
 
         ui.horizontal(|ui| {
-            ui.label("Max cluster size (mm)");
+            ui.label("Max cluster size");
             if ui
                 .add(
                     Slider::new(
@@ -199,19 +199,25 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             }
 
             ui.horizontal(|ui| {
-                let (label_text, slider_range) = {
+                let slider_range = {
                     if backend_config.smoothing_use_real_units {
-                        (String::from("Merge radius (mm)"), 0. ..=5000.)
+                        0. ..=5000.
                     } else {
-                        (String::from("Merge radius (units)"), 0. ..=1.0)
+                        0. ..=1.0
                     }
                 };
-                ui.label(label_text);
+                ui.label("Merge radius");
                 if ui
-                    .add(Slider::new(
-                        &mut backend_config.smoothing_merge_radius,
-                        slider_range,
-                    ))
+                    .add(
+                        Slider::new(&mut backend_config.smoothing_merge_radius, slider_range)
+                            .suffix({
+                                if backend_config.smoothing_use_real_units {
+                                    "mm"
+                                } else {
+                                    ""
+                                }
+                            }),
+                    )
                     .changed()
                 {
                     debug!(
@@ -248,12 +254,13 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
 
             ui.horizontal(|ui| {
                 ui.label("Smoothing update interval");
-                let mut value = backend_config.smoothing_update_interval as u64;
                 if ui
-                    .add(Slider::new(&mut value, 0..=5000).suffix("ms"))
+                    .add(
+                        Slider::new(&mut backend_config.smoothing_update_interval, 0..=5000)
+                            .suffix("ms"),
+                    )
                     .changed()
                 {
-                    backend_config.smoothing_update_interval = value as u128;
                     model.is_editing = true;
                 }
             });
@@ -389,25 +396,28 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
 
         ui.add_enabled_ui(!backend_config.transform_include_outside, |ui| {
             ui.horizontal(|ui| {
-                let (label_text, slider_range) = {
+                let slider_range = {
                     if backend_config.smoothing_use_real_units {
-                        (
-                            String::from("Margin to ignore outside ROI (mm)"),
-                            0. ..=1000.,
-                        )
+                        0. ..=1000.
                     } else {
-                        (
-                            String::from("Margin to ignore outside ROI (units)"),
-                            0. ..=1.0,
-                        )
+                        0. ..=1.0
                     }
                 };
-                ui.label(label_text);
+                ui.label("Margin to ignore outside ROI");
                 if ui
-                    .add(Slider::new(
-                        &mut backend_config.transform_ignore_outside_margin,
-                        slider_range,
-                    ))
+                    .add(
+                        Slider::new(
+                            &mut backend_config.transform_ignore_outside_margin,
+                            slider_range,
+                        )
+                        .suffix({
+                            if backend_config.smoothing_use_real_units {
+                                "mm"
+                            } else {
+                                ""
+                            }
+                        }),
+                    )
                     .changed()
                 {
                     model.is_editing = true;
@@ -417,24 +427,44 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
 
         // ---------------- MOVEMENT ANALYSIS SETTINGS
         ui.separator();
-        ui.heading("Movement Analysis");
+        ui.heading("Average Movement Analysis");
 
         if ui
             .checkbox(
-                &mut backend_config.movement_disable,
-                "Disable calculation + output",
+                &mut backend_config.enable_average_movement,
+                "Enable calculation + output",
             )
             .clicked()
         {
             model.is_editing = true;
+            if backend_config.enable_average_movement {
+                // Average movement calculations NEED per-point velocity calculations to be enabled, too
+                backend_config.enable_velocity = true;
+            }
         }
 
-        ui.add_enabled_ui(!backend_config.movement_disable, |ui| {
-            let mut value = backend_config.movement_interval as u64;
-            if ui.add(Slider::new(&mut value, 8..=3000)).changed() {
-                model.is_editing = true;
-                backend_config.movement_interval = value as u128;
-            }
+        if backend_config.enable_average_movement && !backend_config.enable_velocity {
+            ui.label(
+                RichText::new(
+                    "Per-point velocity must also be enabled for avarege movement analysis to work",
+                )
+                .color(Color32::LIGHT_RED),
+            );
+        }
+
+        ui.add_enabled_ui(backend_config.enable_average_movement, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Update interval");
+                if ui
+                    .add(
+                        Slider::new(&mut backend_config.average_movement_interval, 8..=3000)
+                            .suffix("ms"),
+                    )
+                    .changed()
+                {
+                    model.is_editing = true;
+                }
+            });
         });
     }
 }

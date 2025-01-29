@@ -128,7 +128,7 @@ impl TrackingSmoother {
     /// Do time-based smoothing of all known points, and also automatically expire any points
     /// that are "stale". This function should be called as often as possible, not necessarily
     /// only when a new TrackedPoint message comes in.
-    pub fn update_smoothing(&mut self, interval: u128) {
+    pub fn update_smoothing(&mut self, interval: u64) {
         self.last_updated = SystemTime::now();
         // First, remove all points which were waiting too long to become "active"...
         if let Some(i) = self

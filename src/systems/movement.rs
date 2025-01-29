@@ -1,14 +1,16 @@
 use std::time::{Duration, SystemTime};
 
+use log::{error, info};
+
 use crate::{tracking::TrackedPoint2D, Point2D};
 
-pub struct MovementAnalysis {
+pub struct AverageMovementAnalysis {
     last_updated: SystemTime,
 }
 
-impl MovementAnalysis {
+impl AverageMovementAnalysis {
     pub fn new() -> Self {
-        MovementAnalysis {
+        AverageMovementAnalysis {
             last_updated: SystemTime::now(),
         }
     }
@@ -22,19 +24,20 @@ impl MovementAnalysis {
     }
 }
 
-pub fn get_total_movement(points: &[TrackedPoint2D]) -> Point2D {
+pub fn calculate(points: &[TrackedPoint2D]) -> Point2D {
     points.iter().fold((0., 0.), |acc, p| {
         if let Some(v) = p.velocity {
             let [vx, vy] = v;
             (acc.0 + vx, acc.1 + vy)
         } else {
+            error!("No velocity for points; is velocity calculation enabled?");
             acc
         }
     })
 }
 
-impl Default for MovementAnalysis {
+impl Default for AverageMovementAnalysis {
     fn default() -> Self {
-        MovementAnalysis::new()
+        AverageMovementAnalysis::new()
     }
 }

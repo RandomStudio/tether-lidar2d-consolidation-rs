@@ -8,7 +8,7 @@ pub mod smoothing;
 use automasking::AutoMaskSamplerMap;
 use clustering::ClusteringSystem;
 use indexmap::IndexMap;
-use movement::MovementAnalysis;
+use movement::AverageMovementAnalysis;
 use position_remapping::PositionRemapping;
 use presence::PresenceDetectionZones;
 use smoothing::{SmoothSettings, TrackingSmoother};
@@ -21,7 +21,7 @@ pub struct Systems {
     pub smoothing_system: TrackingSmoother,
     pub automask_samplers: AutoMaskSamplerMap,
     pub presence_detector: PresenceDetectionZones,
-    pub movement_analysis: MovementAnalysis,
+    pub movement_analysis: AverageMovementAnalysis,
 }
 
 impl Systems {
@@ -54,7 +54,7 @@ impl Systems {
             automask_samplers: IndexMap::new(),
             position_remapping: position_system,
             presence_detector,
-            movement_analysis: MovementAnalysis::new(),
+            movement_analysis: AverageMovementAnalysis::new(),
         }
     }
 }

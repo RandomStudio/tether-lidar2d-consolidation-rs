@@ -1,7 +1,7 @@
 use clap::Parser;
 use tether_lidar2d_consolidation::backend_config::load_config_from_file;
 use tether_lidar2d_consolidation::systems::automasking::handle_automask_message;
-use tether_lidar2d_consolidation::systems::movement::get_total_movement;
+use tether_lidar2d_consolidation::systems::movement::calculate;
 use tether_lidar2d_consolidation::systems::presence::publish_presence_change;
 use tether_lidar2d_consolidation::systems::Systems;
 use tether_lidar2d_consolidation::tether_interface::Outputs;
@@ -124,7 +124,7 @@ fn main() {
 
         if !backend_config.smoothing_disable
             && systems.smoothing_system.get_elapsed().as_millis()
-                > backend_config.smoothing_update_interval
+                > backend_config.smoothing_update_interval as u128
         {
             work_done = true;
             systems
@@ -138,12 +138,12 @@ fn main() {
                     .encode_and_publish(&outputs.smoothed_tracking_output, &active_smoothed_points)
                     .expect("failed to publish smoothed tracking points");
 
-                if !backend_config.movement_disable
+                if backend_config.enable_average_movement
                     && systems.movement_analysis.get_elapsed()
-                        >= Duration::from_millis(backend_config.movement_interval as u64)
+                        >= Duration::from_millis(backend_config.average_movement_interval as u64)
                 {
                     // Use smoothed points for movement analysis...
-                    let movement_vector = get_total_movement(&active_smoothed_points);
+                    let movement_vector = calculate(&active_smoothed_points);
 
                     tether_agent
                         .encode_and_publish(&outputs.movement_output, movement_vector)
@@ -166,11 +166,11 @@ fn main() {
                     publish_presence_change(changed_zone, &tether_agent);
                 }
                 // No smoothed points, but update movement analysis with zero-points...
-                if !backend_config.movement_disable
+                if backend_config.enable_average_movement
                     && systems.movement_analysis.get_elapsed()
-                        >= Duration::from_millis(backend_config.movement_interval as u64)
+                        >= Duration::from_millis(backend_config.average_movement_interval as u64)
                 {
-                    let movement_vector = get_total_movement(&[]);
+                    let movement_vector = calculate(&[]);
 
                     tether_agent
                         .encode_and_publish(&outputs.movement_output, movement_vector)
