@@ -10,9 +10,32 @@ const BIG_TEXT_SIZE: f32 = 20.0;
 
 pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
     if let Some(backend_config) = &mut model.backend_config {
-        // ------------------------ AUTOMASKING SETTINGS
+        // ------------------------ QUIET MODE
+        ui.separator();
+        ui.heading("Quiet Mode");
 
+        if ui
+            .checkbox(
+                &mut backend_config.skip_some_outputs,
+                "Skip nonessential Output messages",
+            )
+            .clicked()
+        {
+            model.is_editing = true;
+        };
+        if backend_config.skip_some_outputs {
+            ui.label(
+                RichText::new("WARNING: frontend will be missing clusters and raw tracked points.")
+                    .color(Color32::LIGHT_RED),
+            );
+        } else {
+            ui.label(RichText::new("All Outputs currently enabled.").color(Color32::LIGHT_GREEN));
+        }
+
+        // ------------------------ AUTOMASKING SETTINGS
+        ui.separator();
         ui.heading("Automasking");
+
         ui.horizontal(|ui| {
             if ui.button("New auto-calibration").clicked() {
                 model
