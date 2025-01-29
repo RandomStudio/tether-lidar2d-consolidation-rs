@@ -30,7 +30,7 @@ nalgebra = "0.31.4"
 clap = { version = "4.1.1", features = ["derive"] }
 env_logger = "0.7"
 log = "0.4.17"
-tether-agent = "0.12"
+tether-agent = "0.14"
 # The dependencies below should be tied to options/feature set for gui
 egui = "0.21.0"
 eframe = "0.21.3"

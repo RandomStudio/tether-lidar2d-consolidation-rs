@@ -10,7 +10,7 @@ use env_logger::Env;
 use log::{debug, info};
 use std::thread;
 use std::time::Duration;
-use tether_agent::TetherAgentOptionsBuilder;
+use tether_agent::{three_part_topic::TetherOrCustomTopic, TetherAgentOptionsBuilder};
 
 use tether_lidar2d_consolidation::tether_interface::{handle_scans_message, Inputs};
 
@@ -30,14 +30,14 @@ fn main() {
 
     debug!("Started; args: {:?}", cli);
 
-    let tether_agent = TetherAgentOptionsBuilder::new(&cli.agent_role)
+    let mut tether_agent = TetherAgentOptionsBuilder::new(&cli.agent_role)
         .id(Some(&cli.agent_group))
         .host(Some(&cli.tether_host.to_string()))
         .build()
         .expect("failed to init and/or connect Tether Agent");
 
-    let inputs = Inputs::new(&tether_agent);
-    let outputs = Outputs::new(&tether_agent);
+    let inputs = Inputs::new(&mut tether_agent);
+    let outputs = Outputs::new(&mut tether_agent);
 
     let mut backend_config = match load_config_from_file(&cli.config_path) {
         Ok(config) => {
@@ -63,8 +63,8 @@ fn main() {
             // debug!("Received {:?}", message);
             if inputs.scans_input.matches(&topic) {
                 let serial_number = match &topic {
-                    tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
-                    tether_agent::TetherOrCustomTopic::Custom(s) => {
+                    TetherOrCustomTopic::Tether(t) => t.id(),
+                    TetherOrCustomTopic::Custom(s) => {
                         panic!(
                             "The topic \"{}\" is not expected for Lidar scan messages",
                             &s
@@ -73,7 +73,7 @@ fn main() {
                 };
 
                 let scans: Vec<(f32, f32)> =
-                    rmp_serde::from_slice(message.payload()).expect("failed to decode scans");
+                    rmp_serde::from_slice(&message).expect("failed to decode scans");
 
                 handle_scans_message(
                     serial_number,

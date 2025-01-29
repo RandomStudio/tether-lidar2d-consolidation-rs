@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use log::{debug, error, info, warn};
 use std::{fmt::Error, fs};
-use tether_agent::{mqtt::Message, PlugDefinition, TetherAgent};
+use tether_agent::{PlugDefinition, TetherAgent};
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -27,17 +27,17 @@ pub struct LidarDevice {
     pub flip_coords: Option<(i8, i8)>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct ExternalTracker {
-    pub serial: String,
-    pub name: String,
-    pub rotation: f32,
-    pub x: f32,
-    pub y: f32,
-    pub color: String,
-    pub flip_coords: Option<(i8, i8)>,
-}
+// #[derive(Serialize, Deserialize, Debug)]
+// #[serde(rename_all = "camelCase")]
+// pub struct ExternalTracker {
+//     pub serial: String,
+//     pub name: String,
+//     pub rotation: f32,
+//     pub x: f32,
+//     pub y: f32,
+//     pub color: String,
+//     pub flip_coords: Option<(i8, i8)>,
+// }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigRectCornerPoint {
@@ -140,6 +140,10 @@ pub struct BackendConfig {
 
     /// How often (ms) to send movement messages
     pub average_movement_interval: u64,
+
+    /// If enabled, skip publishing messages that are typically only used by the lidar2d-frontend
+    /// Can reduce I/O load and improve broker performance
+    pub skip_some_outputs: bool,
 }
 
 impl Default for BackendConfig {
@@ -171,15 +175,14 @@ impl Default for BackendConfig {
             enable_velocity: false,
             enable_heading: false,
             enable_distance: false,
+            skip_some_outputs: false,
         }
     }
 }
 
 impl BackendConfig {
-    pub fn parse_remote_config(&mut self, incoming_message: &Message) -> Result<()> {
-        let payload = incoming_message.payload().to_vec();
-
-        match rmp_serde::from_slice::<BackendConfig>(&payload) {
+    pub fn parse_remote_config(&mut self, payload: &[u8]) -> Result<()> {
+        match rmp_serde::from_slice::<BackendConfig>(payload) {
             Ok(config) => {
                 *self = config;
                 Ok(())
@@ -340,11 +343,11 @@ impl BackendConfig {
         &mut self,
         tether_agent: &TetherAgent,
         config_output: &PlugDefinition,
-        incoming_message: &Message,
+        payload: &[u8],
         position_remapping: &mut PositionRemapping,
         config_file_path: &str,
-    ) -> Result<()> {
-        match self.parse_remote_config(incoming_message) {
+    ) -> anyhow::Result<()> {
+        match self.parse_remote_config(payload) {
             Ok(()) => {
                 if let Some(region_of_interest) = self.region_of_interest() {
                     info!("New Region of Interest was provided remotely; update the Perspective Transformer");
@@ -359,7 +362,7 @@ impl BackendConfig {
                 self.save_and_republish(tether_agent, config_output, config_file_path)
                 // Ok(())
             }
-            Err(e) => Err(anyhow!(e)),
+            Err(e) => Err(anyhow!("Handle save-message failure: {e}")),
         }
     }
 
