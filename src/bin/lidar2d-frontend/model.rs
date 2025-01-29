@@ -2,7 +2,10 @@ use std::{collections::HashMap, thread, time::Duration};
 
 use log::{debug, error, info};
 use quad_to_quad_transformer::RectCorners;
-use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent, TetherAgentOptionsBuilder};
+use tether_agent::{
+    three_part_topic::TetherOrCustomTopic, PlugDefinition, PlugOptionsBuilder, TetherAgent,
+    TetherAgentOptionsBuilder,
+};
 use tether_lidar2d_consolidation::{
     backend_config::BackendConfig,
     systems::{clustering::Cluster2D, position_remapping::calculate_dst_quad},
@@ -56,38 +59,38 @@ impl Default for Model {
     fn default() -> Self {
         // let cli = Cli::parse();
 
-        let tether_agent = TetherAgentOptionsBuilder::new("lidar2dFrontend")
+        let mut tether_agent = TetherAgentOptionsBuilder::new("lidar2dFrontend")
             .build()
             .expect("failed to init+connect Tether Agent");
 
         info!("Lidar2D Frontend started OK");
 
         let config_input = PlugOptionsBuilder::create_input("provideLidarConfig")
-            .build(&tether_agent)
+            .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
         let scans = PlugOptionsBuilder::create_input("scans")
-            .build(&tether_agent)
+            .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
         let clusters = PlugOptionsBuilder::create_input("clusters")
-            .build(&tether_agent)
+            .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
         let raw_tracked_points = PlugOptionsBuilder::create_input("trackedPoints")
-            .build(&tether_agent)
+            .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
         let smoothed_tracked_points = PlugOptionsBuilder::create_input("smoothedTrackedPoints")
-            .build(&tether_agent)
+            .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
         let config_output = PlugOptionsBuilder::create_output("saveLidarConfig")
-            .build(&tether_agent)
+            .build(&mut tether_agent)
             .expect("failed to create Output Plug");
 
         let request_automask = PlugOptionsBuilder::create_output("requestAutoMask")
-            .build(&tether_agent)
+            .build(&mut tether_agent)
             .expect("failed to create Output Plug");
 
         Model {
@@ -121,11 +124,11 @@ impl eframe::App for Model {
         ctx.request_repaint();
 
         let mut work_done = false;
-        while let Some((topic, msg)) = &self.tether_agent.check_messages() {
+        while let Some((topic, payload)) = &self.tether_agent.check_messages() {
             work_done = true;
 
             if self.inputs.config.matches(topic) {
-                if let Ok(tracking_config) = rmp_serde::from_slice::<BackendConfig>(msg.payload()) {
+                if let Ok(tracking_config) = rmp_serde::from_slice::<BackendConfig>(payload) {
                     debug!("Got new Tracking Config: {:?}", tracking_config);
                     if let Some(roi) = tracking_config.region_of_interest() {
                         self.calculated_dst_quad =
@@ -140,11 +143,11 @@ impl eframe::App for Model {
             }
 
             if self.inputs.scans.matches(topic) {
-                if let Ok(scans) = rmp_serde::from_slice::<Vec<(f32, f32)>>(msg.payload()) {
+                if let Ok(scans) = rmp_serde::from_slice::<Vec<(f32, f32)>>(payload) {
                     // self.scans = scans;
                     let serial_number = match topic {
-                        tether_agent::TetherOrCustomTopic::Tether(t) => t.id(),
-                        tether_agent::TetherOrCustomTopic::Custom(t) => {
+                        TetherOrCustomTopic::Tether(t) => t.id(),
+                        TetherOrCustomTopic::Custom(t) => {
                             error!("Could not retrieve serial number from topic {}", t);
                             "unknown"
                         }
@@ -154,21 +157,19 @@ impl eframe::App for Model {
             }
 
             if self.inputs.clusters.matches(topic) {
-                if let Ok(clusters) = rmp_serde::from_slice::<Vec<Cluster2D>>(msg.payload()) {
+                if let Ok(clusters) = rmp_serde::from_slice::<Vec<Cluster2D>>(payload) {
                     self.clusters = clusters;
                 }
             }
 
             if self.inputs.raw_tracked_points.matches(topic) {
-                if let Ok(tracked_points) = rmp_serde::from_slice::<Vec<Point2D>>(msg.payload()) {
+                if let Ok(tracked_points) = rmp_serde::from_slice::<Vec<Point2D>>(payload) {
                     self.raw_tracked_points = tracked_points;
                 }
             }
 
             if self.inputs.smoothed_tracked_points.matches(topic) {
-                if let Ok(tracked_points) =
-                    rmp_serde::from_slice::<Vec<TrackedPoint2D>>(msg.payload())
-                {
+                if let Ok(tracked_points) = rmp_serde::from_slice::<Vec<TrackedPoint2D>>(payload) {
                     self.smoothed_tracked_points = tracked_points;
                 }
             }

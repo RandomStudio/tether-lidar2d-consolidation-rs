@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use indexmap::IndexMap;
 use log::info;
 use serde::{Deserialize, Serialize};
-use tether_agent::mqtt::Message;
 
 use crate::{backend_config::BackendConfig, Point2D};
 
@@ -63,13 +62,11 @@ impl AutoMaskSampler {
 /// Result if the action requires re-saving and re-publishing the
 /// updated Tracking Config.
 pub fn handle_automask_message(
-    incoming_message: &Message,
+    payload: &[u8],
     automask_samplers: &mut IndexMap<String, AutoMaskSampler>,
     config: &mut BackendConfig,
 ) -> Result<bool> {
-    let payload = incoming_message.payload().to_vec();
-
-    if let Ok(automask_command) = rmp_serde::from_slice::<AutoMaskMessage>(&payload) {
+    if let Ok(automask_command) = rmp_serde::from_slice::<AutoMaskMessage>(payload) {
         let command_type: &str = &automask_command.r#type;
         match command_type {
             "new" => {

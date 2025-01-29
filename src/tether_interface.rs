@@ -13,7 +13,7 @@ pub struct Outputs {
 }
 
 impl Outputs {
-    pub fn new(tether_agent: &TetherAgent) -> Outputs {
+    pub fn new(tether_agent: &mut TetherAgent) -> Outputs {
         let config_output = PlugOptionsBuilder::create_output("provideLidarConfig")
             .qos(Some(2))
             .retain(Some(true))
@@ -65,7 +65,7 @@ pub struct Inputs {
 }
 
 impl Inputs {
-    pub fn new(tether_agent: &TetherAgent) -> Inputs {
+    pub fn new(tether_agent: &mut TetherAgent) -> Inputs {
         // Some subscriptions
         let scans_input = PlugOptionsBuilder::create_input("scans")
             .qos(Some(0))
@@ -128,19 +128,26 @@ pub fn handle_scans_message(
     if let Some(device) = config.get_device(serial) {
         clustering_system.update_from_scan(scans, device);
         let clusters = clustering_system.clusters();
-        tether_agent
-            .encode_and_publish(clusters_output, clusters)
-            .expect("failed to publish clusters");
+
+        if !config.skip_some_outputs {
+            tether_agent
+                .encode_and_publish(clusters_output, clusters)
+                .expect("failed to publish clusters");
+        }
 
         if position_remapping.is_ready() {
             let points: Vec<Point2D> = position_remapping.transform_clusters(clusters);
 
-            let tracked_points = position_remapping.filter_points_inside(&points);
             // Normal (unsmoothed) tracked points...
-            tether_agent
-                .encode_and_publish(tracking_output, &tracked_points)
-                .expect("failed to publish tracked points");
+            let tracked_points = position_remapping.filter_points_inside(&points);
+
             smoothing_system.update_tracked_points(&tracked_points);
+
+            if !config.skip_some_outputs {
+                tether_agent
+                    .encode_and_publish(tracking_output, &tracked_points)
+                    .expect("failed to publish tracked points");
+            }
         }
 
         if let Some(sampler) = automask_samplers.get_mut(serial) {

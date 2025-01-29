@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime};
 
-use log::{error, info};
+use log::error;
 
 use crate::{tracking::TrackedPoint2D, Point2D};
 

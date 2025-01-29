@@ -1,7 +1,4 @@
-use crate::{
-    backend_config::{ExternalTracker, LidarDevice},
-    Point2D,
-};
+use crate::{backend_config::LidarDevice, Point2D};
 
 use indexmap::IndexMap;
 use log::debug;
@@ -10,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use ndarray::{Array, ArrayView};
 use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
-use std::{collections::HashMap, f32::consts::TAU};
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Cluster2D {
@@ -102,70 +99,70 @@ impl ClusteringSystem {
             .collect()
     }
 
-    pub fn update_from_external_tracker(&mut self, points: &[Point2D], tracker: &ExternalTracker) {
-        debug!("Tracker is {:?}", tracker);
-        let transformed_points: Vec<Point2D> = points
-            .iter()
-            .map(|p| external_point_transformed(p, tracker))
-            .collect();
+    // pub fn update_from_external_tracker(&mut self, points: &[Point2D], tracker: &ExternalTracker) {
+    //     debug!("Tracker is {:?}", tracker);
+    //     let transformed_points: Vec<Point2D> = points
+    //         .iter()
+    //         .map(|p| external_point_transformed(p, tracker))
+    //         .collect();
 
-        let mut fake_points = Vec::new();
-        for (x, y) in transformed_points {
-            for i in 0..32 {
-                let t = (i as f32) / 32. * TAU;
-                let r = 500.;
-                fake_points.push((r * t.sin() + x, r * t.cos() + y));
-            }
-        }
+    //     let mut fake_points = Vec::new();
+    //     for (x, y) in transformed_points {
+    //         for i in 0..32 {
+    //             let t = (i as f32) / 32. * TAU;
+    //             let r = 500.;
+    //             fake_points.push((r * t.sin() + x, r * t.cos() + y));
+    //         }
+    //     }
 
-        debug!(
-            "inserting {} points for external tracker, around {:?}",
-            fake_points.len(),
-            points,
-        );
+    //     debug!(
+    //         "inserting {} points for external tracker, around {:?}",
+    //         fake_points.len(),
+    //         points,
+    //     );
 
-        self.scan_points
-            .insert(String::from(&tracker.serial), fake_points);
+    //     self.scan_points
+    //         .insert(String::from(&tracker.serial), fake_points);
 
-        let combined_points = self.combine_all_points();
+    //     let combined_points = self.combine_all_points();
 
-        let (clusters, _outliers) = self.clustering_engine.fit(&combined_points);
+    //     let (clusters, _outliers) = self.clustering_engine.fit(&combined_points);
 
-        debug!(
-            "{} clusters from {} combined points",
-            clusters.len(),
-            combined_points.len()
-        );
+    //     debug!(
+    //         "{} clusters from {} combined points",
+    //         clusters.len(),
+    //         combined_points.len()
+    //     );
 
-        self.cached_clusters = clusters
-            .iter()
-            .map(|c| {
-                let (cluster_index, point_indexes) = c;
-                let matched_points = point_indexes
-                    .iter()
-                    .map(|i| {
-                        let point = combined_points.row(*i);
-                        (point[0], point[1])
-                    })
-                    .collect();
+    //     self.cached_clusters = clusters
+    //         .iter()
+    //         .map(|c| {
+    //             let (cluster_index, point_indexes) = c;
+    //             let matched_points = point_indexes
+    //                 .iter()
+    //                 .map(|i| {
+    //                     let point = combined_points.row(*i);
+    //                     (point[0], point[1])
+    //                 })
+    //                 .collect();
 
-                circle_of_cluster_points(matched_points, *cluster_index)
-            })
-            .filter(|cluster| cluster.size <= self.max_cluster_size)
-            .collect()
+    //             circle_of_cluster_points(matched_points, *cluster_index)
+    //         })
+    //         .filter(|cluster| cluster.size <= self.max_cluster_size)
+    //         .collect()
 
-        // for (x, y) in points {
-        //     self.cached_clusters.push(Cluster2D {
-        //         id: self.cached_clusters.len(),
-        //         x: *x,
-        //         y: *y,
-        //         size: 500.0,
-        //     })
-        // }
+    //     // for (x, y) in points {
+    //     //     self.cached_clusters.push(Cluster2D {
+    //     //         id: self.cached_clusters.len(),
+    //     //         x: *x,
+    //     //         y: *y,
+    //     //         size: 500.0,
+    //     //     })
+    //     // }
 
-        // self.scan_points
-        //     .insert(String::from(&tracker.serial), transformed_points.to_vec());
-    }
+    //     // self.scan_points
+    //     //     .insert(String::from(&tracker.serial), transformed_points.to_vec());
+    // }
 
     pub fn combine_all_points(&self) -> ndarray::Array2<f32> {
         let mut all_points = Array::zeros((0, 2));
@@ -262,25 +259,25 @@ fn scan_sample_to_point(angle: &f32, distance: &f32, device: &LidarDevice) -> Op
     }
 }
 
-fn external_point_transformed(p: &Point2D, tracker: &ExternalTracker) -> Point2D {
-    let ExternalTracker {
-        x,
-        y,
-        rotation,
-        flip_coords,
-        ..
-    } = tracker;
-    // let rotation = -rotation;
-    let (px, py) = p;
-    // Translate so origin is at (x,y), then tRotate about origin...
-    let px = px * rotation.to_radians().cos() - py * rotation.to_radians().sin() + *x;
-    let py = py * rotation.to_radians().cos() + px * rotation.to_radians().sin() + *y;
-    debug!("external point {},{} => {},{}", p.0, p.1, px, py);
-    match flip_coords {
-        None => (px, py),
-        Some((flip_x, flip_y)) => (px * (*flip_x as f32), py * (*flip_y as f32)),
-    }
-}
+// fn external_point_transformed(p: &Point2D, tracker: &ExternalTracker) -> Point2D {
+//     let ExternalTracker {
+//         x,
+//         y,
+//         rotation,
+//         flip_coords,
+//         ..
+//     } = tracker;
+//     // let rotation = -rotation;
+//     let (px, py) = p;
+//     // Translate so origin is at (x,y), then tRotate about origin...
+//     let px = px * rotation.to_radians().cos() - py * rotation.to_radians().sin() + *x;
+//     let py = py * rotation.to_radians().cos() + px * rotation.to_radians().sin() + *y;
+//     debug!("external point {},{} => {},{}", p.0, p.1, px, py);
+//     match flip_coords {
+//         None => (px, py),
+//         Some((flip_x, flip_y)) => (px * (*flip_x as f32), py * (*flip_y as f32)),
+//     }
+// }
 
 fn passes_mask_threshold(
     angle: &f32,
