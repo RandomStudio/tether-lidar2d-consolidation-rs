@@ -69,17 +69,17 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
                     Text::new(PlotPoint::new(p.x, p.y), format!("#{}", p.id()))
                         .color(Color32::WHITE),
                 );
-                if let Some(distance) = p.distance {
+                if let Some(range) = p.range {
                     plot_ui.text(Text::new(
                         PlotPoint::new(p.x, p.y + text_offset.unwrap_or_default()),
                         if let Some(c) = config {
                             if c.smoothing_use_real_units {
-                                format!("{:.0}mm", distance)
+                                format!("{:.0}mm", range)
                             } else {
-                                format!("{:.2}", distance)
+                                format!("{:.2}", range)
                             }
                         } else {
-                            format!("{:.0}mm", distance)
+                            format!("{:.0}mm", range)
                         },
                     ));
                 }

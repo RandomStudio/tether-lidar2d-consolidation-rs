@@ -41,7 +41,7 @@ impl Systems {
             origin_mode: config.origin_location,
             should_calculate_velocity: config.enable_velocity,
             should_calculate_bearing: config.enable_bearing,
-            should_calculate_distance: config.enable_distance,
+            should_calculate_range: config.enable_range,
         });
 
         let position_system = PositionRemapping::new(config);

@@ -223,8 +223,8 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
 
             if ui
                 .checkbox(
-                    &mut backend_config.enable_distance,
-                    "Calculate distance from 0,0 per point",
+                    &mut backend_config.enable_range,
+                    "Calculate range from origin per point",
                 )
                 .clicked()
             {
