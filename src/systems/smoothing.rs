@@ -3,7 +3,11 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::{tracking::TrackedPoint2D, Point2D};
+use crate::{
+    geometry_utils::{centroid, distance, distance_points, heading, lerp},
+    tracking::TrackedPoint2D,
+    Point2D,
+};
 
 use super::position_remapping::OriginLocation;
 
@@ -69,7 +73,9 @@ impl TrackingSmoother {
             let points_in_my_range: Vec<(usize, Point2D)> = points
                 .iter()
                 .enumerate()
-                .filter(|(_i, p)| distance(p, &sp.current_position) <= self.settings.merge_radius)
+                .filter(|(_i, p)| {
+                    distance_points(p, &sp.current_position) <= self.settings.merge_radius
+                })
                 .map(|(i, p)| (i, *p))
                 .collect();
             for (i, _p) in points_in_my_range.iter() {
@@ -101,7 +107,7 @@ impl TrackingSmoother {
         for (i, p) in points.iter().enumerate() {
             if !marked_points_in_range.contains(&i) {
                 // Append to list
-                let (x, y) = p;
+                let (x, y) = *p;
 
                 let timestamp = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
@@ -109,13 +115,13 @@ impl TrackingSmoother {
 
                 let new_point = SmoothedPoint {
                     id: timestamp.as_millis() as usize,
-                    current_position: (*x, *y),
-                    target_position: (*x, *y),
+                    current_position: (x, y),
+                    target_position: (x, y),
                     first_updated: SystemTime::now(),
                     last_updated: SystemTime::now(),
                     velocity: None,
                     distance: if self.settings.should_calculate_distance {
-                        Some(distance(p, &(0., 0.)))
+                        Some(distance(x, y, 0., 0.))
                     } else {
                         None
                     },
@@ -173,7 +179,7 @@ impl TrackingSmoother {
                         .find(|(other_index, other_point)| {
                             *other_index != this_index
                                 && other_point.ready
-                                && distance(
+                                && distance_points(
                                     &other_point.current_position,
                                     &this_point.current_position,
                                 ) < self.settings.merge_radius
@@ -216,7 +222,7 @@ impl TrackingSmoother {
                 ]);
             }
             if self.settings.should_calculate_distance {
-                p.distance = Some(distance(&(x1, y1), &(0., 0.)));
+                p.distance = Some(distance(x1, y1, 0., 0.));
             }
             p.current_position = (new_x, new_y);
         })
@@ -271,62 +277,5 @@ impl TrackingSmoother {
 
     pub fn get_elapsed(&self) -> Duration {
         self.last_updated.elapsed().unwrap_or_default()
-    }
-}
-
-fn centroid(points: &[Point2D]) -> Option<Point2D> {
-    let count = points.len();
-    points
-        .iter()
-        .cloned()
-        .reduce(|acc, el| (acc.0 + el.0, acc.1 + el.1))
-        .map(|(x, y)| (x / count as f32, y / count as f32))
-}
-
-fn distance(a: &Point2D, b: &Point2D) -> f32 {
-    let (x1, y1) = a;
-    let (x2, y2) = b;
-
-    f32::sqrt(f32::powi(x1 - x2, 2) + f32::powi(y1 - y2, 2))
-}
-
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    a * (1. - t) + (b * t)
-}
-
-/// Return the clockwise angle (in degrees) between two lines:
-/// - origin to a point on the y-axis (0,a) where a is positive
-/// - origin to the point (x,y)
-///
-/// This corresponds to the common-sense "heading" of a point
-/// from the point-of-view of the origin
-fn heading(x: f32, y: f32) -> f32 {
-    let angle_rad = y.atan2(x); // Get the angle from the positive x-axis in radians
-    let angle_deg = angle_rad.to_degrees(); // Convert to degrees
-
-    // Convert from positive x-axis reference to positive y-axis reference
-    let heading = (90.0 - angle_deg) % 360.0;
-    if heading < 0.0 {
-        heading + 360.0
-    } else {
-        heading
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_heading_easy_cardinals() {
-        assert_eq!(heading(0., 1.0), 0.); // N
-        assert_eq!(heading(1.0, 1.0), 45.0); // NE
-        assert_eq!(heading(3.5, 3.5), 45.0); // Also NE
-        assert_eq!(heading(1.0, 0.), 90.0); // E
-        assert_eq!(heading(1.0, -1.0), 135.); // SE
-        assert_eq!(heading(0.0, -101.0), 180.); // S
-        assert_eq!(heading(-1.0, -1.0), 225.); // SW
-        assert_eq!(heading(-1.0, -0.), 270.); // W
-        assert_eq!(heading(-3.1, 3.1), 315.); // NW
     }
 }
