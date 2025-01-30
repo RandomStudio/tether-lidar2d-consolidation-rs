@@ -4,7 +4,7 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    geometry_utils::{centroid, distance, distance_points, heading, lerp},
+    geometry_utils::{bearing, centroid, distance, distance_points, lerp},
     tracking::TrackedPoint2D,
     Point2D,
 };
@@ -26,7 +26,7 @@ pub struct SmoothSettings {
     pub empty_list_send_mode: EmptyListSendMode,
     pub origin_mode: OriginLocation,
     pub should_calculate_velocity: bool,
-    pub should_calculate_heading: bool,
+    pub should_calculate_bearing: bool,
     pub should_calculate_distance: bool,
 }
 
@@ -237,9 +237,9 @@ impl TrackingSmoother {
                 let mut tp = TrackedPoint2D::new(p.id, p.current_position);
                 tp.velocity = p.velocity;
                 tp.distance = p.distance;
-                if self.settings.should_calculate_heading {
+                if self.settings.should_calculate_bearing {
                     let (x, y) = p.current_position;
-                    tp.heading = Some(heading(x, y));
+                    tp.bearing = Some(bearing(x, y));
                 }
                 tp
             })

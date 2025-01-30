@@ -59,7 +59,7 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
 
         if model.show_graph_labels {
             for p in &model.smoothed_tracked_points {
-                if let Some(heading) = p.heading {
+                if let Some(heading) = p.bearing {
                     plot_ui.text(Text::new(
                         PlotPoint::new(p.x, p.y - text_offset.unwrap_or_default()),
                         format!("{:.0}°", heading),

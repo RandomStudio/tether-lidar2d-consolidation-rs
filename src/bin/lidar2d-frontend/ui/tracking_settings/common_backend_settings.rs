@@ -213,8 +213,8 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
 
             if ui
                 .checkbox(
-                    &mut backend_config.enable_heading,
-                    "Calculate heading (angle from N) per point",
+                    &mut backend_config.enable_bearing,
+                    "Calculate bearing (from origin) per point",
                 )
                 .clicked()
             {
