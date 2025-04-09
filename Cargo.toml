@@ -2,7 +2,7 @@
 name = "tether-lidar2d-consolidation"
 description = "Tether Lidar2D Consolidator Agent, Rust edition"
 version = "2.0.1-alpha"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 repository = "https://github.com/RandomStudio/tether-lidar2d-consolidation-rs"
 homepage = "https://github.com/RandomStudio/tether-lidar2d-consolidation-rs"
