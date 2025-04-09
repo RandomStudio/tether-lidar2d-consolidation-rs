@@ -3,7 +3,7 @@ use tether_agent::{ChannelDefinition, ChannelOptionsBuilder, TetherAgent};
 
 use crate::{Point2D, backend_config::BackendConfig, systems::Systems};
 
-pub struct Outputs {
+pub struct ChannelSenders {
     pub config_output: ChannelDefinition,
     pub clusters_output: ChannelDefinition,
     pub tracking_output: ChannelDefinition,
@@ -12,8 +12,8 @@ pub struct Outputs {
     pub movement_output: ChannelDefinition,
 }
 
-impl Outputs {
-    pub fn new(tether_agent: &mut TetherAgent) -> Outputs {
+impl ChannelSenders {
+    pub fn new(tether_agent: &mut TetherAgent) -> ChannelSenders {
         let config_output = ChannelOptionsBuilder::create_sender("provideLidarConfig")
             .qos(Some(2))
             .retain(Some(true))
@@ -48,7 +48,7 @@ impl Outputs {
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
-        Outputs {
+        ChannelSenders {
             config_output,
             tracking_output,
             clusters_output,
@@ -102,7 +102,7 @@ pub fn handle_scans_message(
     config: &mut BackendConfig,
     tether_agent: &TetherAgent,
     systems: &mut Systems,
-    outputs: &Outputs,
+    outputs: &ChannelSenders,
     config_file_path: &str,
 ) {
     let Systems {
@@ -113,7 +113,7 @@ pub fn handle_scans_message(
         ..
     } = systems;
 
-    let Outputs {
+    let ChannelSenders {
         config_output,
         clusters_output,
         tracking_output,

@@ -4,7 +4,7 @@ use tether_lidar2d_consolidation::systems::Systems;
 use tether_lidar2d_consolidation::systems::automasking::handle_automask_message;
 use tether_lidar2d_consolidation::systems::movement::calculate;
 use tether_lidar2d_consolidation::systems::presence::publish_presence_change;
-use tether_lidar2d_consolidation::tether_interface::Outputs;
+use tether_lidar2d_consolidation::tether_interface::ChannelSenders;
 
 use env_logger::Env;
 use log::{debug, info};
@@ -37,7 +37,7 @@ fn main() {
         .expect("failed to init and/or connect Tether Agent");
 
     let inputs = Inputs::new(&mut tether_agent);
-    let outputs = Outputs::new(&mut tether_agent);
+    let outputs = ChannelSenders::new(&mut tether_agent);
 
     let mut backend_config = match load_config_from_file(&cli.config_path) {
         Ok(config) => {
