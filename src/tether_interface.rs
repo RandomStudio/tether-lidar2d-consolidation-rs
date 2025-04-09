@@ -1,7 +1,7 @@
 use log::{debug, error, info};
 use tether_agent::{ChannelDefinition, ChannelOptionsBuilder, TetherAgent};
 
-use crate::{backend_config::BackendConfig, systems::Systems, Point2D};
+use crate::{Point2D, backend_config::BackendConfig, systems::Systems};
 
 pub struct Outputs {
     pub config_output: ChannelDefinition,
@@ -133,7 +133,7 @@ pub fn handle_scans_message(
 
         if !config.skip_some_outputs {
             tether_agent
-                .encode_and_send(clusters_output, clusters)
+                .send(clusters_output, clusters)
                 .expect("failed to publish clusters");
         }
 
@@ -147,7 +147,7 @@ pub fn handle_scans_message(
 
             if !config.skip_some_outputs {
                 tether_agent
-                    .encode_and_send(tracking_output, &tracked_points)
+                    .send(tracking_output, &tracked_points)
                     .expect("failed to publish tracked points");
             }
         }

@@ -3,7 +3,7 @@ use log::{debug, error, info, warn};
 use std::{fmt::Error, fs};
 use tether_agent::{ChannelDefinition, TetherAgent};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 use crate::systems::{
@@ -350,7 +350,9 @@ impl BackendConfig {
         match self.parse_remote_config(payload) {
             Ok(()) => {
                 if let Some(region_of_interest) = self.region_of_interest() {
-                    info!("New Region of Interest was provided remotely; update the Perspective Transformer");
+                    info!(
+                        "New Region of Interest was provided remotely; update the Perspective Transformer"
+                    );
                     position_remapping.update_with_roi(
                         region_of_interest,
                         self.origin_location,
@@ -377,7 +379,7 @@ impl BackendConfig {
             .expect("failed to save to disk");
 
         tether_agent
-            .encode_and_send(config_output, self)
+            .send(config_output, self)
             .expect("failed to publish config");
         Ok(())
     }

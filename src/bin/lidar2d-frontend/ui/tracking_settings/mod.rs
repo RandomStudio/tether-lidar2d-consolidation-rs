@@ -55,7 +55,7 @@ pub fn render_tracking_settings(model: &mut Model, ui: &mut Ui) {
         debug!("Publish new backend config: {:?}", &model.backend_config);
         model
             .tether_agent
-            .encode_and_send(&model.outputs.config, &model.backend_config)
+            .send(&model.outputs.config, &model.backend_config)
             .expect("failed to publish config");
     }
 }

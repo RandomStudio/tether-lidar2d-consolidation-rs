@@ -40,7 +40,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             if ui.button("New auto-calibration").clicked() {
                 model
                     .tether_agent
-                    .encode_and_send(
+                    .send(
                         &model.outputs.request_automask,
                         AutoMaskMessage {
                             r#type: "new".into(),
@@ -51,7 +51,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             if ui.button("Clear calibration").clicked() {
                 model
                     .tether_agent
-                    .encode_and_send(
+                    .send(
                         &model.outputs.request_automask,
                         AutoMaskMessage {
                             r#type: "clear".into(),

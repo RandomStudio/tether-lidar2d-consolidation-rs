@@ -1,18 +1,18 @@
 use clap::Parser;
 use tether_lidar2d_consolidation::backend_config::load_config_from_file;
+use tether_lidar2d_consolidation::systems::Systems;
 use tether_lidar2d_consolidation::systems::automasking::handle_automask_message;
 use tether_lidar2d_consolidation::systems::movement::calculate;
 use tether_lidar2d_consolidation::systems::presence::publish_presence_change;
-use tether_lidar2d_consolidation::systems::Systems;
 use tether_lidar2d_consolidation::tether_interface::Outputs;
 
 use env_logger::Env;
 use log::{debug, info};
 use std::thread;
 use std::time::Duration;
-use tether_agent::{tether_compliant_topic::TetherOrCustomTopic, TetherAgentOptionsBuilder};
+use tether_agent::{TetherAgentOptionsBuilder, tether_compliant_topic::TetherOrCustomTopic};
 
-use tether_lidar2d_consolidation::tether_interface::{handle_scans_message, Inputs};
+use tether_lidar2d_consolidation::tether_interface::{Inputs, handle_scans_message};
 
 mod cli;
 use cli::Cli;
@@ -135,7 +135,7 @@ fn main() {
 
             if let Some(active_smoothed_points) = smoothed_points {
                 tether_agent
-                    .encode_and_send(&outputs.smoothed_tracking_output, &active_smoothed_points)
+                    .send(&outputs.smoothed_tracking_output, &active_smoothed_points)
                     .expect("failed to publish smoothed tracking points");
 
                 if backend_config.enable_average_movement
@@ -146,7 +146,7 @@ fn main() {
                     let movement_vector = calculate(&active_smoothed_points);
 
                     tether_agent
-                        .encode_and_send(&outputs.movement_output, movement_vector)
+                        .send(&outputs.movement_output, movement_vector)
                         .expect("failed to publish movement vector");
 
                     systems.movement_analysis.reset_timer();
@@ -173,7 +173,7 @@ fn main() {
                     let movement_vector = calculate(&[]);
 
                     tether_agent
-                        .encode_and_send(&outputs.movement_output, movement_vector)
+                        .send(&outputs.movement_output, movement_vector)
                         .expect("failed to publish movement vector");
 
                     systems.movement_analysis.reset_timer();

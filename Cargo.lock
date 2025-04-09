@@ -3172,9 +3172,9 @@ dependencies = [
 
 [[package]]
 name = "tether-agent"
-version = "4.0.0-alpha"
+version = "4.0.1-alpha"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30c55caf5a7ceea90eb0832255af0cb9eb6b289fdac9cdfc15a4381b621c6be7"
+checksum = "f7ae3eb5137c360e45651922decce75223d6fbc5c0067d8f0716a61305ff8c5d"
 dependencies = [
  "anyhow",
  "env_logger",
@@ -3189,7 +3189,7 @@ dependencies = [
 
 [[package]]
 name = "tether-lidar2d-consolidation"
-version = "2.0.1-alpha"
+version = "2.0.2-alpha"
 dependencies = [
  "anyhow",
  "async-std",
