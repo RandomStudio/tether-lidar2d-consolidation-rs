@@ -31,7 +31,7 @@ fn main() {
     debug!("Started; args: {:?}", cli);
 
     let mut tether_agent = TetherAgentOptionsBuilder::new(&cli.agent_role)
-        .id(Some(&cli.agent_group))
+        .id(cli.agent_id.as_deref())
         .host(Some(&cli.tether_host.to_string()))
         .build()
         .expect("failed to init and/or connect Tether Agent");

@@ -21,9 +21,9 @@ pub struct Cli {
     #[arg(long="tether.role",default_value_t=String::from("lidarConsolidation"))]
     pub agent_role: String,
 
-    /// The Agent Group (ID)
-    #[arg(long="tether.group",default_value_t=String::from("any"))]
-    pub agent_group: String,
+    /// The Agent ID to apply, if any
+    #[arg(long = "tether.id")]
+    pub agent_id: Option<String>,
 
     /// Optional username for MQTT Broker
     #[arg(long = "tether.username")]
