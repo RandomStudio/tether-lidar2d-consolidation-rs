@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use log::debug;
 use serde::{Deserialize, Serialize};
-use tether_agent::{three_part_topic::build_topic, TetherAgent};
+use tether_agent::{tether_compliant_topic::build_publish_topic, TetherAgent};
 
 use crate::tracking::TrackedPoint2D;
 
@@ -71,10 +71,10 @@ impl PresenceDetectionZones {
 
 pub fn publish_presence_change(changed_zone: &Zone, tether_agent: &TetherAgent) {
     debug!("ZONE CHANGED: {:?}", changed_zone);
-    let topic = build_topic(
+    let topic = build_publish_topic(
         "presenceDetection",
-        &changed_zone.id.to_string(),
         "presence",
+        Some(&changed_zone.id.to_string()),
     );
     let payload = if changed_zone.active { &[1] } else { &[0] };
     tether_agent
