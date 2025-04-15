@@ -140,7 +140,7 @@ impl eframe::App for Model {
                     }
                     self.backend_config = Some(tracking_config);
                 } else {
-                    error!("Error reading new config");
+                    error!("Error parsing new config");
                 }
             }
 

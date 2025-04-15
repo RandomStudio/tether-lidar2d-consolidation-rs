@@ -4,7 +4,7 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    geometry_utils::{centroid, distance, distance_points, heading, lerp},
+    geometry_utils::{bearing, centroid, distance, distance_points, lerp},
     tracking::TrackedPoint2D,
     Point2D,
 };
@@ -26,8 +26,8 @@ pub struct SmoothSettings {
     pub empty_list_send_mode: EmptyListSendMode,
     pub origin_mode: OriginLocation,
     pub should_calculate_velocity: bool,
-    pub should_calculate_heading: bool,
-    pub should_calculate_distance: bool,
+    pub should_calculate_bearing: bool,
+    pub should_calculate_range: bool,
 }
 
 #[derive(Debug)]
@@ -120,7 +120,7 @@ impl TrackingSmoother {
                     first_updated: SystemTime::now(),
                     last_updated: SystemTime::now(),
                     velocity: None,
-                    distance: if self.settings.should_calculate_distance {
+                    distance: if self.settings.should_calculate_range {
                         Some(distance(x, y, 0., 0.))
                     } else {
                         None
@@ -221,7 +221,7 @@ impl TrackingSmoother {
                     (new_y - y1) / interval as f32 * 1000.,
                 ]);
             }
-            if self.settings.should_calculate_distance {
+            if self.settings.should_calculate_range {
                 p.distance = Some(distance(x1, y1, 0., 0.));
             }
             p.current_position = (new_x, new_y);
@@ -236,10 +236,10 @@ impl TrackingSmoother {
             .map(|p| {
                 let mut tp = TrackedPoint2D::new(p.id, p.current_position);
                 tp.velocity = p.velocity;
-                tp.distance = p.distance;
-                if self.settings.should_calculate_heading {
+                tp.range = p.distance;
+                if self.settings.should_calculate_bearing {
                     let (x, y) = p.current_position;
-                    tp.heading = Some(heading(x, y));
+                    tp.bearing = Some(bearing(x, y));
                 }
                 tp
             })

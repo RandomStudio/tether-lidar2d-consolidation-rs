@@ -30,7 +30,7 @@ pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
 ///
 /// This corresponds to the common-sense "heading" of a point
 /// from the point-of-view of the origin
-pub fn heading(x: f32, y: f32) -> f32 {
+pub fn bearing(x: f32, y: f32) -> f32 {
     let angle_rad = y.atan2(x); // Get the angle from the positive x-axis in radians
     let angle_deg = angle_rad.to_degrees(); // Convert to degrees
 
@@ -48,15 +48,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_heading_easy_cardinals() {
-        assert_eq!(heading(0., 1.0), 0.); // N
-        assert_eq!(heading(1.0, 1.0), 45.0); // NE
-        assert_eq!(heading(3.5, 3.5), 45.0); // Also NE
-        assert_eq!(heading(1.0, 0.), 90.0); // E
-        assert_eq!(heading(1.0, -1.0), 135.); // SE
-        assert_eq!(heading(0.0, -101.0), 180.); // S
-        assert_eq!(heading(-1.0, -1.0), 225.); // SW
-        assert_eq!(heading(-1.0, -0.), 270.); // W
-        assert_eq!(heading(-3.1, 3.1), 315.); // NW
+    fn test_bearing_easy_cardinals() {
+        assert_eq!(bearing(0., 1.0), 0.); // N
+        assert_eq!(bearing(1.0, 1.0), 45.0); // NE
+        assert_eq!(bearing(3.5, 3.5), 45.0); // Also NE
+        assert_eq!(bearing(1.0, 0.), 90.0); // E
+        assert_eq!(bearing(1.0, -1.0), 135.); // SE
+        assert_eq!(bearing(0.0, -101.0), 180.); // S
+        assert_eq!(bearing(-1.0, -1.0), 225.); // SW
+        assert_eq!(bearing(-1.0, -0.), 270.); // W
+        assert_eq!(bearing(-3.1, 3.1), 315.); // NW
     }
 }

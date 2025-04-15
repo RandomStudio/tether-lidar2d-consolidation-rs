@@ -8,9 +8,9 @@ pub struct TrackedPoint2D {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub velocity: Option<[f32; 2]>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub heading: Option<f32>,
+    pub bearing: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub distance: Option<f32>,
+    pub range: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -37,8 +37,8 @@ impl TrackedPoint2D {
             x: position.0,
             y: position.1,
             velocity: None,
-            heading: None,
-            distance: None,
+            bearing: None,
+            range: None,
         }
     }
 

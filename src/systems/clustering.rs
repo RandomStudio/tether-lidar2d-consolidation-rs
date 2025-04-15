@@ -219,7 +219,7 @@ pub fn circle_of_cluster_points(points: Vec<Point2D>, id: usize) -> Cluster2D {
 }
 
 /**
-Take in angle, distance return as Point2D as (x,y) coordinates
+Take in angle and distance, return as Point2D i.e. (x,y) coordinates
 */
 fn scan_sample_to_point(angle: &f32, distance: &f32, device: &LidarDevice) -> Option<Point2D> {
     let LidarDevice {
