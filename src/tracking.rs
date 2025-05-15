@@ -6,6 +6,8 @@ pub struct TrackedPoint2D {
     pub x: f32,
     pub y: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub velocity: Option<[f32; 2]>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bearing: Option<f32>,
@@ -31,9 +33,10 @@ pub struct Body3D {
 pub type BodyFrame3D = Vec<Body3D>;
 
 impl TrackedPoint2D {
-    pub fn new(id: usize, position: (f32, f32)) -> Self {
+    pub fn new(id: usize, position: (f32, f32), size: Option<f32>) -> Self {
         TrackedPoint2D {
             id,
+            size,
             x: position.0,
             y: position.1,
             velocity: None,

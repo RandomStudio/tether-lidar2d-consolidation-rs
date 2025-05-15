@@ -47,11 +47,13 @@ pub fn render_info(model: &mut Model, ui: &mut Ui) {
 
             let magnitude = Vector2::new(mx, my).magnitude();
             ui.horizontal(|ui| {
-                ui.label("Mangitude (speed)");
+                ui.label("Magnitude (speed)");
                 ui.label(RichText::new(format!("{:.0}mm/s", magnitude)));
             });
         }
     }
+
+    ui.separator();
 
     Grid::new("tracking_grid").show(ui, |ui| {
         ui.label("Clusters count: ");
@@ -66,10 +68,18 @@ pub fn render_info(model: &mut Model, ui: &mut Ui) {
         ui.label(format!("{}", model.smoothed_tracked_points.len()));
         ui.end_row();
 
-        for (i, p) in model.smoothed_tracked_points.iter().enumerate() {
-            ui.label(format!("{}:", i));
-            ui.label(format!("#{}", p.id()));
-            ui.end_row();
+        if let Some(tracking_config) = &model.backend_config {
+            for (i, p) in model.smoothed_tracked_points.iter().enumerate() {
+                ui.label(format!("{}:", i));
+                ui.label(format!("#{}", p.id()));
+                if tracking_config.enable_velocity {
+                    if let Some([x, y]) = p.velocity {
+                        let speed = (x.abs() + y.abs()) / 2.0;
+                        ui.label(format!("@ {:.1} mm/s", speed));
+                    }
+                }
+                ui.end_row();
+            }
         }
     });
 }

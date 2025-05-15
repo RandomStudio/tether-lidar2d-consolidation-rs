@@ -66,15 +66,27 @@ impl PositionRemapping {
         self.transformer.is_ready()
     }
 
-    pub fn transform_clusters(&self, clusters: &[Cluster2D]) -> Vec<Point2D> {
+    pub fn transform_clusters(&self, clusters: &[Cluster2D]) -> Vec<Cluster2D> {
         clusters
             .iter()
-            .map(|c| self.transformer.transform(&(c.x, c.y)).unwrap())
+            .map(|c| {
+                let (x, y) = self.transformer.transform(&(c.x, c.y)).unwrap();
+                Cluster2D {
+                    id: c.id,
+                    x,
+                    y,
+                    size: c.size,
+                }
+            })
             .collect()
     }
 
-    pub fn filter_points_inside(&self, points: &[Point2D]) -> Vec<Point2D> {
-        self.transformer.filter_points_inside(points)
+    pub fn filter_clusters_inside(&self, clusters: &[Cluster2D]) -> Vec<Cluster2D> {
+        clusters
+            .iter()
+            .filter(|c| self.transformer.point_is_inside_quad(&(c.x, c.y)))
+            .cloned()
+            .collect()
     }
 
     pub fn update_with_roi(

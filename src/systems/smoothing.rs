@@ -9,7 +9,7 @@ use crate::{
     Point2D,
 };
 
-use super::position_remapping::OriginLocation;
+use super::{clustering::Cluster2D, position_remapping::OriginLocation};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum EmptyListSendMode {
@@ -33,6 +33,8 @@ pub struct SmoothSettings {
 #[derive(Debug)]
 struct SmoothedPoint {
     id: usize,
+    /// This is the **diameter**
+    size: f32,
     current_position: Point2D,
     target_position: Point2D,
     velocity: Option<[f32; 2]>,
@@ -65,24 +67,26 @@ impl TrackingSmoother {
     }
 
     /// Add some raw points (clusters, position data, etc.) to the tracking-smoothing system
-    pub fn update_tracked_points(&mut self, incoming_points: &[Point2D]) {
+    pub fn update_tracked_points(&mut self, incoming_clusters: &[Cluster2D]) {
         let mut marked_points_in_range_indexes: Vec<usize> = Vec::new();
 
         for known_point in self.known_points.iter_mut() {
             known_point.points_in_range.clear();
-            let points_in_my_range: Vec<(usize, Point2D)> = incoming_points
+            let clusters_in_my_range: Vec<(usize, Cluster2D)> = incoming_clusters
                 .iter()
                 .enumerate()
                 .filter(|(_i, p)| {
-                    distance_points(p, &known_point.current_position) <= self.settings.merge_radius
+                    distance_points(&(p.x, p.y), &known_point.target_position) <= known_point.size
+                    // <= self.settings.merge_radius
                 })
-                .map(|(i, p)| (i, *p))
+                .map(|(i, c)| (i, c.clone()))
                 .collect();
-            for (i, _p) in points_in_my_range.iter() {
+            for (i, c) in clusters_in_my_range.iter() {
                 marked_points_in_range_indexes.push(*i);
                 known_point.points_in_range.push(*i);
+                known_point.size = known_point.size.max(c.size); // only allowed to grow, not shrink
             }
-            if !points_in_my_range.is_empty() {
+            if !clusters_in_my_range.is_empty() {
                 // There were points in range; so update time
                 known_point.last_updated = SystemTime::now();
                 // If the SmoothedPoint was not ready till now, check if it's time to mark it "ready"
@@ -94,9 +98,9 @@ impl TrackingSmoother {
                 }
                 // Finally, set the target position as the centroid between all the points in range
                 if let Some(centroid) = centroid(
-                    &points_in_my_range
+                    &clusters_in_my_range
                         .iter()
-                        .map(|(_i, p)| *p)
+                        .map(|(_i, c)| (c.x, c.y))
                         .collect::<Vec<Point2D>>(),
                 ) {
                     known_point.target_position = centroid;
@@ -104,10 +108,10 @@ impl TrackingSmoother {
             }
         }
 
-        for (i, p) in incoming_points.iter().enumerate() {
+        for (i, p) in incoming_clusters.iter().enumerate() {
             if !marked_points_in_range_indexes.contains(&i) {
                 // Does not appear in known points; append to list
-                let (x, y) = *p;
+                let (x, y) = (p.x, p.y);
 
                 // let timestamp = SystemTime::now()
                 //     .duration_since(UNIX_EPOCH)
@@ -132,6 +136,7 @@ impl TrackingSmoother {
 
                 let new_point = SmoothedPoint {
                     id,
+                    size: p.size,
                     current_position: (x, y),
                     target_position: (x, y),
                     first_updated: SystemTime::now(),
@@ -251,7 +256,7 @@ impl TrackingSmoother {
             .iter()
             .filter(|p| p.ready)
             .map(|p| {
-                let mut tp = TrackedPoint2D::new(p.id, p.current_position);
+                let mut tp = TrackedPoint2D::new(p.id, p.current_position, Some(p.size));
                 tp.velocity = p.velocity;
                 tp.range = p.distance;
                 if self.settings.should_calculate_bearing {

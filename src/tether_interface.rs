@@ -1,7 +1,11 @@
 use log::{debug, error, info};
 use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
 
-use crate::{backend_config::BackendConfig, systems::Systems, Point2D};
+use crate::{
+    backend_config::BackendConfig,
+    systems::{clustering::Cluster2D, Systems},
+    Point2D,
+};
 
 pub struct Outputs {
     pub config_output: PlugDefinition,
@@ -136,16 +140,20 @@ pub fn handle_scans_message(
         }
 
         if position_remapping.is_ready() {
-            let points: Vec<Point2D> = position_remapping.transform_clusters(clusters);
+            let transformed_clusters: Vec<Cluster2D> =
+                position_remapping.transform_clusters(clusters);
 
             // Normal (unsmoothed) tracked points...
-            let tracked_points = position_remapping.filter_points_inside(&points);
+            let filtered_clusters =
+                position_remapping.filter_clusters_inside(&transformed_clusters);
 
-            smoothing_system.update_tracked_points(&tracked_points);
+            smoothing_system.update_tracked_points(&filtered_clusters);
 
             if !config.skip_some_outputs {
+                let raw_points: Vec<Point2D> =
+                    filtered_clusters.iter().map(|c| (c.x, c.y)).collect();
                 tether_agent
-                    .encode_and_publish(tracking_output, &tracked_points)
+                    .encode_and_publish(tracking_output, &raw_points)
                     .expect("failed to publish tracked points");
             }
         }

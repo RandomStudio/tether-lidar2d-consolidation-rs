@@ -295,7 +295,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                     model.is_editing = true;
                 }
                 ui.label(format!(
-                    "{:.1}Hz",
+                    "{:.0}Hz",
                     1.0 / (backend_config.smoothing_update_interval as f64 / 1000.)
                 ));
                 ui.end_row();

@@ -9,11 +9,12 @@ use petal_clustering::{Dbscan, Fit};
 use petal_neighbors::distance::Euclidean;
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Cluster2D {
     pub id: usize,
     pub x: f32,
     pub y: f32,
+    /// This is the **diameter** of the circle enclosing the points comprising this cluster
     pub size: f32,
 }
 

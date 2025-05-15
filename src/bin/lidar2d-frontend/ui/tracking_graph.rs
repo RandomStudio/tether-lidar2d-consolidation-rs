@@ -17,8 +17,10 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         .auto_bounds_x()
         .auto_bounds_y();
 
+    let light_green = Color32::from_rgba_unmultiplied(200, 255, 200, 64);
+
     tracker_plot.show(ui, |plot_ui| {
-        let mut all_points = Vec::new();
+        // let mut all_points = Vec::new();
 
         let config = &model.backend_config.as_ref();
         let radius = {
@@ -30,20 +32,8 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         };
 
         for (x, y) in &model.raw_tracked_points {
-            plot_ui.line(draw_circle(
-                *x,
-                *y,
-                radius,
-                Color32::from_rgba_unmultiplied(200, 255, 200, 64),
-            ));
+            plot_ui.line(draw_circle(*x, *y, radius, Color32::DARK_GRAY));
         }
-
-        let smoothed_points = smoothed_tracked_points_to_plot_points(
-            &model.smoothed_tracked_points,
-            5.0,
-            Color32::from_rgba_unmultiplied(200, 255, 200, 64),
-        );
-        all_points.push(smoothed_points);
 
         let text_offset = {
             if let Some(c) = config {
@@ -57,8 +47,6 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
             }
         };
 
-        let x_offset = text_offset.unwrap_or(0.);
-
         if model.show_graph_labels {
             for p in &model.smoothed_tracked_points {
                 if let Some(heading) = p.bearing {
@@ -68,7 +56,7 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
                     ));
                 }
                 plot_ui.text(
-                    Text::new(PlotPoint::new(p.x + x_offset, p.y), format!("#{}", p.id()))
+                    Text::new(PlotPoint::new(p.x, p.y), format!("#{}", p.id()))
                         .color(Color32::WHITE),
                 );
                 if let Some(range) = p.range {
@@ -85,16 +73,24 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
                         },
                     ));
                 }
-                plot_ui.line(
-                    draw_line(0., 0., p.x, p.y)
-                        .color(Color32::from_rgba_unmultiplied(200, 255, 200, 64)),
-                );
+                // "Bearing" line from origin
+                plot_ui.line(draw_line(0., 0., p.x, p.y).color(light_green));
+
+                // Current position of smoothed point
+                plot_ui.line(draw_circle(
+                    p.x,
+                    p.y,
+                    p.size.unwrap_or(1000.) / 2.0,
+                    light_green,
+                ))
             }
         }
 
-        for points_group in all_points {
-            plot_ui.points(points_group);
-        }
+        for p in model.smoothed_tracked_points.iter() {}
+
+        // for points_group in all_points {
+        //     plot_ui.points(points_group);
+        // }
 
         if let Some(tracking_config) = &model.backend_config {
             if tracking_config.smoothing_use_real_units {
