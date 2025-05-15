@@ -232,6 +232,20 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
             }
 
             Grid::new("smooth_sliders").show(ui, |ui| {
+                ui.label("ID offset");
+                if ui
+                    .add(Slider::new(&mut backend_config.offset_index, 0..=1))
+                    .changed()
+                {
+                    model.is_editing = true;
+                }
+                match backend_config.offset_index {
+                    0 => ui.label("starts at 0"),
+                    1 => ui.label("starts at 1"),
+                    _ => ui.label("custom"),
+                };
+                ui.end_row();
+
                 let slider_range = {
                     if backend_config.smoothing_use_real_units {
                         0. ..=5000.

@@ -33,6 +33,7 @@ impl Systems {
         );
 
         let smoothing_system = TrackingSmoother::new(SmoothSettings {
+            id_offset: config.offset_index,
             merge_radius: config.smoothing_merge_radius,
             wait_before_active_ms: config.smoothing_wait_before_active_ms,
             expire_ms: config.smoothing_expire_ms,

@@ -19,6 +19,7 @@ pub enum EmptyListSendMode {
 }
 
 pub struct SmoothSettings {
+    pub id_offset: usize,
     pub merge_radius: f32,
     pub wait_before_active_ms: u128,
     pub expire_ms: u128,
@@ -119,12 +120,13 @@ impl TrackingSmoother {
                 //     .duration_since(UNIX_EPOCH)
                 //     .expect("time error");
                 //
+                let start_index = self.settings.id_offset;
                 let id = {
                     if self.known_points.is_empty() {
-                        0
+                        start_index
                     } else {
-                        let mut i = 0;
-                        for check in 0..=self.known_points.len() {
+                        let mut i = start_index;
+                        for check in start_index..=self.known_points.len() {
                             if !self.known_points.iter().any(|p| p.id == check) {
                                 i = check;
                                 break;

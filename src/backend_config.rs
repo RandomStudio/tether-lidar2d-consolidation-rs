@@ -89,6 +89,11 @@ pub struct BackendConfig {
     /// also disable presence detection + movement analysis.
     pub smoothing_disable: bool,
 
+    #[serde(default)]
+    /// How much to add to the ID (index) values for each smoothed point,
+    /// e.g. 0 (default) for 0-based indexing or 1 for 1-based
+    pub offset_index: usize,
+
     /// How close to count two points as the same Tracked Point
     pub smoothing_merge_radius: f32,
 
@@ -176,6 +181,7 @@ impl Default for BackendConfig {
             enable_bearing: false,
             enable_range: false,
             skip_some_outputs: false,
+            offset_index: 0,
         }
     }
 }
