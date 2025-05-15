@@ -55,7 +55,7 @@ pub fn render_info(model: &mut Model, ui: &mut Ui) {
 
     ui.separator();
 
-    Grid::new("tracking_grid").show(ui, |ui| {
+    Grid::new("tracking_grid_1").show(ui, |ui| {
         ui.label("Clusters count: ");
         ui.label(format!("{}", model.clusters.len()));
         ui.end_row();
@@ -67,11 +67,13 @@ pub fn render_info(model: &mut Model, ui: &mut Ui) {
         ui.label("Smoothed tracked points count: ");
         ui.label(format!("{}", model.smoothed_tracked_points.len()));
         ui.end_row();
-
+    });
+    ui.separator();
+    Grid::new("tracking_grid_2").show(ui, |ui| {
         if let Some(tracking_config) = &model.backend_config {
             for (i, p) in model.smoothed_tracked_points.iter().enumerate() {
-                ui.label(format!("{}:", i));
-                ui.label(format!("#{}", p.id()));
+                ui.label(format!("[{}]", i));
+                ui.label(format!("ID \"{}\"", p.id()));
                 if tracking_config.enable_velocity {
                     if let Some([x, y]) = p.velocity {
                         let speed = (x.abs() + y.abs()) / 2.0 / 1000.;
