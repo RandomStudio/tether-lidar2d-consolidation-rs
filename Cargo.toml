@@ -35,8 +35,8 @@ tether-agent = "0.14"
 egui = "0.21.0"
 eframe = "0.21.3"
 egui_plot = "0.24.0"
-# quad-to-quad-transformer = "0.4"
-quad-to-quad-transformer = { path = "../../quad-to-quad-transformer" }
+quad-to-quad-transformer = "0.5"
+# quad-to-quad-transformer = { path = "../../quad-to-quad-transformer" }
 anyhow = "1.0.91"
 colorsys = "0.6.7"
 map-range = "0.1.2"

@@ -74,8 +74,8 @@ pub fn render_info(model: &mut Model, ui: &mut Ui) {
                 ui.label(format!("#{}", p.id()));
                 if tracking_config.enable_velocity {
                     if let Some([x, y]) = p.velocity {
-                        let speed = (x.abs() + y.abs()) / 2.0;
-                        ui.label(format!("@ {:.1} mm/s", speed));
+                        let speed = (x.abs() + y.abs()) / 2.0 / 1000.;
+                        ui.label(format!("@ {:.2} m/s", speed));
                     }
                 }
                 ui.end_row();
