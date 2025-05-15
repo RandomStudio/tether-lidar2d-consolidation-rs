@@ -80,17 +80,11 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
                 plot_ui.line(draw_circle(
                     p.x,
                     p.y,
-                    p.size.unwrap_or(1000.) / 2.0,
+                    p.size.unwrap_or(500.) / 2.0,
                     light_green,
-                ))
+                ));
             }
         }
-
-        for p in model.smoothed_tracked_points.iter() {}
-
-        // for points_group in all_points {
-        //     plot_ui.points(points_group);
-        // }
 
         if let Some(tracking_config) = &model.backend_config {
             if tracking_config.smoothing_use_real_units {

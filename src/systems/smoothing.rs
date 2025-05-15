@@ -76,7 +76,9 @@ impl TrackingSmoother {
                 .iter()
                 .enumerate()
                 .filter(|(_i, p)| {
-                    distance_points(&(p.x, p.y), &known_point.target_position) <= known_point.size
+                    distance_points(&(p.x, p.y), &known_point.target_position)
+                        <= self.settings.merge_radius.max(known_point.size)
+                    // <= known_point.size
                     // <= self.settings.merge_radius
                 })
                 .map(|(i, c)| (i, c.clone()))
