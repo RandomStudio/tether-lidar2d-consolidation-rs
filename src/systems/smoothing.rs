@@ -40,7 +40,7 @@ struct SmoothedPoint {
     ready: bool,
     first_updated: SystemTime,
     last_updated: SystemTime,
-    /// A list of raw tracking points currently in range of this point
+    /// A list of raw tracking point **indexes** currently in range of this point
     points_in_range: Vec<usize>,
 }
 
@@ -65,32 +65,32 @@ impl TrackingSmoother {
     }
 
     /// Add some raw points (clusters, position data, etc.) to the tracking-smoothing system
-    pub fn update_tracked_points(&mut self, points: &[Point2D]) {
-        let mut marked_points_in_range: Vec<usize> = Vec::new();
+    pub fn update_tracked_points(&mut self, incoming_points: &[Point2D]) {
+        let mut marked_points_in_range_indexes: Vec<usize> = Vec::new();
 
-        for sp in self.known_points.iter_mut() {
-            sp.points_in_range.clear();
-            let points_in_my_range: Vec<(usize, Point2D)> = points
+        for known_point in self.known_points.iter_mut() {
+            known_point.points_in_range.clear();
+            let points_in_my_range: Vec<(usize, Point2D)> = incoming_points
                 .iter()
                 .enumerate()
                 .filter(|(_i, p)| {
-                    distance_points(p, &sp.current_position) <= self.settings.merge_radius
+                    distance_points(p, &known_point.current_position) <= self.settings.merge_radius
                 })
                 .map(|(i, p)| (i, *p))
                 .collect();
             for (i, _p) in points_in_my_range.iter() {
-                marked_points_in_range.push(*i);
-                sp.points_in_range.push(*i);
+                marked_points_in_range_indexes.push(*i);
+                known_point.points_in_range.push(*i);
             }
             if !points_in_my_range.is_empty() {
                 // There were points in range; so update time
-                sp.last_updated = SystemTime::now();
+                known_point.last_updated = SystemTime::now();
                 // If the SmoothedPoint was not ready till now, check if it's time to mark it "ready"
-                if !sp.ready
-                    && sp.first_updated.elapsed().unwrap().as_millis()
+                if !known_point.ready
+                    && known_point.first_updated.elapsed().unwrap().as_millis()
                         > self.settings.wait_before_active_ms
                 {
-                    sp.ready = true;
+                    known_point.ready = true;
                 }
                 // Finally, set the target position as the centroid between all the points in range
                 if let Some(centroid) = centroid(
@@ -99,22 +99,39 @@ impl TrackingSmoother {
                         .map(|(_i, p)| *p)
                         .collect::<Vec<Point2D>>(),
                 ) {
-                    sp.target_position = centroid;
+                    known_point.target_position = centroid;
                 }
             }
         }
 
-        for (i, p) in points.iter().enumerate() {
-            if !marked_points_in_range.contains(&i) {
-                // Append to list
+        for (i, p) in incoming_points.iter().enumerate() {
+            if !marked_points_in_range_indexes.contains(&i) {
+                // Does not appear in known points; append to list
                 let (x, y) = *p;
 
-                let timestamp = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .expect("time error");
+                // let timestamp = SystemTime::now()
+                //     .duration_since(UNIX_EPOCH)
+                //     .expect("time error");
+                //
+                let id = {
+                    if self.known_points.is_empty() {
+                        0
+                    } else {
+                        let mut i = 0;
+                        for check in 0..=self.known_points.len() {
+                            if !self.known_points.iter().any(|p| p.id == check) {
+                                i = check;
+                                break;
+                            } else {
+                                i += 1;
+                            }
+                        }
+                        i
+                    }
+                };
 
                 let new_point = SmoothedPoint {
-                    id: timestamp.as_millis() as usize,
+                    id,
                     current_position: (x, y),
                     target_position: (x, y),
                     first_updated: SystemTime::now(),

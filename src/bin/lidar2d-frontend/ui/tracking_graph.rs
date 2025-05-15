@@ -48,7 +48,7 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         let text_offset = {
             if let Some(c) = config {
                 if c.smoothing_use_real_units {
-                    Some(110.)
+                    Some(c.smoothing_merge_radius)
                 } else {
                     Some(0.05)
                 }
@@ -56,6 +56,8 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
                 None
             }
         };
+
+        let x_offset = text_offset.unwrap_or(0.);
 
         if model.show_graph_labels {
             for p in &model.smoothed_tracked_points {
@@ -66,7 +68,7 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
                     ));
                 }
                 plot_ui.text(
-                    Text::new(PlotPoint::new(p.x, p.y), format!("#{}", p.id()))
+                    Text::new(PlotPoint::new(p.x + x_offset, p.y), format!("#{}", p.id()))
                         .color(Color32::WHITE),
                 );
                 if let Some(range) = p.range {

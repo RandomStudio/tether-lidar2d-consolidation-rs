@@ -1,4 +1,4 @@
-use egui::{plot::Plot, Color32, RichText, Stroke, Ui};
+use egui::{plot::Plot, Color32, Grid, RichText, Stroke, Ui};
 use nalgebra::Vector2;
 use tether_lidar2d_consolidation::{geometry_utils::distance, systems::movement::calculate};
 
@@ -9,18 +9,6 @@ use super::draw_line;
 const INCLUDE_RANGE: f32 = 1000.;
 
 pub fn render_info(model: &mut Model, ui: &mut Ui) {
-    ui.horizontal(|ui| {
-        ui.label("Clusters count: ");
-        ui.label(format!("{}", model.clusters.len()));
-    });
-    ui.horizontal(|ui| {
-        ui.label("(Raw) tracked points count: ");
-        ui.label(format!("{}", model.raw_tracked_points.len()));
-    });
-    ui.horizontal(|ui| {
-        ui.label("Smoothed tracked points count: ");
-        ui.label(format!("{}", model.smoothed_tracked_points.len()));
-    });
     if let Some(tracking_config) = &model.backend_config {
         ui.heading("Tracking ROI");
         if tracking_config.smoothing_use_real_units {
@@ -64,4 +52,24 @@ pub fn render_info(model: &mut Model, ui: &mut Ui) {
             });
         }
     }
+
+    Grid::new("tracking_grid").show(ui, |ui| {
+        ui.label("Clusters count: ");
+        ui.label(format!("{}", model.clusters.len()));
+        ui.end_row();
+
+        ui.label("(Raw) tracked points count: ");
+        ui.label(format!("{}", model.raw_tracked_points.len()));
+        ui.end_row();
+
+        ui.label("Smoothed tracked points count: ");
+        ui.label(format!("{}", model.smoothed_tracked_points.len()));
+        ui.end_row();
+
+        for (i, p) in model.smoothed_tracked_points.iter().enumerate() {
+            ui.label(format!("{}:", i));
+            ui.label(format!("#{}", p.id()));
+            ui.end_row();
+        }
+    });
 }
