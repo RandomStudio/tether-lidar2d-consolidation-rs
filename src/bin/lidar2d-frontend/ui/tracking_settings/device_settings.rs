@@ -60,7 +60,7 @@ pub fn render_device_settings(model: &mut Model, ui: &mut Ui, should_publish_upd
                     ui.horizontal(|ui| {
                         ui.label("Rotation");
                         if ui
-                            .add(Slider::new(&mut device.rotation, 0. ..=360.))
+                            .add(Slider::new(&mut device.rotation, 0. ..=360.).step_by(1.0))
                             .changed()
                         {
                             model.is_editing = true;

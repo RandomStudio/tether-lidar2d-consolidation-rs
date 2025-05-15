@@ -1,4 +1,4 @@
-use egui::{Color32, RichText, Slider, Ui};
+use egui::{Color32, Grid, RichText, Slider, Ui};
 use log::debug;
 use tether_lidar2d_consolidation::systems::{
     automasking::AutoMaskMessage, position_remapping::OriginLocation, smoothing::EmptyListSendMode,
@@ -231,7 +231,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                 model.is_editing = true;
             }
 
-            ui.horizontal(|ui| {
+            Grid::new("smooth_sliders").show(ui, |ui| {
                 let slider_range = {
                     if backend_config.smoothing_use_real_units {
                         0. ..=5000.
@@ -259,9 +259,8 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                     );
                     model.is_editing = true;
                 }
-            });
+                ui.end_row();
 
-            ui.horizontal(|ui| {
                 ui.label("Wait before active");
                 let mut value = backend_config.smoothing_wait_before_active_ms as u64;
                 if ui
@@ -271,9 +270,8 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                     backend_config.smoothing_wait_before_active_ms = value as u128;
                     model.is_editing = true;
                 }
-            });
+                ui.end_row();
 
-            ui.horizontal(|ui| {
                 ui.label("Wait before expire");
                 let mut value = backend_config.smoothing_expire_ms as u64;
                 if ui
@@ -283,22 +281,25 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                     backend_config.smoothing_expire_ms = value as u128;
                     model.is_editing = true;
                 }
-            });
+                ui.end_row();
 
-            ui.horizontal(|ui| {
-                ui.label("Smoothing update interval");
+                ui.label("Update interval");
                 if ui
                     .add(
                         Slider::new(&mut backend_config.smoothing_update_interval, 0..=5000)
+                            .step_by(5.0)
                             .suffix("ms"),
                     )
                     .changed()
                 {
                     model.is_editing = true;
                 }
-            });
+                ui.label(format!(
+                    "{:.1}Hz",
+                    1.0 / (backend_config.smoothing_update_interval as f64 / 1000.)
+                ));
+                ui.end_row();
 
-            ui.horizontal(|ui| {
                 ui.label("Lerp factor");
                 if ui
                     .add(Slider::new(
@@ -309,6 +310,7 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                 {
                     model.is_editing = true;
                 }
+                ui.end_row();
             });
 
             ui.horizontal(|ui| {
