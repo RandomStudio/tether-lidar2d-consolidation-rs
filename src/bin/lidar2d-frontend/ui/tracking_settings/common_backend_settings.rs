@@ -275,6 +275,18 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
                 }
                 ui.end_row();
 
+                ui.label("Auto merge radius");
+                if ui
+                    .checkbox(
+                        &mut backend_config.enable_auto_merge_radius,
+                        "Merge auto radius",
+                    )
+                    .clicked()
+                {
+                    model.is_editing = true;
+                }
+                ui.end_row();
+
                 ui.label("Wait before active");
                 let mut value = backend_config.smoothing_wait_before_active_ms as u64;
                 if ui

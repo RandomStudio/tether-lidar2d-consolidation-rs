@@ -83,7 +83,7 @@ impl TrackingSmoother {
                             <= self.settings.merge_radius.max(known_point.size)
                     } else {
                         distance_points(&(p.x, p.y), &known_point.target_position)
-                            <= self.settings.merge_radius
+                            <= (self.settings.merge_radius * 2.0)
                     }
                 })
                 .map(|(i, c)| (i, c.clone()))
@@ -91,7 +91,11 @@ impl TrackingSmoother {
             for (i, c) in clusters_in_my_range.iter() {
                 marked_points_in_range_indexes.push(*i);
                 known_point.points_in_range.push(*i);
-                known_point.size = known_point.size.max(c.size); // only allowed to grow, not shrink
+                if self.settings.enable_auto_merge {
+                    known_point.size = known_point.size.max(c.size); // only allowed to grow, not shrink
+                } else {
+                    known_point.size = self.settings.merge_radius * 2.0;
+                }
             }
             if !clusters_in_my_range.is_empty() {
                 // There were points in range; so update time
