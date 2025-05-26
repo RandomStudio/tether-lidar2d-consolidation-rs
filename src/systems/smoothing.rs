@@ -1,4 +1,4 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,7 @@ pub enum EmptyListSendMode {
 pub struct SmoothSettings {
     pub id_offset: usize,
     pub merge_radius: f32,
+    pub enable_auto_merge: bool,
     pub wait_before_active_ms: u128,
     pub expire_ms: u128,
     pub lerp_factor: f32,
@@ -77,10 +78,13 @@ impl TrackingSmoother {
                 .iter()
                 .enumerate()
                 .filter(|(_i, p)| {
-                    distance_points(&(p.x, p.y), &known_point.target_position)
-                        <= self.settings.merge_radius.max(known_point.size)
-                    // <= known_point.size
-                    // <= self.settings.merge_radius
+                    if self.settings.enable_auto_merge {
+                        distance_points(&(p.x, p.y), &known_point.target_position)
+                            <= self.settings.merge_radius.max(known_point.size)
+                    } else {
+                        distance_points(&(p.x, p.y), &known_point.target_position)
+                            <= self.settings.merge_radius
+                    }
                 })
                 .map(|(i, c)| (i, c.clone()))
                 .collect();

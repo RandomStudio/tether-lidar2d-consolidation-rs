@@ -13,7 +13,7 @@ use egui::{
 
 use info::render_info;
 use scan_graph::render_scan_graph;
-use tether_lidar2d_consolidation::{tracking::TrackedPoint2D, Point2D};
+use tether_lidar2d_consolidation::Point2D;
 use tracking_graph::render_tracking_graph;
 use tracking_settings::render_tracking_settings;
 use vis_settings::render_vis_settings;
@@ -72,27 +72,27 @@ pub fn angle_samples_to_plot_points(
         .color(color)
 }
 
-pub fn smoothed_tracked_points_to_plot_points(
-    tracked_points: &[TrackedPoint2D],
-    size: f32,
-    color: Color32,
-) -> Points {
-    let plot_points = PlotPoints::new(
-        tracked_points
-            .iter()
-            .map(|tp| {
-                let x = tp.x;
-                let y = tp.y;
-                [x as f64, y as f64]
-            })
-            .collect(),
-    );
-    Points::new(plot_points)
-        .filled(true)
-        .radius(size)
-        .shape(MarkerShape::Circle)
-        .color(color)
-}
+// pub fn smoothed_tracked_points_to_plot_points(
+//     tracked_points: &[TrackedPoint2D],
+//     size: f32,
+//     color: Color32,
+// ) -> Points {
+//     let plot_points = PlotPoints::new(
+//         tracked_points
+//             .iter()
+//             .map(|tp| {
+//                 let x = tp.x;
+//                 let y = tp.y;
+//                 [x as f64, y as f64]
+//             })
+//             .collect(),
+//     );
+//     Points::new(plot_points)
+//         .filled(true)
+//         .radius(size)
+//         .shape(MarkerShape::Circle)
+//         .color(color)
+// }
 
 fn draw_circle(x: f32, y: f32, radius: f32, colour: Color32) -> Line {
     let n = 512;

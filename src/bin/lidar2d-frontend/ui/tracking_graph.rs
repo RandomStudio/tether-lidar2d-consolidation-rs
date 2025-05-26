@@ -5,7 +5,7 @@ use egui::{
 };
 use quad_to_quad_transformer::DEFAULT_DST_QUAD;
 
-use super::{draw_circle, draw_line, smoothed_tracked_points_to_plot_points};
+use super::{draw_circle, draw_line};
 
 pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
     let tracker_plot = Plot::new("tracker_plot")

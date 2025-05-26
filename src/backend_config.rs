@@ -97,6 +97,12 @@ pub struct BackendConfig {
     /// How close to count two points as the same Tracked Point
     pub smoothing_merge_radius: f32,
 
+    /// If enabled, the merge radius will expand (but never shrink) to
+    /// the known cluster size. Tends to result in more (false) merge events,
+    /// so use wisely.
+    #[serde(default)]
+    pub enable_auto_merge_radius: bool,
+
     /// How long (ms) before deciding a new point is valid/active
     pub smoothing_wait_before_active_ms: u128,
 
@@ -165,6 +171,7 @@ impl Default for BackendConfig {
             clustering_max_cluster_size: 2500.,
             smoothing_disable: false,
             smoothing_merge_radius: 100.,
+            enable_auto_merge_radius: false,
             smoothing_wait_before_active_ms: 100,
             smoothing_expire_ms: 3000,
             smoothing_lerp_factor: 0.1,
