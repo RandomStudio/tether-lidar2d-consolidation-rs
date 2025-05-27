@@ -1,15 +1,11 @@
-use std::net::{IpAddr, Ipv4Addr};
-
 use clap::{command, Parser};
 
-const TETHER_HOST: std::net::IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
-    /// The IP address of the MQTT broker (server)
-    #[arg(long = "tether.host", default_value_t=TETHER_HOST)]
-    pub tether_host: std::net::IpAddr,
+    ///Hostname of MQTT broker (server)
+    #[arg(long = "tether.host")]
+    pub tether_host: Option<String>,
 
     /// Optional username for MQTT Broker
     #[arg(long = "tether.username")]

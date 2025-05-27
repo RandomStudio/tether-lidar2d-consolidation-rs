@@ -25,7 +25,7 @@ fn main() -> Result<(), eframe::Error> {
     // Initialize the logger from the environment
 
     env_logger::Builder::from_env(Env::default().default_filter_or(&cli.log_level))
-        .filter_module("paho_mqtt", log::LevelFilter::Warn)
+        .filter_module("rumqttc", log::LevelFilter::Warn)
         .filter_module("winit", log::LevelFilter::Warn)
         .filter_module("eframe", log::LevelFilter::Warn)
         .filter_module("tether_agent", log::LevelFilter::Warn)
@@ -40,6 +40,6 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Tether LIDAR2D Consolidation",
         options,
-        Box::new(|_cc| Box::<Model>::default()),
+        Box::new(|_cc| Box::<Model>::new(Model::new(cli))),
     )
 }

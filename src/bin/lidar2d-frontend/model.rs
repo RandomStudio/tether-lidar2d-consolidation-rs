@@ -13,7 +13,7 @@ use tether_lidar2d_consolidation::{
     Point2D,
 };
 
-use crate::ui::render_ui;
+use crate::{cli::Cli, ui::render_ui};
 
 // use clap::Parser;
 
@@ -56,11 +56,10 @@ pub struct Model {
     pub is_editing: bool,
 }
 
-impl Default for Model {
-    fn default() -> Self {
-        // let cli = Cli::parse();
-
+impl Model {
+    pub fn new(cli: Cli) -> Self {
         let mut tether_agent = TetherAgentOptionsBuilder::new("lidar2dFrontend")
+            .host(cli.tether_host.as_deref())
             .build()
             .expect("failed to init+connect Tether Agent");
 
