@@ -32,7 +32,7 @@ pub fn render_tracking_graph(model: &mut Model, ui: &mut Ui) {
         };
 
         for (x, y) in &model.raw_tracked_points {
-            plot_ui.line(draw_circle(*x, *y, radius, Color32::DARK_GRAY));
+            plot_ui.line(draw_circle(*x, *y, radius, Color32::DARK_RED));
         }
 
         let text_offset = {
