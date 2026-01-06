@@ -53,9 +53,10 @@ pub fn render_tracking_settings(model: &mut Model, ui: &mut Ui) {
     // config file (JSON) and republishes the updated Config (on the plug "provideLidarConfig").
     if should_publish_update {
         debug!("Publish new backend config: {:?}", &model.backend_config);
+        let payload = rmp_serde::to_vec(&model.backend_config).expect("failed to serialize config");
         model
             .tether_agent
-            .encode_and_publish(&model.outputs.config, &model.backend_config)
+            .send(&model.outputs.config, Some(&payload))
             .expect("failed to publish config");
     }
 }

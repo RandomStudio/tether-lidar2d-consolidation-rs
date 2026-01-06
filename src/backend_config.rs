@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use log::{debug, error, info, warn};
 use std::{fmt::Error, fs};
-use tether_agent::{PlugDefinition, TetherAgent};
+use tether_agent::{ChannelDefinition, TetherAgent};
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -355,7 +355,7 @@ impl BackendConfig {
     pub fn handle_save_message(
         &mut self,
         tether_agent: &TetherAgent,
-        config_output: &PlugDefinition,
+        config_output: &ChannelDefinition,
         payload: &[u8],
         position_remapping: &mut PositionRemapping,
         config_file_path: &str,
@@ -382,15 +382,16 @@ impl BackendConfig {
     pub fn save_and_republish(
         &self,
         tether_agent: &TetherAgent,
-        config_output: &PlugDefinition,
+        config_output: &ChannelDefinition,
         config_file_path: &str,
     ) -> Result<()> {
         info!("Saving config to disk and re-publishing via Tether...");
         self.write_config_to_file(config_file_path)
             .expect("failed to save to disk");
 
+        let payload = rmp_serde::to_vec(self).expect("failed to serialize config");
         tether_agent
-            .encode_and_publish(config_output, self)
+            .send(config_output, Some(&payload))
             .expect("failed to publish config");
         Ok(())
     }

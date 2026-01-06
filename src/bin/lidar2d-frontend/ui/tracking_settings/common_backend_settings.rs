@@ -38,25 +38,23 @@ pub fn render_common_backend_settings(model: &mut Model, ui: &mut Ui) {
 
         ui.horizontal(|ui| {
             if ui.button("New auto-calibration").clicked() {
+                let payload = rmp_serde::to_vec(&AutoMaskMessage {
+                    r#type: "new".into(),
+                })
+                .expect("failed to serialize automask command");
                 model
                     .tether_agent
-                    .encode_and_publish(
-                        &model.outputs.request_automask,
-                        AutoMaskMessage {
-                            r#type: "new".into(),
-                        },
-                    )
+                    .send(&model.outputs.request_automask, Some(&payload))
                     .expect("failed to publish automask command");
             }
             if ui.button("Clear calibration").clicked() {
+                let payload = rmp_serde::to_vec(&AutoMaskMessage {
+                    r#type: "clear".into(),
+                })
+                .expect("failed to serialize automask command");
                 model
                     .tether_agent
-                    .encode_and_publish(
-                        &model.outputs.request_automask,
-                        AutoMaskMessage {
-                            r#type: "clear".into(),
-                        },
-                    )
+                    .send(&model.outputs.request_automask, Some(&payload))
                     .expect("failed to publish automask command");
             }
         });

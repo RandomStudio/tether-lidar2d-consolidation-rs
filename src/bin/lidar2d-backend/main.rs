@@ -10,7 +10,7 @@ use env_logger::Env;
 use log::{debug, info};
 use std::thread;
 use std::time::Duration;
-use tether_agent::{three_part_topic::TetherOrCustomTopic, TetherAgentOptionsBuilder};
+use tether_agent::{tether_compliant_topic::TetherOrCustomTopic, TetherAgentOptionsBuilder};
 
 use tether_lidar2d_consolidation::tether_interface::{handle_scans_message, Inputs};
 
@@ -76,7 +76,7 @@ fn main() {
                     rmp_serde::from_slice(&message).expect("failed to decode scans");
 
                 handle_scans_message(
-                    serial_number,
+                    serial_number.unwrap(),
                     &scans,
                     &mut backend_config,
                     &tether_agent,
@@ -134,8 +134,10 @@ fn main() {
             let smoothed_points = systems.smoothing_system.get_active_smoothed_points();
 
             if let Some(active_smoothed_points) = smoothed_points {
+                let payload = rmp_serde::to_vec(&active_smoothed_points)
+                    .expect("failed to serialize smoothed tracking points");
                 tether_agent
-                    .encode_and_publish(&outputs.smoothed_tracking_output, &active_smoothed_points)
+                    .send(&outputs.smoothed_tracking_output, Some(&payload))
                     .expect("failed to publish smoothed tracking points");
 
                 if backend_config.enable_average_movement
@@ -144,9 +146,10 @@ fn main() {
                 {
                     // Use smoothed points for movement analysis...
                     let movement_vector = calculate(&active_smoothed_points);
-
+                    let payload = rmp_serde::to_vec(&movement_vector)
+                        .expect("failed to serialize movement vector");
                     tether_agent
-                        .encode_and_publish(&outputs.movement_output, movement_vector)
+                        .send(&outputs.movement_output, Some(&payload))
                         .expect("failed to publish movement vector");
 
                     systems.movement_analysis.reset_timer();
@@ -171,9 +174,11 @@ fn main() {
                         >= Duration::from_millis(backend_config.average_movement_interval as u64)
                 {
                     let movement_vector = calculate(&[]);
+                    let payload = rmp_serde::to_vec(&movement_vector)
+                        .expect("failed to serialize movement vector");
 
                     tether_agent
-                        .encode_and_publish(&outputs.movement_output, movement_vector)
+                        .send(&outputs.movement_output, Some(&payload))
                         .expect("failed to publish movement vector");
 
                     systems.movement_analysis.reset_timer();

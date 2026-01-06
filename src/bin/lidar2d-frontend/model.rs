@@ -3,8 +3,8 @@ use std::{collections::HashMap, thread, time::Duration};
 use log::{debug, error, info};
 use quad_to_quad_transformer::RectCorners;
 use tether_agent::{
-    three_part_topic::TetherOrCustomTopic, PlugDefinition, PlugOptionsBuilder, TetherAgent,
-    TetherAgentOptionsBuilder,
+    tether_compliant_topic::TetherOrCustomTopic, ChannelDefinition, ChannelOptionsBuilder,
+    TetherAgent, TetherAgentOptionsBuilder,
 };
 use tether_lidar2d_consolidation::{
     backend_config::BackendConfig,
@@ -18,16 +18,16 @@ use crate::{cli::Cli, ui::render_ui};
 // use clap::Parser;
 
 pub struct Inputs {
-    pub config: PlugDefinition,
-    pub scans: PlugDefinition,
-    pub clusters: PlugDefinition,
-    pub raw_tracked_points: PlugDefinition,
-    pub smoothed_tracked_points: PlugDefinition,
+    pub config: ChannelDefinition,
+    pub scans: ChannelDefinition,
+    pub clusters: ChannelDefinition,
+    pub raw_tracked_points: ChannelDefinition,
+    pub smoothed_tracked_points: ChannelDefinition,
 }
 
 pub struct Outputs {
-    pub config: PlugDefinition,
-    pub request_automask: PlugDefinition,
+    pub config: ChannelDefinition,
+    pub request_automask: ChannelDefinition,
 }
 
 #[derive(Debug)]
@@ -65,31 +65,32 @@ impl Model {
 
         info!("Lidar2D Frontend started OK");
 
-        let config_input = PlugOptionsBuilder::create_input("provideLidarConfig")
+        let config_input = ChannelOptionsBuilder::create_receiver("provideLidarConfig")
             .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
-        let scans = PlugOptionsBuilder::create_input("scans")
+        let scans = ChannelOptionsBuilder::create_receiver("scans")
             .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
-        let clusters = PlugOptionsBuilder::create_input("clusters")
+        let clusters = ChannelOptionsBuilder::create_receiver("clusters")
             .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
-        let raw_tracked_points = PlugOptionsBuilder::create_input("trackedPoints")
+        let raw_tracked_points = ChannelOptionsBuilder::create_receiver("trackedPoints")
             .build(&mut tether_agent)
             .expect("failed to create Input Plug");
 
-        let smoothed_tracked_points = PlugOptionsBuilder::create_input("smoothedTrackedPoints")
-            .build(&mut tether_agent)
-            .expect("failed to create Input Plug");
+        let smoothed_tracked_points =
+            ChannelOptionsBuilder::create_receiver("smoothedTrackedPoints")
+                .build(&mut tether_agent)
+                .expect("failed to create Input Plug");
 
-        let config_output = PlugOptionsBuilder::create_output("saveLidarConfig")
+        let config_output = ChannelOptionsBuilder::create_sender("saveLidarConfig")
             .build(&mut tether_agent)
             .expect("failed to create Output Plug");
 
-        let request_automask = PlugOptionsBuilder::create_output("requestAutoMask")
+        let request_automask = ChannelOptionsBuilder::create_sender("requestAutoMask")
             .build(&mut tether_agent)
             .expect("failed to create Output Plug");
 
@@ -150,10 +151,10 @@ impl eframe::App for Model {
                         TetherOrCustomTopic::Tether(t) => t.id(),
                         TetherOrCustomTopic::Custom(t) => {
                             error!("Could not retrieve serial number from topic {}", t);
-                            "unknown"
+                            Some("unknown")
                         }
                     };
-                    self.scans.insert(serial_number.into(), scans);
+                    self.scans.insert(serial_number.unwrap().to_string(), scans);
                 }
             }
 

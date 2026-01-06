@@ -1,5 +1,5 @@
 use log::{debug, error, info};
-use tether_agent::{PlugDefinition, PlugOptionsBuilder, TetherAgent};
+use tether_agent::{ChannelDefinition, ChannelOptionsBuilder, TetherAgent};
 
 use crate::{
     backend_config::BackendConfig,
@@ -8,45 +8,47 @@ use crate::{
 };
 
 pub struct Outputs {
-    pub config_output: PlugDefinition,
-    pub clusters_output: PlugDefinition,
-    pub tracking_output: PlugDefinition,
-    pub smoothed_tracking_output: PlugDefinition,
-    pub smoothed_remapped_output: PlugDefinition,
-    pub movement_output: PlugDefinition,
+    pub config_output: ChannelDefinition,
+    pub clusters_output: ChannelDefinition,
+    pub tracking_output: ChannelDefinition,
+    pub smoothed_tracking_output: ChannelDefinition,
+    pub smoothed_remapped_output: ChannelDefinition,
+    pub movement_output: ChannelDefinition,
 }
 
 impl Outputs {
     pub fn new(tether_agent: &mut TetherAgent) -> Outputs {
-        let config_output = PlugOptionsBuilder::create_output("provideLidarConfig")
+        let config_output = ChannelOptionsBuilder::create_sender("provideLidarConfig")
             .qos(Some(2))
             .retain(Some(true))
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
         // Clusters, tracking outputs
-        let tracking_output = PlugOptionsBuilder::create_output("trackedPoints")
+        let tracking_output = ChannelOptionsBuilder::create_sender("trackedPoints")
             .qos(Some(0))
             .build(tether_agent)
             .expect("failed to create Output Plug");
-        let clusters_output = PlugOptionsBuilder::create_output("clusters")
+        let clusters_output = ChannelOptionsBuilder::create_sender("clusters")
             .qos(Some(0))
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
         // Smoothed tracked points output (with TopLeft origin)
-        let smoothed_tracking_output = PlugOptionsBuilder::create_output("smoothedTrackedPoints")
-            .qos(Some(0))
-            .build(tether_agent)
-            .expect("failed to create Output Plug");
+        let smoothed_tracking_output =
+            ChannelOptionsBuilder::create_sender("smoothedTrackedPoints")
+                .qos(Some(0))
+                .build(tether_agent)
+                .expect("failed to create Output Plug");
 
-        let smoothed_remapped_output = PlugOptionsBuilder::create_output("smoothedRemappedPoints")
-            .qos(Some(0))
-            .build(tether_agent)
-            .expect("failed to create Output Plug");
+        let smoothed_remapped_output =
+            ChannelOptionsBuilder::create_sender("smoothedRemappedPoints")
+                .qos(Some(0))
+                .build(tether_agent)
+                .expect("failed to create Output Plug");
 
         // Movement vector output
-        let movement_output = PlugOptionsBuilder::create_output("movement")
+        let movement_output = ChannelOptionsBuilder::create_sender("movement")
             .build(tether_agent)
             .expect("failed to create Output Plug");
 
@@ -62,29 +64,29 @@ impl Outputs {
 }
 
 pub struct Inputs {
-    pub scans_input: PlugDefinition,
-    pub save_config_input: PlugDefinition,
-    pub request_automask_input: PlugDefinition,
-    pub external_tracking_input: PlugDefinition,
+    pub scans_input: ChannelDefinition,
+    pub save_config_input: ChannelDefinition,
+    pub request_automask_input: ChannelDefinition,
+    pub external_tracking_input: ChannelDefinition,
 }
 
 impl Inputs {
     pub fn new(tether_agent: &mut TetherAgent) -> Inputs {
         // Some subscriptions
-        let scans_input = PlugOptionsBuilder::create_input("scans")
+        let scans_input = ChannelOptionsBuilder::create_receiver("scans")
             .qos(Some(0))
             .build(tether_agent)
             .expect("failed to create Output Plug");
-        let save_config_input = PlugOptionsBuilder::create_input("saveLidarConfig")
+        let save_config_input = ChannelOptionsBuilder::create_receiver("saveLidarConfig")
             .qos(Some(2))
             .build(tether_agent)
             .expect("failed to create Output Plug");
-        let request_automask_input = PlugOptionsBuilder::create_input("requestAutoMask")
+        let request_automask_input = ChannelOptionsBuilder::create_receiver("requestAutoMask")
             .qos(Some(2))
             .build(tether_agent)
             .expect("failed to create Output Plug");
         // TODO: the name of this input plug should be customisable
-        let external_tracking_input = PlugOptionsBuilder::create_input("bodyFrames")
+        let external_tracking_input = ChannelOptionsBuilder::create_receiver("bodyFrames")
             .qos(Some(2))
             .build(tether_agent)
             .expect("failed to create Output Plug");
@@ -134,8 +136,9 @@ pub fn handle_scans_message(
         let clusters = clustering_system.clusters();
 
         if !config.skip_some_outputs {
+            let payload = rmp_serde::to_vec(&clusters).expect("failed to serialize clusters");
             tether_agent
-                .encode_and_publish(clusters_output, clusters)
+                .send(clusters_output, Some(&payload))
                 .expect("failed to publish clusters");
         }
 
@@ -152,8 +155,11 @@ pub fn handle_scans_message(
             if !config.skip_some_outputs {
                 let raw_points: Vec<Point2D> =
                     filtered_clusters.iter().map(|c| (c.x, c.y)).collect();
+
+                let payload =
+                    rmp_serde::to_vec(&raw_points).expect("failed to serialize tracked points");
                 tether_agent
-                    .encode_and_publish(tracking_output, &raw_points)
+                    .send(tracking_output, Some(&payload))
                     .expect("failed to publish tracked points");
             }
         }
